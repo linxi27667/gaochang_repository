@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1024, height=600, initial-scale=1.0">
+    <title>高昌举升机 | Gaochang Lift</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/cards.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <span class="brand-name" data-i18n="brand">高昌举升机</span>
+            </div>
+            <div class="header-status">
+                <div class="status-item" id="headerSystemStatus">
+                    <span class="status-dot warning"></span>
+                    <span class="status-label" id="headerSystemLabel" data-i18n="status_idle">IDLE</span>
+                </div>
+                <div class="status-item" id="headerOnline">
+                    <span class="status-dot success"></span>
+                    <span class="status-label" id="headerOnlineLabel">2/2</span>
+                </div>
+                <div class="status-item" id="headerSync">
+                    <span class="status-dot success"></span>
+                    <span class="status-label" id="headerSyncLabel" data-i18n="sync_ok">OK</span>
+                </div>
+            </div>
+            <button class="menu-btn" id="menuBtn" aria-label="Menu">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <rect x="3" y="4" width="14" height="2" rx="1"/>
+                    <rect x="3" y="9" width="14" height="2" rx="1"/>
+                    <rect x="3" y="14" width="14" height="2" rx="1"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- VIEW: Data Panel (default) -->
+            <section id="view-data" class="view active">
+                <div class="data-layout">
+                    <!-- Left: Motor Data -->
+                    <div class="data-left">
+                        <div class="section-label" data-i18n="realtime_data">实时数据</div>
+                        <!-- Motor Cards -->
+                        <div class="motor-cards">
+                            <div class="motor-card">
+                                <div class="motor-card-header">
+                                    <span class="motor-tag" data-i18n="motor1">电机 1</span>
+                                    <span class="motor-state" id="motor1-state" data-i18n="status_idle">空闲</span>
+                                </div>
+                                <div class="motor-height-display">
+                                    <span class="motor-value" id="motor1-height">120.0</span>
+                                    <span class="motor-unit">mm</span>
+                                </div>
+                                <div class="motor-bar">
+                                    <div class="motor-bar-track">
+                                        <div class="motor-bar-fill" id="motor1-bar" style="width:60%"></div>
+                                    </div>
+                                    <div class="motor-bar-labels">
+                                        <span>0</span>
+                                        <span>2000</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="motor-card">
+                                <div class="motor-card-header">
+                                    <span class="motor-tag" data-i18n="motor2">电机 2</span>
+                                    <span class="motor-state" id="motor2-state" data-i18n="status_idle">空闲</span>
+                                </div>
+                                <div class="motor-height-display">
+                                    <span class="motor-value" id="motor2-height">118.5</span>
+                                    <span class="motor-unit">mm</span>
+                                </div>
+                                <div class="motor-bar">
+                                    <div class="motor-bar-track">
+                                        <div class="motor-bar-fill bar-fill-2" id="motor2-bar" style="width:59%"></div>
+                                    </div>
+                                    <div class="motor-bar-labels">
+                                        <span>0</span>
+                                        <span>2000</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lift Schematic -->
+                        <div class="lift-schematic">
+                            <div class="lift-col">
+                                <div class="lift-col-bar" id="lift-left-bar" style="height:60%"></div>
+                                <span class="lift-col-label">M1</span>
+                            </div>
+                            <div class="lift-center">
+                                <div class="lift-platform" id="lift-platform">
+                                    <span id="current-height-val-lift">120.0</span>
+                                    <span>mm</span>
+                                </div>
+                            </div>
+                            <div class="lift-col">
+                                <div class="lift-col-bar bar-fill-2" id="lift-right-bar" style="height:59%"></div>
+                                <span class="lift-col-label">M2</span>
+                            </div>
+                        </div>
+
+                        <!-- Bottom status row -->
+                        <div class="status-row">
+                            <div class="status-card" id="syncCard">
+                                <div class="status-card-dot" id="sync-dot"></div>
+                                <div class="status-card-info">
+                                    <div class="status-card-label" data-i18n="sync_error">误差</div>
+                                    <div class="status-card-value"><span id="sync-value">1.5</span> mm</div>
+                                </div>
+                            </div>
+                            <div class="status-card" id="systemCard">
+                                <div class="status-card-dot dot-blue"></div>
+                                <div class="status-card-info">
+                                    <div class="status-card-label" data-i18n="system_status">系统</div>
+                                    <div class="status-card-value" id="system-status-value" data-i18n="status_idle">空闲</div>
+                                </div>
+                            </div>
+                            <div class="status-card" id="onlineCard">
+                                <div class="status-card-dot dot-green"></div>
+                                <div class="status-card-info">
+                                    <div class="status-card-label" data-i18n="online_status">连接</div>
+                                    <div class="status-card-value" id="online-status-value">2/2</div>
+                                </div>
+                            </div>
+                            <div class="status-card" id="alarmCard">
+                                <div class="status-card-dot dot-gray"></div>
+                                <div class="status-card-info">
+                                    <div class="status-card-label" data-i18n="alarm_info">报警</div>
+                                    <div class="status-card-value" id="alarm-status-value" data-i18n="no_alarm">无</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Height Setter -->
+                    <div class="data-right">
+                        <div class="section-label" data-i18n="height_set">高度设定</div>
+                        <div class="height-setter">
+                            <div class="current-height">
+                                <div class="setter-label" data-i18n="current_height">当前高度</div>
+                                <div class="setter-value"><span id="current-height-val">1.20</span><span class="setter-unit"> m</span></div>
+                            </div>
+                            <div class="setter-divider"></div>
+                            <div class="target-height">
+                                <div class="setter-label" data-i18n="target_height">目标高度</div>
+                                <div class="target-controls">
+                                    <button class="setter-btn" id="heightMinus">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                            <path d="M5 10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </button>
+                                    <div class="target-display" id="targetDisplay" tabindex="0">
+                                        <span id="target-height-val" class="setter-value">1.20</span>
+                                        <span class="setter-unit">m</span>
+                                    </div>
+                                    <button class="setter-btn" id="heightPlus">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                            <path d="M5 10h10M10 5v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="height-slider">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="sliderFill" style="width:60%"></div>
+                                    <div class="slider-thumb" id="sliderThumb" style="left:60%"></div>
+                                </div>
+                                <div class="slider-labels">
+                                    <span>0.00</span>
+                                    <span id="sliderMax">2.00 m</span>
+                                </div>
+                            </div>
+                            <div class="step-selector">
+                                <button class="step-btn" data-step="0.01">0.01m</button>
+                                <button class="step-btn active" data-step="0.05">0.05m</button>
+                                <button class="step-btn" data-step="0.10">0.10m</button>
+                            </div>
+                            <button class="confirm-btn" id="confirmBtn" data-i18n="confirm_set">确认设定</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: Settings -->
+            <section id="view-settings" class="view">
+                <div class="settings-container">
+                    <div class="settings-section-label" data-i18n="settings_general">通用</div>
+                    <div class="settings-group">
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="setting_language">语言</span>
+                            <button class="setting-action" id="langDrawerBtn" data-i18n="lang_zh">中文</button>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="setting_unit">单位</span>
+                            <div class="segmented-control">
+                                <button class="seg-btn active" data-unit="mm">mm</button>
+                                <button class="seg-btn" data-unit="inch">inch</button>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <div>
+                                <span class="setting-label" data-i18n="setting_demo">演示模式</span>
+                                <span class="setting-desc" data-i18n="setting_demo_desc">模拟数据自动更新</span>
+                            </div>
+                            <div class="toggle-switch" id="demoToggle">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section-label" data-i18n="settings_about">关于</div>
+                    <div class="settings-group">
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="about_device">设备名称</span>
+                            <span class="setting-value" data-i18n="about_device_val">高昌双柱举升机</span>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="about_version">系统版本</span>
+                            <span class="setting-value">v1.0</span>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="about_max_height">最大高度</span>
+                            <span class="setting-value">2.00 m</span>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label" data-i18n="about_comms">通信方式</span>
+                            <span class="setting-value">USART</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: Manual -->
+            <section id="view-manual" class="view">
+                <div class="manual-container">
+                    <div class="manual-title" data-i18n="manual_title">高昌丝杆举升机 · 操作指南</div>
+                    <div class="manual-steps">
+                        <div class="manual-step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <div class="step-title" data-i18n="step1_title">查看数据</div>
+                                <div class="step-desc" data-i18n="step1_desc">主界面实时显示两立柱高度、同步误差、系统连接状态。</div>
+                            </div>
+                        </div>
+                        <div class="manual-step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <div class="step-title" data-i18n="step2_title">设定高度</div>
+                                <div class="step-desc" data-i18n="step2_desc">点击 + / − 调节目标高度，步进可调。确认后双柱同步运行至目标高度。</div>
+                            </div>
+                        </div>
+                        <div class="manual-step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <div class="step-title" data-i18n="step3_title">报警处理</div>
+                                <div class="step-desc" data-i18n="step3_desc">同步误差 >5mm 黄色警告，>10mm 红色报警。堵转报警请立即停机检查。</div>
+                            </div>
+                        </div>
+                        <div class="manual-step">
+                            <div class="step-num">4</div>
+                            <div class="step-content">
+                                <div class="step-title" data-i18n="step4_title">安全须知</div>
+                                <div class="step-desc" data-i18n="step4_desc">举升中确保人员安全，严禁超载。定期检查螺母磨损。</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="manual-footer">
+                        <span>v1.0</span>
+                        <span>1024 x 600</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <span>gaochangOS v1.0</span>
+            <span id="uptime">运行 00:00:00</span>
+        </footer>
+
+        <!-- Menu Overlay -->
+        <div class="menu-overlay" id="menuOverlay">
+            <div class="menu-panel" id="menuPanel">
+                <div class="menu-title" data-i18n="menu_title">菜单</div>
+                <div class="menu-items">
+                    <button class="menu-item" data-view="view-data">
+                        <div class="menu-item-name" data-i18n="menu_data">数据面板</div>
+                        <div class="menu-item-desc" data-i18n="menu_data_desc">实时高度 · 误差 · 状态</div>
+                    </button>
+                    <button class="menu-item" data-view="view-settings">
+                        <div class="menu-item-name" data-i18n="menu_settings">设置</div>
+                        <div class="menu-item-desc" data-i18n="menu_settings_desc">语言 · 单位 · 关于本机</div>
+                    </button>
+                    <button class="menu-item" data-view="view-manual">
+                        <div class="menu-item-name" data-i18n="menu_manual">操作说明</div>
+                        <div class="menu-item-desc" data-i18n="menu_manual_desc">使用指南 · 安全须知</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Drawer -->
+        <div class="lang-drawer-overlay" id="langDrawerOverlay">
+            <div class="lang-drawer" id="langDrawer">
+                <div class="lang-drawer-title" data-i18n="drawer_lang">选择语言</div>
+                <div class="lang-options" id="langOptions">
+                    <button class="lang-option active" data-lang="zh"><span>中文</span></button>
+                    <button class="lang-option" data-lang="en"><span>English</span></button>
+                    <button class="lang-option" data-lang="ru"><span>Русский</span></button>
+                    <button class="lang-option" data-lang="de"><span>Deutsch</span></button>
+                    <button class="lang-option" data-lang="fr"><span>Français</span></button>
+                    <button class="lang-option" data-lang="ar"><span>العربية</span></button>
+                    <button class="lang-option" data-lang="es"><span>Español</span></button>
+                    <button class="lang-option" data-lang="tr"><span>Türkçe</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Dialog -->
+        <div class="confirm-overlay" id="confirmOverlay">
+            <div class="confirm-dialog">
+                <div class="confirm-title" data-i18n="confirm_title">确认设定</div>
+                <div class="confirm-message" data-i18n="confirm_msg">是否确认将举升机高度设定为</div>
+                <div class="confirm-value" id="confirmValue">1.20 m</div>
+                <div class="confirm-sub" data-i18n="confirm_sub">双柱将同步运行至目标高度</div>
+                <div class="confirm-actions">
+                    <button class="confirm-btn-cancel" id="confirmCancel" data-i18n="confirm_cancel">取消</button>
+                    <button class="confirm-btn-ok" id="confirmOk" data-i18n="confirm_ok">确认</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Numeric Keypad Overlay -->
+        <div class="numpad-overlay" id="numpadOverlay">
+            <div class="numpad-panel">
+                <div class="numpad-header">
+                    <span class="numpad-title" data-i18n="target_height">目标高度</span>
+                    <button class="numpad-close" id="numpadClose">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="numpad-display">
+                    <span id="numpadValue">1.20</span>
+                    <span class="numpad-unit">m</span>
+                </div>
+                <div class="numpad-grid">
+                    <button class="numpad-key" data-key="1">1</button>
+                    <button class="numpad-key" data-key="2">2</button>
+                    <button class="numpad-key" data-key="3">3</button>
+                    <button class="numpad-key" data-key="backspace">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M14 7l-4 4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="numpad-key" data-key="4">4</button>
+                    <button class="numpad-key" data-key="5">5</button>
+                    <button class="numpad-key" data-key="6">6</button>
+                    <button class="numpad-key" data-key="clear">C</button>
+                    <button class="numpad-key" data-key="7">7</button>
+                    <button class="numpad-key" data-key="8">8</button>
+                    <button class="numpad-key" data-key="9">9</button>
+                    <button class="numpad-key" data-key=".">.</button>
+                    <button class="numpad-key" data-key="0">0</button>
+                    <button class="numpad-key" data-key="00">00</button>
+                    <button class="numpad-key" data-key="000">000</button>
+                    <button class="numpad-key numpad-key-confirm" data-key="confirm">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/data.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/updates.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

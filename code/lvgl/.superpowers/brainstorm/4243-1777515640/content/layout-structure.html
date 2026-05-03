@@ -1,0 +1,132 @@
+<h2>选择页面布局结构</h2>
+<p class="subtitle">1024×600分辨率，需要展示：双立柱高度、高度差、联机状态、一键调平、登录、设置、WiFi</p>
+
+<div class="cards">
+  <div class="card" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 16px; border-radius: 12px; height: 280px; position: relative;">
+      <!-- Sidebar Layout Mockup -->
+      <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 80px; background: #E5E5EA; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; gap: 8px;">
+        <div style="width: 48px; height: 48px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">📊</div>
+        <div style="width: 48px; height: 48px; background: #007AFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;">⚙</div>
+        <div style="width: 48px; height: 48px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>
+      </div>
+      <div style="position: absolute; left: 88px; right: 8px; top: 8px; height: 40px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+        <span style="color: #007AFF; font-weight: 600;">高昌举升机</span>
+        <span style="color: #8E8E93;">09:30:00</span>
+      </div>
+      <div style="position: absolute; left: 88px; right: 8px; top: 56px; bottom: 8px; display: flex; gap: 8px;">
+        <div style="flex: 1; background: white; border-radius: 12px; padding: 12px;">
+          <div style="color: #8E8E93; font-size: 12px;">左立柱</div>
+          <div style="color: #1C1C1E; font-size: 24px; font-weight: bold;">1850mm</div>
+          <div style="color: #8E8E93; font-size: 12px; margin-top: 8px;">右立柱</div>
+          <div style="color: #1C1C1E; font-size: 24px; font-weight: bold;">1848mm</div>
+        </div>
+        <div style="flex: 1; background: white; border-radius: 12px; padding: 12px;">
+          <div style="color: #8E8E93; font-size: 12px;">高度差</div>
+          <div style="color: #34C759; font-size: 28px; font-weight: bold;">2mm</div>
+          <div style="background: #34C759; color: white; padding: 6px 12px; border-radius: 6px; margin-top: 12px; text-align: center;">正常</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>侧边栏导航</h3>
+      <p>左侧固定图标导航栏(80px)，右侧内容区。类似现有项目结构，导航清晰不占用太多空间。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="tabs" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 16px; border-radius: 12px; height: 280px; position: relative;">
+      <!-- Tab Bar Layout Mockup -->
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; height: 40px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+        <span style="color: #007AFF; font-weight: 600;">高昌举升机</span>
+        <span style="color: #8E8E93;">09:30:00</span>
+      </div>
+      <div style="position: absolute; left: 8px; right: 8px; top: 56px; bottom: 56px; background: white; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; gap: 12px;">
+          <div style="flex: 1; background: #F2F2F7; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="color: #8E8E93; font-size: 11px;">左立柱</div>
+            <div style="color: #1C1C1E; font-size: 20px; font-weight: bold;">1850mm</div>
+          </div>
+          <div style="flex: 1; background: #F2F2F7; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="color: #8E8E93; font-size: 11px;">右立柱</div>
+            <div style="color: #1C1C1E; font-size: 20px; font-weight: bold;">1848mm</div>
+          </div>
+          <div style="flex: 1; background: #F2F2F7; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="color: #8E8E93; font-size: 11px;">高度差</div>
+            <div style="color: #34C759; font-size: 20px; font-weight: bold;">2mm</div>
+          </div>
+        </div>
+        <div style="background: #007AFF; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: 600;">一键调平</div>
+      </div>
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around; padding: 0 8px;">
+        <div style="color: #007AFF; font-size: 11px; text-align: center;">📊<br>数据</div>
+        <div style="color: #8E8E93; font-size: 11px; text-align: center;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px; text-align: center;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px; text-align: center;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>底部Tab栏导航</h3>
+      <p>iOS经典风格，底部圆角Tab栏(44px)，内容区最大化。适合触控操作，符合用户习惯。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="cards" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 16px; border-radius: 12px; height: 280px; position: relative;">
+      <!-- Card Dashboard Layout Mockup -->
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; height: 44px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 28px; height: 28px; background: #007AFF; border-radius: 8px;"></div>
+          <span style="color: #1C1C1E; font-weight: 600;">高昌举升机</span>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div style="width: 8px; height: 8px; background: #34C759; border-radius: 4px;"></div>
+          <span style="color: #8E8E93; font-size: 13px;">已联机</span>
+          <span style="color: #1C1C1E;">09:30</span>
+          <div style="width: 32px; height: 32px; background: #F2F2F7; border-radius: 8px; display: flex; align-items: center; justify-content: center;">👤</div>
+        </div>
+      </div>
+      <div style="position: absolute; left: 8px; right: 8px; top: 60px; bottom: 8px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px;">
+        <div style="grid-column: span 2; background: white; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <div style="color: #8E8E93; font-size: 13px;">立柱高度</div>
+          <div style="display: flex; gap: 24px; margin-top: 8px;">
+            <div style="text-align: center;"><div style="color: #1C1C1E; font-size: 28px; font-weight: bold;">1850</div><div style="color: #8E8E93; font-size: 11px;">左</div></div>
+            <div style="text-align: center;"><div style="color: #1C1C1E; font-size: 28px; font-weight: bold;">1848</div><div style="color: #8E8E93; font-size: 11px;">右</div></div>
+          </div>
+        </div>
+        <div style="background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #8E8E93; font-size: 11px;">高度差</div>
+          <div style="color: #34C759; font-size: 22px; font-weight: bold;">2mm</div>
+          <div style="background: #34C759; width: 36px; height: 6px; border-radius: 3px; margin-top: 6px;"></div>
+        </div>
+        <div style="background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #8E8E93; font-size: 11px;">联机状态</div>
+          <div style="width: 20px; height: 20px; background: #34C759; border-radius: 10px; margin-top: 8px;"></div>
+          <div style="color: #34C759; font-size: 12px; margin-top: 4px;">已联机</div>
+        </div>
+        <div style="grid-column: span 2; background: #007AFF; border-radius: 14px; padding: 16px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+          <div style="color: white; font-size: 20px;">⚡</div>
+          <div style="color: white; font-size: 18px; font-weight: 600;">一键调平</div>
+        </div>
+        <div style="background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #8E8E93; font-size: 11px;">WiFi</div>
+          <div style="color: #1C1C1E; font-size: 16px;">📶</div>
+        </div>
+        <div style="background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #8E8E93; font-size: 11px;">设置</div>
+          <div style="color: #1C1C1E; font-size: 16px;">⚙</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>卡片网格仪表盘</h3>
+      <p>所有核心信息一屏展示，顶部Header+底部/右上用户入口。无导航切换，点击卡片进入详情。适合快速查看数据场景。</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #8E8E93;"><strong>页面规划：</strong><br>
+• 主页/数据页：双立柱高度、高度差、联机状态、一键调平<br>
+• 控制页：参数设置、手动操作<br>
+• 设置页：语言切换(9国语言)、WiFi配置、亮度、报警阈值<br>
+• 用户页：登录、管理员管理</p>

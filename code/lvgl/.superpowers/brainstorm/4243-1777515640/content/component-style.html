@@ -1,0 +1,104 @@
+<h2>组件细节样式</h2>
+<p class="subtitle">iOS风格的圆角、阴影、过渡动画等细节参数</p>
+
+<div class="mockup">
+  <div class="mockup-header">组件样式对比</div>
+  <div class="mockup-body" style="background: #F2F2F7; padding: 24px; display: flex; gap: 24px;">
+
+    <!-- Standard iOS -->
+    <div style="flex: 1; background: white; border-radius: 16px; padding: 20px;">
+      <h4 style="color: #1C1C1E; margin-bottom: 16px; font-size: 15px;">标准iOS风格</h4>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="background: #007AFF; color: white; padding: 14px 24px; border-radius: 12px; font-weight: 500; text-align: center;">主要按钮</div>
+        <div style="background: white; border: 1px solid #007AFF; color: #007AFF; padding: 14px 24px; border-radius: 12px; text-align: center;">次要按钮</div>
+        <div style="background: #F2F2F7; padding: 16px; border-radius: 12px;">
+          <div style="color: #8E8E93; font-size: 12px;">卡片标题</div>
+          <div style="color: #1C1C1E; font-size: 17px; margin-top: 4px;">数据内容</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 12px; height: 12px; background: #34C759; border-radius: 6px;"></div>
+          <span style="color: #34C759; font-size: 14px;">状态指示</span>
+        </div>
+      </div>
+      <div style="margin-top: 16px; color: #8E8E93; font-size: 12px;">
+        <strong>参数：</strong><br>
+        圆角: 12px (按钮) / 16px (卡片)<br>
+        阴影: 无或轻微<br>
+        动画: 200ms ease-out
+      </div>
+    </div>
+
+    <!-- Elevated iOS -->
+    <div style="flex: 1; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <h4 style="color: #1C1C1E; margin-bottom: 16px; font-size: 15px;">立体阴影风格</h4>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="background: #007AFF; color: white; padding: 14px 24px; border-radius: 12px; font-weight: 500; text-align: center; box-shadow: 0 2px 8px rgba(0,122,255,0.3);">主要按钮</div>
+        <div style="background: white; border: 1px solid #007AFF; color: #007AFF; padding: 14px 24px; border-radius: 12px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">次要按钮</div>
+        <div style="background: #F2F2F7; padding: 16px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+          <div style="color: #8E8E93; font-size: 12px;">卡片标题</div>
+          <div style="color: #1C1C1E; font-size: 17px; margin-top: 4px;">数据内容</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 14px; height: 14px; background: #34C759; border-radius: 7px; box-shadow: 0 0 8px rgba(52,199,89,0.5);"></div>
+          <span style="color: #34C759; font-size: 14px;">状态指示</span>
+        </div>
+      </div>
+      <div style="margin-top: 16px; color: #8E8E93; font-size: 12px;">
+        <strong>参数：</strong><br>
+        圆角: 12px (按钮) / 16px (卡片)<br>
+        阴影: 有层次感<br>
+        动画: 250ms ease-out + scale
+      </div>
+    </div>
+
+    <!-- Large Touch -->
+    <div style="flex: 1; background: white; border-radius: 16px; padding: 20px;">
+      <h4 style="color: #1C1C1E; margin-bottom: 16px; font-size: 15px;">大触控风格</h4>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #007AFF; color: white; padding: 18px 32px; border-radius: 14px; font-weight: 600; text-align: center; font-size: 18px;">主要按钮</div>
+        <div style="background: white; border: 2px solid #007AFF; color: #007AFF; padding: 18px 32px; border-radius: 14px; text-align: center; font-size: 18px;">次要按钮</div>
+        <div style="background: #F2F2F7; padding: 20px; border-radius: 14px;">
+          <div style="color: #8E8E93; font-size: 14px;">卡片标题</div>
+          <div style="color: #1C1C1E; font-size: 20px; margin-top: 6px;">数据内容</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 16px; height: 16px; background: #34C759; border-radius: 8px;"></div>
+          <span style="color: #34C759; font-size: 16px;">状态指示</span>
+        </div>
+      </div>
+      <div style="margin-top: 16px; color: #8E8E93; font-size: 12px;">
+        <strong>参数：</strong><br>
+        圆角: 14px (按钮) / 18px (卡片)<br>
+        阴影: 无<br>
+        动画: 300ms ease-out<br>
+        字号: 增大20%
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="standard" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>标准iOS风格</h3>
+      <p>严格遵循iOS设计规范，圆角12-16px，无阴影或轻微阴影，动画简洁200ms</p>
+    </div>
+  </div>
+  <div class="option" data-choice="elevated" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>立体阴影风格</h3>
+      <p>按钮和卡片带阴影层次，增加立体感和点击反馈，适合触控区分</p>
+    </div>
+  </div>
+  <div class="option" data-choice="large" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>大触控风格</h3>
+      <p>增大按钮尺寸和字号，圆角更圆润14-18px，适合站立操作/戴手套场景</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #8E8E93;"><strong>我的建议：</strong> 大触控风格(C)，汽修门店工程师可能站立操作，大尺寸更友好。但保持iOS简洁感，不加过多阴影。</p>

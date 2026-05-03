@@ -1,0 +1,87 @@
+<h2>弹窗与对话框风格</h2>
+<p class="subtitle">iOS风格弹窗：设置参数、确认操作、ON/OFF切换等场景</p>
+
+<div class="cards">
+  <div class="card" data-choice="ios-alert" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; height: 200px; display: flex; align-items: center; justify-content: center;">
+      <!-- iOS Alert style -->
+      <div style="background: white; border-radius: 14px; width: 280px; overflow: hidden;">
+        <div style="padding: 20px 16px 12px; text-align: center;">
+          <div style="color: #1C1C1E; font-size: 17px; font-weight: 600;">设置最小高度</div>
+          <div style="color: #8E8E93; font-size: 13px; margin-top: 8px;">请输入高度值 (mm)</div>
+        </div>
+        <div style="background: #F2F2F7; border-radius: 8px; margin: 0 16px 16px;">
+          <div style="padding: 12px 12px; color: #1C1C1E; font-size: 15px; border-bottom: 1px solid #C7C7CC;">150</div>
+        </div>
+        <div style="display: flex; border-top: 1px solid #E5E5EA;">
+          <div style="flex: 1; padding: 12px; text-align: center; color: #007AFF; font-size: 17px; border-right: 1px solid #E5E5EA;">取消</div>
+          <div style="flex: 1; padding: 12px; text-align: center; color: #007AFF; font-size: 17px; font-weight: 600;">确认</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>iOS Alert风格</h3>
+      <p>经典iOS弹窗：半透明遮罩 + 居中圆角卡片 + 标题/内容 + 横排按钮。简洁紧凑，适合快速确认。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="ios-action" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; height: 200px; display: flex; align-items: flex-end; justify-content: center;">
+      <!-- iOS Action Sheet style -->
+      <div style="background: #E5E5EA; border-radius: 14px; width: 300px; margin-bottom: 10px; overflow: hidden;">
+        <div style="background: white; border-radius: 14px 14px 0 0; padding: 14px; text-align: center;">
+          <div style="color: #8E8E93; font-size: 13px;">联机设置</div>
+          <div style="color: #8E8E93; font-size: 13px; margin-top: 4px;">请选择联机状态</div>
+        </div>
+        <div style="background: white;">
+          <div style="padding: 16px; text-align: center; color: #007AFF; font-size: 17px; font-weight: 500; border-bottom: 1px solid #E5E5EA;">开启联机</div>
+          <div style="padding: 16px; text-align: center; color: #FF3B30; font-size: 17px; font-weight: 500;">关闭联机</div>
+        </div>
+        <div style="background: white; border-radius: 14px; margin-top: 8px; padding: 16px; text-align: center; color: #007AFF; font-size: 17px; font-weight: 600;">取消</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>iOS Action Sheet风格</h3>
+      <p>底部弹出式：适合多选项场景（ON/OFF切换、选择语言等）。按钮纵向排列，取消按钮独立在最下方。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="full-kb" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 200px; position: relative;">
+      <!-- Full screen with keyboard -->
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 90px; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 14px; width: 260px; padding: 20px;">
+          <div style="color: #1C1C1E; font-size: 17px; font-weight: 600; text-align: center;">设置最小高度</div>
+          <div style="background: #F2F2F7; border-radius: 10px; margin-top: 16px; padding: 12px;">
+            <div style="color: #1C1C1E; font-size: 20px; text-align: center;">150</div>
+          </div>
+        </div>
+      </div>
+      <!-- Keyboard -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 80px; background: #E5E5EA; border-radius: 12px; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4px; padding: 8px;">
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">1</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">2</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">3</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">4</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">5</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1E; font-size: 14px;">6</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">7</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">8</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">9</div>
+        <div style="background: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1C1C1E; font-size: 14px;">0</div>
+        <div style="grid-column: span 7; background: white; border-radius: 6px;"></div>
+        <div style="background: #007AFF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">确认</div>
+        <div style="background: #FF3B30; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">清除</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>全屏键盘输入</h3>
+      <p>点击输入框后，键盘从底部滑出占据半屏，类似iOS键盘交互。适合需要频繁输入的场景（设置参数、密码等）。</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #8E8E93;"><strong>建议组合：</strong><br>
+• 数值输入（高度、密码等） → 全屏键盘<br>
+• ON/OFF切换、语言选择 → Action Sheet<br>
+• 确认操作（一键调平、删除用户） → Alert</p>

@@ -1,0 +1,35 @@
+# Keil MDK build artifacts
+*.o
+*.d
+*.crf
+*.htm
+*.dep
+*.lnp
+*.lst
+*.map
+*.iex
+*.bak
+*.sct
+*.tmp
+*.hex
+*.bin
+*.axf
+*.sbr
+*.sup
+*.scvd
+JLinkLog.txt
+DebugConfig/
+Listings/
+Objects/
+
+# IDE
+*.uvguix.*
+*.uvoptx
+*.uvproj.*
+*.csolution
+*.cproject
+*.project
+
+# OS
+.DS_Store
+Thumbs.db

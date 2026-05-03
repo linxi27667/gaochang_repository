@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1024">
+    <title>高昌举升机 - 方案二 HMI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        /* ============================================
+         * Dark Industrial 调色板 (对应 LVGL 宏定义)
+         * ============================================ */
+        :root {
+            --COLOR_BG_GLOBAL: #151515;
+            --COLOR_BG_CARD: #242529;
+            --COLOR_ACCENT: #B1D873;
+            --COLOR_TEXT_PRIMARY: #EAEAEA;
+            --COLOR_TEXT_SECONDARY: #8A8D93;
+            --COLOR_WARNING: #FFB020;
+            --COLOR_SUCCESS: #00C853;
+            --COLOR_ERROR: #FF5252;
+            --COLOR_BORDER: #3A4556;
+            --RADIUS_SMALL: 8px;
+            --RADIUS_MEDIUM: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .screen {
+            width: 1024px;
+            height: 600px;
+            background: var(--COLOR_BG_GLOBAL);
+            display: flex;
+            overflow: hidden;
+            border-radius: var(--RADIUS_MEDIUM);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+
+        /* ============================================
+         * 左侧导航栏
+         * ============================================ */
+        .sidebar {
+            width: 200px;
+            height: 100%;
+            background: var(--COLOR_BG_CARD);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 12px;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            width: 100%;
+            height: 52px;
+            background: rgba(255, 255, 255, 0.04);
+            border: none;
+            border-radius: var(--RADIUS_MEDIUM);
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(177, 216, 115, 0.08);
+            color: var(--COLOR_TEXT_PRIMARY);
+        }
+
+        .nav-btn.active {
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            font-weight: 600;
+        }
+
+        /* LVGL v9 原生 Unicode 符号 */
+        .lvgl-symbol {
+            font-family: 'FontAwesome';
+            font-size: 18px;
+            line-height: 1;
+            display: inline-block;
+        }
+
+        .nav-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* ============================================
+         * 右侧主内容区
+         * ============================================ */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0 16px 16px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ============================================
+         * 顶部状态栏
+         * ============================================ */
+        .top-header {
+            height: 60px;
+            background: transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .logo-icon svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.3;
+        }
+
+        .logo-brand {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .logo-sub {
+            color: #E03030;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .model-badge {
+            color: var(--COLOR_ACCENT);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            background: rgba(177, 216, 115, 0.1);
+            border-radius: var(--RADIUS_SMALL);
+            margin-left: 8px;
+        }
+
+        .status-tags {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .status-tag {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+            padding: 5px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--RADIUS_SMALL);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background: var(--COLOR_SUCCESS);
+            box-shadow: 0 0 8px var(--COLOR_SUCCESS);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.warning {
+            background: var(--COLOR_WARNING);
+            box-shadow: 0 0 8px var(--COLOR_WARNING);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.error {
+            background: var(--COLOR_ERROR);
+            box-shadow: 0 0 8px var(--COLOR_ERROR);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .clock {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 18px;
+            font-weight: 600;
+            padding: 5px 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: var(--RADIUS_SMALL);
+            letter-spacing: 1px;
+        }
+
+        /* ============================================
+         * 页面容器
+         * ============================================ */
+        .page-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            /* 默认隐藏 */
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(40px);
+            transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        opacity 0.35s ease;
+        }
+
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+
+        .page.leaving {
+            opacity: 0;
+            transform: translateX(-40px);
+            pointer-events: none;
+        }
+
+        /* ============================================
+         * 数据看板页面 - Grid 布局
+         * ============================================ */
+        .dashboard-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 16px;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--COLOR_BG_CARD);
+            border-radius: var(--RADIUS_MEDIUM);
+            border: none;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 16px;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+        }
+
+        /* Grid Cell 分配 */
+        .card-a { grid-column: 1 / 3; grid-row: 1; }
+        .card-b { grid-column: 3; grid-row: 1; }
+        .card-c { grid-column: 4; grid-row: 1 / 3; }
+        .card-d { grid-column: 1; grid-row: 2; }
+        .card-e { grid-column: 2; grid-row: 2; }
+        .card-f { grid-column: 3; grid-row: 2; }
+
+        /* 卡片标题 */
+        .card-title {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-badge {
+            padding: 3px 8px;
+            border-radius: var(--RADIUS_SMALL);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .card-badge.normal { background: rgba(0, 200, 83, 0.15); color: var(--COLOR_SUCCESS); }
+        .card-badge.warning { background: rgba(255, 176, 32, 0.15); color: var(--COLOR_WARNING); }
+        .card-badge.error { background: rgba(255, 82, 82, 0.15); color: var(--COLOR_ERROR); }
+
+        /* 卡片 A: 立柱高度 */
+        .height-values {
+            display: flex;
+            gap: 24px;
+            flex: 1;
+            align-items: center;
+        }
+
+        .height-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--RADIUS_SMALL);
+        }
+
+        .height-value {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .height-unit {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .height-diff-value {
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .height-diff-value.normal { color: var(--COLOR_SUCCESS); }
+        .height-diff-value.warning { color: var(--COLOR_WARNING); }
+        .height-diff-value.error { color: var(--COLOR_ERROR); }
+
+        /* 卡片 B: 报警 */
+        .alarm-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alarm-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--RADIUS_SMALL);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .alarm-icon.normal { background: rgba(0, 200, 83, 0.12); }
+        .alarm-icon.warning { background: rgba(255, 176, 32, 0.12); }
+        .alarm-icon.error { background: rgba(255, 82, 82, 0.12); }
+
+        .alarm-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .alarm-icon.normal svg { stroke: var(--COLOR_SUCCESS); }
+        .alarm-icon.warning svg { stroke: var(--COLOR_WARNING); }
+        .alarm-icon.error svg { stroke: var(--COLOR_ERROR); }
+
+        .alarm-text {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .alarm-sub {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 12px;
+        }
+
+        /* 卡片 C: 系统状态 */
+        .status-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+
+        .status-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .status-list::-webkit-scrollbar-track {
+            background: var(--COLOR_BG_GLOBAL);
+            border-radius: 2px;
+        }
+
+        .status-list::-webkit-scrollbar-thumb {
+            background: var(--COLOR_ACCENT);
+            border-radius: 2px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--RADIUS_SMALL);
+        }
+
+        .status-item-label {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 12px;
+        }
+
+        .status-item-value {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-item-value svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .blink-warning {
+            animation: blink 1s infinite;
+        }
+
+        /* 卡片 D/E/F: 控制面板按钮 */
+        .control-card {
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+        }
+
+        .control-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: none;
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .control-btn:hover {
+            background: rgba(177, 216, 115, 0.1);
+            color: var(--COLOR_TEXT_PRIMARY);
+        }
+
+        .control-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--COLOR_ACCENT);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* ============================================
+         * 控制面板页面
+         * ============================================ */
+        .control-panel {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 12px 0;
+        }
+
+        .app-btn {
+            width: 220px;
+            height: 140px;
+            background: var(--COLOR_BG_CARD);
+            border-radius: var(--RADIUS_MEDIUM);
+            border: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            color: var(--COLOR_TEXT_SECONDARY);
+        }
+
+        .app-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+        }
+
+        .app-btn-icon {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--RADIUS_MEDIUM);
+            background: linear-gradient(135deg, rgba(177, 216, 115, 0.2), rgba(177, 216, 115, 0.08));
+            transition: all 0.3s ease;
+        }
+
+        .app-btn-icon svg {
+            width: 36px;
+            height: 36px;
+            stroke: var(--COLOR_ACCENT);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .app-btn:hover {
+            box-shadow: 0 8px 30px rgba(177, 216, 115, 0.2);
+            transform: translateY(-4px);
+        }
+
+        .app-btn:hover .app-btn-icon {
+            background: var(--COLOR_ACCENT);
+        }
+
+        .app-btn:hover .app-btn-icon svg {
+            stroke: var(--COLOR_BG_GLOBAL);
+        }
+
+        .app-btn:hover .app-btn-text {
+            color: var(--COLOR_TEXT_PRIMARY);
+        }
+
+        .app-btn:active {
+            transform: translateY(-2px) scale(0.98);
+        }
+
+        .app-btn-text {
+            font-size: 16px;
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        /* ============================================
+         * 设置面板
+         * ============================================ */
+        .settings-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .settings-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .settings-panel::-webkit-scrollbar-track {
+            background: var(--COLOR_BG_GLOBAL);
+            border-radius: 2px;
+        }
+
+        .settings-panel::-webkit-scrollbar-thumb {
+            background: var(--COLOR_ACCENT);
+            border-radius: 2px;
+        }
+
+        .settings-item {
+            background: var(--COLOR_BG_CARD);
+            border-radius: var(--RADIUS_MEDIUM);
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .settings-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .settings-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--RADIUS_SMALL);
+            background: rgba(177, 216, 115, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--COLOR_ACCENT);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .settings-label {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .settings-value {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+        }
+
+        .dropdown {
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            padding: 8px 14px;
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            min-width: 110px;
+        }
+
+        .dropdown:focus {
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .settings-btn {
+            padding: 8px 20px;
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            border: none;
+            border-radius: var(--RADIUS_MEDIUM);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(177, 216, 115, 0.2);
+        }
+
+        .settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(177, 216, 115, 0.3);
+        }
+
+        /* ============================================
+         * 触控键盘 (模拟 LVGL lv_keyboard)
+         * ============================================ */
+        .touch-keyboard {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1e;
+            border-top: 1px solid var(--COLOR_BORDER);
+            padding: 8px;
+            z-index: 50;
+            display: none;
+            animation: keyboardSlideUp 0.2s ease;
+        }
+
+        .touch-keyboard.show {
+            display: block;
+        }
+
+        @keyframes keyboardSlideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .kb-display {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_ACCENT);
+            font-size: 20px;
+            font-weight: 600;
+            text-align: right;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            min-height: 42px;
+        }
+
+        .kb-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            justify-content: center;
+        }
+
+        .kb-key {
+            flex: 1;
+            max-width: 72px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .kb-key:active {
+            background: rgba(177, 216, 115, 0.2);
+            transform: scale(0.95);
+        }
+
+        .kb-key.kb-fn {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 14px;
+        }
+
+        .kb-key.kb-confirm {
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            font-weight: 700;
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .kb-key.kb-close-key {
+            background: rgba(255, 82, 82, 0.15);
+            color: var(--COLOR_ERROR);
+        }
+
+        .kb-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            margin-bottom: 6px;
+        }
+
+        .kb-toolbar-title {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .kb-toolbar-btn {
+            background: none;
+            border: none;
+            color: var(--COLOR_ACCENT);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        /* ============================================
+         * 管理员管理表格
+         * ============================================ */
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .admin-table thead th {
+            background: rgba(177, 216, 115, 0.08);
+            color: var(--COLOR_ACCENT);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--COLOR_BORDER);
+        }
+
+        .admin-table tbody td {
+            padding: 10px 14px;
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .admin-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .admin-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(177, 216, 115, 0.12);
+            color: var(--COLOR_ACCENT);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .admin-delete-btn {
+            background: rgba(255, 82, 82, 0.12);
+            border: none;
+            color: var(--COLOR_ERROR);
+            padding: 4px 10px;
+            border-radius: var(--RADIUS_SMALL);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .admin-delete-btn:hover {
+            background: rgba(255, 82, 82, 0.25);
+        }
+
+        .admin-delete-btn.admin-primary {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* ============================================
+         * 控制值输入弹窗
+         * ============================================ */
+        .ctrl-dialog-value {
+            padding: 16px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_ACCENT);
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 2px;
+            margin: 10px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ctrl-dialog-unit {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 14px;
+            margin-left: 4px;
+            letter-spacing: 0;
+            font-weight: 400;
+        }
+
+        /* ============================================
+         * 弹窗内触控键盘
+         * ============================================ */
+        .ctrl-kb {
+            margin-top: 8px;
+        }
+
+        .ctrl-kb-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            justify-content: center;
+        }
+
+        .ctrl-kb-key {
+            flex: 1;
+            max-width: 72px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-kb-key:active {
+            background: rgba(177, 216, 115, 0.2);
+            transform: scale(0.95);
+        }
+
+        .ctrl-kb-key.kb-fn {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+        }
+
+        .ctrl-kb-key.kb-confirm {
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            font-weight: 700;
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .ctrl-kb-key.kb-close-key {
+            background: rgba(255, 82, 82, 0.15);
+            color: var(--COLOR_ERROR);
+        }
+
+        .admin-add-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 14px 0;
+            flex-wrap: wrap;
+        }
+
+        .admin-add-form input {
+            padding: 8px 14px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 13px;
+            outline: none;
+            width: 160px;
+        }
+
+        .admin-add-form input:focus {
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .admin-add-form input::placeholder {
+            color: var(--COLOR_TEXT_SECONDARY);
+        }
+
+        /* ============================================
+         * 数值输入框 (控制面板用)
+         * ============================================ */
+        .ctrl-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .ctrl-input:focus, .ctrl-input:active {
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .ctrl-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .ctrl-input-label {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .ctrl-apply-btn {
+            margin-top: 8px;
+            padding: 6px 20px;
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            border: none;
+            border-radius: var(--RADIUS_SMALL);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: center;
+            transition: all 0.2s ease;
+        }
+
+        .ctrl-apply-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(177, 216, 115, 0.3);
+        }
+
+        /* ============================================
+         * 设置项可编辑输入
+         * ============================================ */
+        .settings-input {
+            padding: 8px 14px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_ACCENT);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 100px;
+            text-align: center;
+            outline: none;
+        }
+
+        /* ============================================
+         * 上电启动登录全屏覆盖
+         * ============================================ */
+        .boot-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--COLOR_BG_GLOBAL);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            border-radius: var(--RADIUS_MEDIUM);
+        }
+
+        .boot-overlay.show {
+            display: flex;
+        }
+
+        .boot-card {
+            width: 380px;
+            background: var(--COLOR_BG_CARD);
+            border-radius: var(--RADIUS_MEDIUM);
+            padding: 36px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            animation: loginEnter 0.4s ease;
+            text-align: center;
+        }
+
+        @keyframes loginEnter {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .boot-logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 4px;
+        }
+
+        .boot-logo svg {
+            width: 72px;
+            height: 72px;
+        }
+
+        .boot-title {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .boot-subtitle {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+            margin-top: -6px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .login-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .login-label {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--COLOR_BG_GLOBAL);
+            border: 1px solid var(--COLOR_BORDER);
+            border-radius: var(--RADIUS_SMALL);
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .login-input:focus {
+            border-color: var(--COLOR_ACCENT);
+        }
+
+        .login-error {
+            color: var(--COLOR_ERROR);
+            font-size: 12px;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        .login-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .login-btn {
+            flex: 1;
+            height: 40px;
+            border-radius: var(--RADIUS_MEDIUM);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .login-btn.confirm {
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            box-shadow: 0 4px 15px rgba(177, 216, 115, 0.3);
+        }
+
+        .login-btn.cancel {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--COLOR_TEXT_SECONDARY);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+         * Msgbox
+         * ============================================ */
+        .msgbox-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: var(--RADIUS_MEDIUM);
+        }
+
+        .msgbox-overlay.show {
+            display: flex;
+        }
+
+        .msgbox {
+            width: 380px;
+            background: var(--COLOR_BG_CARD);
+            border-radius: var(--RADIUS_MEDIUM);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: msgboxEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes msgboxEnter {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .msgbox-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .msgbox-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--RADIUS_SMALL);
+            background: rgba(255, 176, 32, 0.12);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .msgbox-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--COLOR_WARNING);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .msgbox-title {
+            color: var(--COLOR_TEXT_PRIMARY);
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .msgbox-text {
+            color: var(--COLOR_TEXT_SECONDARY);
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 0 10px;
+        }
+
+        .msgbox-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .msgbox-btn {
+            flex: 1;
+            height: 40px;
+            border-radius: var(--RADIUS_MEDIUM);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .msgbox-btn.confirm {
+            background: var(--COLOR_ACCENT);
+            color: var(--COLOR_BG_GLOBAL);
+            box-shadow: 0 4px 15px rgba(177, 216, 115, 0.3);
+        }
+
+        .msgbox-btn.cancel {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--COLOR_TEXT_SECONDARY);
+        }
+
+        .msgbox-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="screen" id="screen">
+        <!-- 上电启动登录界面 -->
+        <div class="boot-overlay" id="boot_overlay">
+            <div class="boot-card">
+                <div class="boot-logo">
+                    <svg viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="gcGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#E03030"/>
+                                <stop offset="100%" style="stop-color:#C02020"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M52 12 Q82 16 84 48 Q86 80 54 88 Q22 82 20 54 Q18 26 48 18 Q68 14 78 34 Q86 50 74 62 L68 54 Q76 44 70 34 Q62 20 48 24 Q28 30 26 54 Q28 78 54 82 Q78 76 78 48 Q76 22 52 18 Z" fill="url(#gcGrad2)"/>
+                        <path d="M38 38 L68 38 L52 64 L22 64 Z" fill="#242529"/>
+                    </svg>
+                </div>
+                <div class="boot-title" id="boot_title"></div>
+                <div class="boot-subtitle" id="boot_subtitle"></div>
+                <div class="login-form">
+                    <div class="login-input-group">
+                        <span class="login-label" id="boot_user_label"></span>
+                        <input type="text" class="login-input" id="boot_username">
+                    </div>
+                    <div class="login-input-group">
+                        <span class="login-label" id="boot_pass_label"></span>
+                        <input type="password" class="login-input" id="boot_password">
+                    </div>
+                    <span class="login-error" id="boot_error"></span>
+                </div>
+                <div class="login-btns">
+                    <button class="login-btn confirm" id="boot_login_btn" onclick="handle_boot_login()"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 左侧导航栏 -->
+        <div class="sidebar">
+            <button class="nav-btn active" data-page="dashboard" onclick="ui_switch_page('dashboard')">
+                <span class="lvgl-symbol">&#xf015;</span>
+                <span id="nav_dashboard_text"></span>
+            </button>
+            <button class="nav-btn" data-page="control" onclick="ui_switch_page('control')">
+                <span class="lvgl-symbol">&#xf044;</span>
+                <span id="nav_control_text"></span>
+            </button>
+            <button class="nav-btn" data-page="settings" onclick="ui_switch_page('settings')">
+                <span class="lvgl-symbol">&#xf013;</span>
+                <span id="nav_settings_text"></span>
+            </button>
+            <button class="nav-btn" data-page="about" onclick="ui_switch_page('about')">
+                <span class="lvgl-symbol">&#xf128;</span>
+                <span id="nav_about_text"></span>
+            </button>
+        </div>
+
+        <!-- 右侧主内容区 -->
+        <div class="main-content">
+            <!-- 顶部状态栏 -->
+            <div class="top-header">
+                <div class="header-logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 100 100">
+                            <defs>
+                                <linearGradient id="gcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#E03030"/>
+                                    <stop offset="100%" style="stop-color:#C02020"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M52 12 Q82 16 84 48 Q86 80 54 88 Q22 82 20 54 Q18 26 48 18 Q68 14 78 34 Q86 50 74 62 L68 54 Q76 44 70 34 Q62 20 48 24 Q28 30 26 54 Q28 78 54 82 Q78 76 78 48 Q76 22 52 18 Z" fill="url(#gcGrad)"/>
+                            <path d="M38 38 L68 38 L52 64 L22 64 Z" fill="#242529"/>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <span class="logo-brand" id="logo-brand"></span>
+                        <span class="logo-sub" id="logo-sub"></span>
+                    </div>
+                    <div class="model-badge" id="model-badge">OMCN-4.0T</div>
+                </div>
+                <div class="status-tags">
+                    <div class="status-tag">
+                        <span class="status-dot online" id="system_dot"></span>
+                        <span class="status-text" id="header_status_text"></span>
+                    </div>
+                    <div class="status-tag">
+                        <span class="status-dot warning" id="link_dot"></span>
+                        <span class="status-text" id="header_link_text"></span>
+                    </div>
+                    <div class="clock" id="clock">--:--:--</div>
+                </div>
+            </div>
+
+            <!-- 页面容器 -->
+            <div class="page-container">
+                <!-- 数据看板页面 -->
+                <div class="page active" id="page_dashboard">
+                    <div class="dashboard-grid">
+                        <!-- 卡片 A: 立柱高度 (跨2列, 行0) -->
+                        <div class="card card-a">
+                            <div class="card-title">
+                                <span id="card_a_title"></span>
+                            </div>
+                            <div class="height-values">
+                                <div class="height-item">
+                                    <div style="color: var(--COLOR_TEXT_SECONDARY); font-size: 14px; margin-bottom: 6px;" id="pillar1_label"></div>
+                                    <div class="height-value" id="h1_value">--</div>
+                                    <div class="height-unit">mm</div>
+                                </div>
+                                <div class="height-item">
+                                    <div style="color: var(--COLOR_TEXT_SECONDARY); font-size: 14px; margin-bottom: 6px;" id="pillar2_label"></div>
+                                    <div class="height-value" id="h2_value">--</div>
+                                    <div class="height-unit">mm</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 卡片 B: 高度差值 (1列, 行0) -->
+                        <div class="card card-b">
+                            <div class="card-title">
+                                <span id="card_b_title"></span>
+                                <span class="card-badge" id="diff_badge"></span>
+                            </div>
+                            <div class="alarm-content">
+                                <div class="height-diff-value" id="height_diff_value">--</div>
+                                <div class="height-unit" id="diff_unit">mm</div>
+                            </div>
+                        </div>
+
+                        <!-- 卡片 C: 报警+状态 (1列, 跨2行) -->
+                        <div class="card card-c">
+                            <div class="card-title" id="card_c_title"></div>
+                            <div id="alarm_indicator" style="text-align:center;padding:8px 0;margin-bottom:8px;"></div>
+                            <div class="status-list" id="status_list"></div>
+                        </div>
+
+                        <!-- 卡片 D: 手动控制 (1列, 行1) -->
+                        <div class="card card-d">
+                            <div class="card-title" id="card_d_title"></div>
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;" id="card_d_content"></div>
+                        </div>
+
+                        <!-- 卡片 E: 参数设置 (1列, 行1) -->
+                        <div class="card card-e">
+                            <div class="card-title" id="card_e_title"></div>
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;" id="card_e_content"></div>
+                        </div>
+
+                        <!-- 卡片 F: 快捷面板 (1列, 行1) -->
+                        <div class="card card-f">
+                            <div class="card-title" id="card_f_title"></div>
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;" id="card_f_content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 控制面板页面 -->
+                <div class="page" id="page_control">
+                    <div class="control-panel" id="control_panel"></div>
+                </div>
+
+                <!-- 设置面板页面 -->
+                <div class="page" id="page_settings">
+                    <div class="settings-panel" id="settings_panel"></div>
+                </div>
+
+                <!-- 关于页面 -->
+                <div class="page" id="page_about">
+                    <div style="flex:1; overflow-y: auto; padding: 8px 0;">
+                        <div style="text-align: center; padding: 20px 0 10px;">
+                            <div style="color: var(--COLOR_ACCENT); font-size: 24px; font-weight: 700; margin-bottom: 4px;" id="about_title"></div>
+                            <div style="color: var(--COLOR_TEXT_SECONDARY); font-size: 14px;" id="about_model"></div>
+                        </div>
+                        <div style="padding: 0 20px;">
+                            <div class="card" style="margin-bottom: 16px;">
+                                <div class="card-title" id="about_desc_title"></div>
+                                <div style="color: var(--COLOR_TEXT_PRIMARY); font-size: 13px; line-height: 1.8; padding: 0 4px;" id="about_desc"></div>
+                            </div>
+                            <div class="card" style="margin-bottom: 16px;">
+                                <div class="card-title" id="about_features_title"></div>
+                                <div id="about_features" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 4px;"></div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding: 16px; color: var(--COLOR_TEXT_SECONDARY); font-size: 12px;" id="about_version"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Msgbox -->
+        <div class="msgbox-overlay" id="msgbox_overlay">
+            <div class="msgbox">
+                <div class="msgbox-header">
+                    <div class="msgbox-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <div class="msgbox-title" id="msgbox_title"></div>
+                </div>
+                <div class="msgbox-text" id="msgbox_text"></div>
+                <div class="msgbox-btns">
+                    <button class="msgbox-btn cancel" id="msgbox_cancel_btn" onclick="msgbox_close()"></button>
+                    <button class="msgbox-btn confirm" id="msgbox_confirm_btn" onclick="msgbox_confirm()"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 触控键盘 (模拟 LVGL lv_keyboard) -->
+        <div class="touch-keyboard" id="touch_keyboard">
+            <div class="kb-toolbar">
+                <span class="kb-toolbar-title" id="kb_toolbar_title">数值输入</span>
+                <button class="kb-toolbar-btn" onclick="kb_close()">关闭</button>
+            </div>
+            <div class="kb-display" id="kb_display">0</div>
+            <div id="kb_keys_container"></div>
+        </div>
+
+        <!-- 管理员管理弹窗 -->
+        <div class="msgbox-overlay" id="admin_overlay" style="background: rgba(0,0,0,0.75);">
+            <div class="msgbox" style="width: 460px; max-height: 80vh; overflow-y: auto;">
+                <div class="msgbox-header">
+                    <div class="msgbox-icon" style="background: rgba(177,216,115,0.12); border-radius: 8px;">
+                        <span class="lvgl-symbol" style="color: var(--COLOR_ACCENT); font-size: 20px;">&#xf0c0;</span>
+                    </div>
+                    <div class="msgbox-title" id="admin_dialog_title"></div>
+                </div>
+                <div id="admin_dialog_content" style="flex: 1;"></div>
+                <div style="display: flex; justify-content: flex-end; padding-top: 8px;">
+                    <button class="settings-btn" onclick="admin_dialog_close()">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制值输入弹窗 -->
+        <div class="msgbox-overlay" id="ctrl_overlay" style="background: rgba(0,0,0,0.75);">
+            <div class="msgbox" style="width: 380px;">
+                <div class="msgbox-header">
+                    <div class="msgbox-icon" style="background: rgba(177,216,115,0.12); border-radius: 8px;">
+                        <span class="lvgl-symbol" style="color: var(--COLOR_ACCENT); font-size: 20px;">&#xf044;</span>
+                    </div>
+                    <div class="msgbox-title" id="ctrl_dialog_title"></div>
+                </div>
+                <div class="ctrl-dialog-value" id="ctrl_dialog_value">0</div>
+                <div id="ctrl_dialog_keyboard"></div>
+                <div style="display: flex; gap: 10px; padding-top: 8px;">
+                    <button class="msgbox-btn cancel" id="ctrl_dialog_cancel" style="flex:1;" onclick="ctrl_dialog_close()"></button>
+                    <button class="msgbox-btn confirm" id="ctrl_dialog_confirm" style="flex:1;" onclick="ctrl_dialog_apply()"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 开关切换弹窗 -->
+        <div class="msgbox-overlay" id="toggle_overlay" style="background: rgba(0,0,0,0.75);">
+            <div class="msgbox" style="width: 300px;">
+                <div class="msgbox-header">
+                    <div class="msgbox-icon" style="background: rgba(177,216,115,0.12); border-radius: 8px;">
+                        <span class="lvgl-symbol" style="color: var(--COLOR_ACCENT); font-size: 20px;">&#xf0e7;</span>
+                    </div>
+                    <div class="msgbox-title" id="toggle_dialog_title"></div>
+                </div>
+                <div style="display: flex; gap: 12px; padding: 12px 0;">
+                    <button class="toggle-btn" id="toggle_btn_on" onclick="toggle_select('on')" style="flex:1; height: 52px; border-radius: var(--RADIUS_MEDIUM); border: 2px solid var(--COLOR_SUCCESS); background: rgba(0,200,83,0.1); color: var(--COLOR_SUCCESS); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">ON</button>
+                    <button class="toggle-btn" id="toggle_btn_off" onclick="toggle_select('off')" style="flex:1; height: 52px; border-radius: var(--RADIUS_MEDIUM); border: 2px solid var(--COLOR_ERROR); background: rgba(255,82,82,0.1); color: var(--COLOR_ERROR); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: flex-end; padding-top: 8px;">
+                    <button class="msgbox-btn cancel" style="width: auto; padding: 0 24px;" onclick="toggle_dialog_close()"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ============================================
+         * 中英文语言字典
+         * ============================================ */
+        let current_language = 'zh';
+        const i18n = {
+            zh: {
+                // Nav
+                nav_dashboard: '数据看板',
+                nav_control: '控制面板',
+                nav_settings: '系统设置',
+                nav_about: '关于',
+                // Header
+                header_system_normal: '系统正常',
+                header_linked: '联机中',
+                // Logo
+                logo_brand: '高昌机电',
+                logo_sub: 'GAOCHANG',
+                // Cards
+                card_pillar1: '立柱 1',
+                card_pillar2: '立柱 2',
+                card_pillar_height: '立柱高度',
+                card_height_diff: '高度差',
+                card_alarm_status: '报警 · 状态',
+                card_manual: '手动控制',
+                card_param: '参数设置',
+                card_quick: '快捷面板',
+                // Status
+                status_system: '系统状态',
+                status_link: '联机状态',
+                status_error_code: '异常代码',
+                status_run_mode: '运行模式',
+                status_work_count: '今日作业',
+                status_normal: '运行正常',
+                status_error: '异常报警',
+                status_linked: '已联机',
+                status_unlinked: '未联机',
+                status_no_error: '无异常',
+                status_standby: '待机',
+                status_running: '运行中',
+                status_times: '次',
+                status_ok: '正常',
+                status_high: '偏高',
+                status_over: '超限',
+                status_reach: '达标',
+                status_need_level: '需调平',
+                status_alarm_none: '无报警',
+                status_alarm_active: '有报警',
+                // Control
+                ctrl_min_clear: '最低位调零',
+                ctrl_max_height: '最大高度',
+                ctrl_id_set: 'ID设置',
+                ctrl_start_height: '起步高度',
+                ctrl_link_set: '联机设置',
+                ctrl_auto_level: '一键调平',
+                // Settings
+                settings_language: '系统语言',
+                settings_version: '系统版本',
+                settings_serial: '设备序列号',
+                settings_mac: 'MAC地址',
+                settings_admin_login: '管理员登录',
+                settings_add_admin: '添加管理员',
+                settings_admin_manage: '管理员管理',
+                lang_zh: '简体中文',
+                lang_en: 'English',
+                btn_login: '登录',
+                btn_add: '添加',
+                // Msgbox
+                msgbox_title: '确认操作',
+                msgbox_cancel: '取消',
+                msgbox_confirm: '确认执行',
+                // Boot
+                boot_title: '欢迎使用',
+                boot_subtitle: '请登录以继续使用',
+                login_username: '用户名',
+                login_password: '密码',
+                login_placeholder_user: '请输入用户名',
+                login_placeholder_pass: '请输入密码',
+                login_error: '用户名或密码错误',
+                login_btn: '登录',
+                // About page
+                about_title: '丝杆举升机系统',
+                about_model: '型号: OMCN-4.0T',
+                about_desc_title: '产品简介',
+                about_desc: '本系统采用高精度丝杆传动方案，通过双立柱同步举升设计，实现车辆底盘的平稳升降。配备实时高度监测、自动调平、过载保护等功能，适用于汽车维修车间等专业场景。',
+                about_features_title: '核心功能',
+                about_f1: '双立柱同步举升',
+                about_f2: '实时高度监测',
+                about_f3: '自动调平控制',
+                about_f4: '过载安全保护',
+                about_f5: '联机协同操作',
+                about_f6: '参数灵活配置',
+                about_version: '固件版本 V1.2.0 | 序列号 GC-2024-00128',
+                // Admin management
+                admin_username: '用户名',
+                admin_role: '角色',
+                admin_action: '操作',
+                admin_delete: '删除',
+                admin_delete_confirm: '确认删除管理员',
+                admin_cannot_delete: '无法删除主管理员',
+                admin_input_user: '输入用户名',
+                admin_input_pass: '输入密码',
+                admin_add_success: '添加成功',
+                admin_exists: '用户名已存在',
+                // Keyboard
+                kb_title: '数值输入',
+                kb_close: '关闭',
+                kb_apply: '应用',
+                // Control panel
+                ctrl_apply: '应用',
+                ctrl_set_success: '设置成功',
+                link_on: '开启',
+                link_off: '关闭',
+            },
+            en: {
+                nav_dashboard: 'Dashboard',
+                nav_control: 'Control',
+                nav_settings: 'Settings',
+                nav_about: 'About',
+                header_system_normal: 'System OK',
+                header_linked: 'Connected',
+                logo_brand: 'GAOCHANG',
+                logo_sub: '',
+                card_pillar1: 'Pillar 1',
+                card_pillar2: 'Pillar 2',
+                card_pillar_height: 'Pillar Height',
+                card_height_diff: 'Height Diff',
+                card_alarm_status: 'Alarm · Status',
+                card_manual: 'Manual Ctrl',
+                card_param: 'Parameters',
+                card_quick: 'Quick Panel',
+                status_system: 'System Status',
+                status_link: 'Connection',
+                status_error_code: 'Error Code',
+                status_run_mode: 'Run Mode',
+                status_work_count: 'Today Jobs',
+                status_normal: 'Normal',
+                status_error: 'Error',
+                status_linked: 'Linked',
+                status_unlinked: 'Unlinked',
+                status_no_error: 'No Error',
+                status_standby: 'Standby',
+                status_running: 'Running',
+                status_times: 'times',
+                status_ok: 'OK',
+                status_high: 'High',
+                status_over: 'Over',
+                status_reach: 'OK',
+                status_need_level: 'Need Level',
+                status_alarm_none: 'No Alarm',
+                status_alarm_active: 'Alarm Active',
+                ctrl_min_clear: 'Min Clear',
+                ctrl_max_height: 'Max Height',
+                ctrl_id_set: 'ID Setup',
+                ctrl_start_height: 'Start Height',
+                ctrl_link_set: 'Link Setup',
+                ctrl_auto_level: 'Auto Level',
+                settings_language: 'Language',
+                settings_version: 'Version',
+                settings_serial: 'Serial No.',
+                settings_mac: 'MAC Address',
+                settings_admin_login: 'Admin Login',
+                settings_add_admin: 'Add Admin',
+                settings_admin_manage: 'Admin Management',
+                lang_zh: '简体中文',
+                lang_en: 'English',
+                btn_login: 'Login',
+                btn_add: 'Add',
+                msgbox_title: 'Confirm',
+                msgbox_cancel: 'Cancel',
+                msgbox_confirm: 'Confirm',
+                boot_title: 'Welcome',
+                boot_subtitle: 'Please login to continue',
+                login_username: 'Username',
+                login_password: 'Password',
+                login_placeholder_user: 'Enter username',
+                login_placeholder_pass: 'Enter password',
+                login_error: 'Invalid username or password',
+                login_btn: 'Login',
+                about_title: 'Screw Lift System',
+                about_model: 'Model: OMCN-4.0T',
+                about_desc_title: 'Product Overview',
+                about_desc: 'This system adopts a high-precision screw drive solution with dual-pillar synchronous lifting design for smooth vehicle chassis elevation. Equipped with real-time height monitoring, auto-leveling, overload protection and other functions, suitable for professional scenarios such as automotive maintenance workshops.',
+                about_features_title: 'Key Features',
+                about_f1: 'Dual-Pillar Synchronous Lift',
+                about_f2: 'Real-Time Height Monitor',
+                about_f3: 'Auto-Leveling Control',
+                about_f4: 'Overload Safety Protection',
+                about_f5: 'Linked Cooperative Operation',
+                about_f6: 'Flexible Parameter Config',
+                about_version: 'Firmware V1.2.0 | Serial GC-2024-00128',
+                admin_username: 'Username',
+                admin_role: 'Role',
+                admin_action: 'Action',
+                admin_delete: 'Delete',
+                admin_delete_confirm: 'Delete admin',
+                admin_cannot_delete: 'Cannot delete primary admin',
+                admin_input_user: 'Enter username',
+                admin_input_pass: 'Enter password',
+                admin_add_success: 'Added successfully',
+                admin_exists: 'Username already exists',
+                kb_title: 'Numeric Input',
+                kb_close: 'Close',
+                kb_apply: 'Apply',
+                ctrl_apply: 'Apply',
+                ctrl_set_success: 'Set successfully',
+            }
+        };
+
+        function t(key) {
+            return i18n[current_language][key] || key;
+        }
+
+        /* ============================================
+         * 模拟数据
+         * ============================================ */
+        let sim_data = {
+            H1: 1856,
+            H2: 1842,
+            height_diff: 14,
+            pillar1_percent: 75,
+            pillar2_percent: 72,
+            system_status: 'normal',
+            link_status: 'linked',
+            error_code: 0,
+            run_mode: '待机',
+            work_count: 128,
+            brightness: 80
+        };
+
+        let is_boot_logged_in = false;
+        let current_page = 'dashboard';
+        let is_animating = false;
+        let msgbox_callback = null;
+        let is_admin_logged_in = false;
+        let admin_list = [
+            { username: 'admin', role: '主管理员', cannot_delete: true }
+        ];
+        let kb_callback = null; // { input, onApply }
+        let kb_current_value = '';
+
+        /* ============================================
+         * 时钟
+         * ============================================ */
+        function update_time() {
+            const now = new Date();
+            document.getElementById('clock').textContent =
+                `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        }
+
+        /* ============================================
+         * 数据更新
+         * ============================================ */
+        function update_sim_data() {
+            sim_data.H1 = 1800 + Math.floor(Math.random() * 100);
+            sim_data.H2 = 1800 + Math.floor(Math.random() * 100);
+            sim_data.height_diff = Math.abs(sim_data.H1 - sim_data.H2);
+            sim_data.pillar1_percent = 60 + Math.floor(Math.random() * 35);
+            sim_data.pillar2_percent = 60 + Math.floor(Math.random() * 35);
+
+            if (Math.random() < 0.05) {
+                sim_data.error_code = Math.floor(Math.random() * 100) + 1;
+                sim_data.system_status = 'error';
+            } else {
+                sim_data.error_code = 0;
+                sim_data.system_status = 'normal';
+            }
+
+            render_dashboard();
+            update_header_status();
+        }
+
+        /* ============================================
+         * 语言切换
+         * ============================================ */
+        function handle_language_change(lang) {
+            current_language = lang;
+            ui_apply_language();
+            render_dashboard();
+            render_control_panel();
+            render_settings_panel();
+        }
+
+        function ui_apply_language() {
+            document.getElementById('logo-brand').textContent = t('logo_brand');
+            document.getElementById('logo-sub').textContent = t('logo_sub');
+            document.getElementById('nav_dashboard_text').textContent = t('nav_dashboard');
+            document.getElementById('nav_control_text').textContent = t('nav_control');
+            document.getElementById('nav_settings_text').textContent = t('nav_settings');
+            document.getElementById('nav_about_text').textContent = t('nav_about');
+            document.getElementById('msgbox_cancel_btn').textContent = t('msgbox_cancel');
+            document.getElementById('msgbox_confirm_btn').textContent = t('msgbox_confirm');
+
+            // About page
+            const about_title = document.getElementById('about_title');
+            if (about_title) about_title.textContent = t('about_title');
+            const about_model = document.getElementById('about_model');
+            if (about_model) about_model.textContent = t('about_model');
+            const about_desc_title = document.getElementById('about_desc_title');
+            if (about_desc_title) about_desc_title.textContent = t('about_desc_title');
+            const about_desc = document.getElementById('about_desc');
+            if (about_desc) about_desc.textContent = t('about_desc');
+            const about_features_title = document.getElementById('about_features_title');
+            if (about_features_title) about_features_title.textContent = t('about_features_title');
+            const about_version = document.getElementById('about_version');
+            if (about_version) about_version.textContent = t('about_version');
+            render_about_features();
+
+            document.documentElement.lang = current_language === 'zh' ? 'zh-CN' : 'en';
+        }
+
+        function render_about_features() {
+            const el = document.getElementById('about_features');
+            if (!el) return;
+            const features = [
+                { key: 'about_f1', icon: '<path d="M12 19V5m-7 7l7-7 7 7"/>' },
+                { key: 'about_f2', icon: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>' },
+                { key: 'about_f3', icon: '<path d="M4 6h16M4 12h16M4 18h7"/>' },
+                { key: 'about_f4', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+                { key: 'about_f5', icon: '<path d="M10 13a5 5 0 007 0"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4"/>' },
+                { key: 'about_f6', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>' },
+            ];
+            let html = '';
+            features.forEach(f => {
+                html += `
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:var(--RADIUS_SMALL);">
+                        <div style="width:32px;height:32px;border-radius:var(--RADIUS_SMALL);background:rgba(177,216,115,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--COLOR_ACCENT)" fill="none" stroke-width="2">${f.icon}</svg>
+                        </div>
+                        <span style="color:var(--COLOR_TEXT_PRIMARY);font-size:13px;">${t(f.key)}</span>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        }
+
+        function update_header_status() {
+            document.getElementById('header_status_text').textContent =
+                sim_data.system_status === 'normal' ? t('header_system_normal') : t('status_error');
+            document.getElementById('header_link_text').textContent =
+                sim_data.link_status === 'linked' ? t('header_linked') : t('status_unlinked');
+
+            const system_dot = document.getElementById('system_dot');
+            system_dot.className = `status-dot ${sim_data.system_status === 'normal' ? 'online' : 'error'}`;
+
+            const link_dot = document.getElementById('link_dot');
+            link_dot.className = `status-dot ${sim_data.link_status === 'linked' ? 'online' : 'warning'}`;
+        }
+
+        /* ============================================
+         * 页面切换
+         * ============================================ */
+        function ui_switch_page(page_name) {
+            if (page_name === current_page || is_animating) return;
+            is_animating = true;
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.page === page_name);
+            });
+
+            const old_page = document.getElementById('page_' + current_page);
+            const new_page = document.getElementById('page_' + page_name);
+
+            if (old_page) {
+                old_page.classList.remove('active');
+                old_page.classList.add('leaving');
+            }
+
+            if (new_page) {
+                new_page.classList.add('active');
+            }
+
+            current_page = page_name;
+
+            setTimeout(() => {
+                if (old_page) old_page.classList.remove('leaving');
+                is_animating = false;
+            }, 350);
+        }
+
+        /* ============================================
+         * 渲染数据看板
+         * ============================================ */
+        function render_dashboard() {
+            // 卡片标题
+            document.getElementById('card_a_title').textContent = t('card_pillar_height');
+            document.getElementById('card_b_title').textContent = t('card_height_diff');
+            document.getElementById('card_c_title').textContent = t('card_alarm_status');
+            document.getElementById('card_d_title').textContent = t('card_manual');
+            document.getElementById('card_e_title').textContent = t('card_param');
+            document.getElementById('card_f_title').textContent = t('card_quick');
+
+            // 立柱高度 (卡片 A)
+            document.getElementById('pillar1_label').textContent = t('card_pillar1');
+            document.getElementById('pillar2_label').textContent = t('card_pillar2');
+            document.getElementById('h1_value').textContent = sim_data.H1;
+            document.getElementById('h2_value').textContent = sim_data.H2;
+
+            // 高度差值 (卡片 B)
+            document.getElementById('height_diff_value').textContent = sim_data.height_diff;
+            const diff_status = get_diff_status(sim_data.height_diff);
+            const diff_el = document.getElementById('height_diff_value');
+            diff_el.className = 'height-diff-value ' + diff_status;
+
+            const diff_badge = document.getElementById('diff_badge');
+            if (diff_status === 'normal') {
+                diff_badge.className = 'card-badge normal';
+                diff_badge.textContent = t('status_reach');
+            } else if (diff_status === 'warning') {
+                diff_badge.className = 'card-badge warning';
+                diff_badge.textContent = t('status_need_level');
+            } else {
+                diff_badge.className = 'card-badge error';
+                diff_badge.textContent = t('status_over');
+            }
+
+            // 报警指示器 (卡片 C 顶部)
+            const alarm_el = document.getElementById('alarm_indicator');
+            if (sim_data.error_code === 0) {
+                alarm_el.innerHTML = `
+                    <div class="alarm-icon normal" style="margin:0 auto;">
+                        <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div style="color: var(--COLOR_SUCCESS); font-size: 13px; font-weight: 600; margin-top: 4px;">${t('status_alarm_none')}</div>
+                `;
+            } else {
+                alarm_el.innerHTML = `
+                    <div class="alarm-icon error" style="margin:0 auto;">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6m0-6l6 6"/></svg>
+                    </div>
+                    <div style="color: var(--COLOR_ERROR); font-size: 14px; font-weight: 700; margin-top: 4px;">E${sim_data.error_code}</div>
+                    <div style="color: var(--COLOR_TEXT_SECONDARY); font-size: 11px;">${t('status_error')}</div>
+                `;
+            }
+
+            // 系统状态列表 (卡片 C 下方, 删除异常代码)
+            const system_color = sim_data.system_status === 'normal' ? 'var(--COLOR_SUCCESS)' : 'var(--COLOR_ERROR)';
+            const link_color = sim_data.link_status === 'linked' ? 'var(--COLOR_SUCCESS)' : 'var(--COLOR_WARNING)';
+            const system_icon = sim_data.system_status === 'normal' ?
+                '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>' :
+                '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6m0-6l6 6"/></svg>';
+            const link_icon = sim_data.link_status === 'linked' ?
+                '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0"/><circle cx="12" cy="12" r="3"/></svg>' :
+                '<svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y2="2" x1="12" y2="12"/></svg>';
+
+            document.getElementById('status_list').innerHTML = `
+                <div class="status-item">
+                    <span class="status-item-label">${t('status_system')}</span>
+                    <span class="status-item-value" style="color: ${system_color}">
+                        ${system_icon}
+                        ${sim_data.system_status === 'normal' ? t('status_normal') : t('status_error')}
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="status-item-label">${t('status_link')}</span>
+                    <span class="status-item-value" style="color: ${link_color}">
+                        ${link_icon}
+                        ${sim_data.link_status === 'linked' ? t('status_linked') : t('status_unlinked')}
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="status-item-label">${t('status_run_mode')}</span>
+                    <span class="status-item-value" style="color: var(--COLOR_ACCENT)">${sim_data.run_mode}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-item-label">${t('status_work_count')}</span>
+                    <span class="status-item-value" style="color: var(--COLOR_TEXT_PRIMARY)">${sim_data.work_count} ${t('status_times')}</span>
+                </div>
+            `;
+
+            // 卡片 D: 手动控制 (快捷按钮)
+            document.getElementById('card_d_content').innerHTML = `
+                <button class="control-btn" onclick="handle_ctrl_input('min_clear', '${t('ctrl_min_clear')}', '0', 'mm', false)">
+                    <svg viewBox="0 0 24 24"><path d="M3 12h4m3 0h4m3 0h4"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                    ${t('ctrl_min_clear')}
+                </button>
+                <button class="control-btn" onclick="handle_ctrl_input('max_height', '${t('ctrl_max_height')}', '2200', 'mm', false)">
+                    <svg viewBox="0 0 24 24"><path d="M12 19V5m-7 7l7-7 7 7"/></svg>
+                    ${t('ctrl_max_height')}
+                </button>
+            `;
+
+            // 卡片 E: 参数设置
+            document.getElementById('card_e_content').innerHTML = `
+                <button class="control-btn" onclick="handle_ctrl_input('id_set', '${t('ctrl_id_set')}', '1', '', false)">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+                    ${t('ctrl_id_set')}
+                </button>
+                <button class="control-btn" onclick="handle_ctrl_input('start_height', '${t('ctrl_start_height')}', '200', 'mm', false)">
+                    <svg viewBox="0 0 24 24"><path d="M4 15h16M4 15l4-4m-4 4l4 4m8-8l4 4m-4-4l4-4"/></svg>
+                    ${t('ctrl_start_height')}
+                </button>
+            `;
+
+            // 卡片 F: 快捷面板
+            document.getElementById('card_f_content').innerHTML = `
+                <button class="control-btn" onclick="handle_toggle_input('link_set', '${t('ctrl_link_set')}')">
+                    <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4"/></svg>
+                    ${t('ctrl_link_set')}
+                </button>
+                <button class="control-btn" onclick="msgbox_show('${t('ctrl_auto_level')}', 'auto_level')">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+                    ${t('ctrl_auto_level')}
+                </button>
+            `;
+        }
+
+        /* ============================================
+         * 渲染控制面板
+         * ============================================ */
+        function render_control_panel() {
+            const buttons = [
+                { icon: '<svg viewBox="0 0 24 24"><path d="M3 12h4m3 0h4m3 0h4"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>', text: t('ctrl_min_clear'), action: 'min_clear', value: '0', unit: 'mm' },
+                { icon: '<svg viewBox="0 0 24 24"><path d="M12 19V5m-7 7l7-7 7 7"/></svg>', text: t('ctrl_max_height'), action: 'max_height', value: '2200', unit: 'mm' },
+                { icon: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>', text: t('ctrl_id_set'), action: 'id_set', value: '1', unit: '' },
+                { icon: '<svg viewBox="0 0 24 24"><path d="M4 15h16M4 15l4-4m-4 4l4 4m8-8l4 4m-4-4l4-4"/></svg>', text: t('ctrl_start_height'), action: 'start_height', value: '200', unit: 'mm' },
+                { icon: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4"/></svg>', text: t('ctrl_link_set'), action: 'link_set', toggle: true },
+                { icon: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>', text: t('ctrl_auto_level'), action: 'auto_level', value: '--', unit: '', need_confirm: true }
+            ];
+
+            let html = '';
+            buttons.forEach(btn => {
+                if (btn.toggle) {
+                    html += `
+                        <button class="app-btn" onclick="handle_toggle_input('${btn.action}', '${btn.text}')">
+                            <div class="app-btn-icon">${btn.icon}</div>
+                            <div class="app-btn-text">${btn.text}</div>
+                        </button>
+                    `;
+                } else {
+                    html += `
+                        <button class="app-btn" onclick="handle_ctrl_input('${btn.action}', '${btn.text}', '${btn.value}', '${btn.unit}', ${btn.need_confirm || false})">
+                            <div class="app-btn-icon">${btn.icon}</div>
+                            <div class="app-btn-text">${btn.text}</div>
+                        </button>
+                    `;
+                }
+            });
+            document.getElementById('control_panel').innerHTML = html;
+        }
+
+        /* ============================================
+         * 渲染设置面板
+         * ============================================ */
+        function render_settings_panel() {
+            const settings = [
+                {
+                    icon: '<svg viewBox="0 0 24 24"><path d="M5 8l6 6m0 0l6-6m-6 6V4"/><path d="M3 21h18"/></svg>',
+                    label: t('settings_language'),
+                    control: `<select class="dropdown" onchange="handle_language_change(this.value)">
+                        <option value="zh" ${current_language === 'zh' ? 'selected' : ''}>${t('lang_zh')}</option>
+                        <option value="en" ${current_language === 'en' ? 'selected' : ''}>${t('lang_en')}</option>
+                    </select>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m-8-9H3m18 0h-1m-2.636-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707M17.657 17.657l.707.707"/></svg>',
+                    label: '屏幕亮度',
+                    control: `<span class="settings-input" id="set_brightness" onclick="kb_open('屏幕亮度', '${sim_data.brightness}', function(v){ sim_data.brightness = parseInt(v)||80; document.getElementById('set_brightness').textContent = sim_data.brightness + '%'; })">${sim_data.brightness}%</span>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+                    label: '报警阈值(mm)',
+                    control: `<span class="settings-input" id="set_alarm_threshold" onclick="kb_open('报警阈值', '20', function(v){ document.getElementById('set_alarm_threshold').textContent = v; })">20</span>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>',
+                    label: t('settings_version'),
+                    control: `<span class="settings-value">V1.2.0</span>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>',
+                    label: t('settings_serial'),
+                    control: `<span class="settings-value">GC-2024-00128</span>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+                    label: t('settings_mac'),
+                    control: `<span class="settings-value">A1:B2:C3:D4:E5:F6</span>`
+                },
+                {
+                    icon: '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+                    label: t('settings_admin_manage'),
+                    control: `<button class="settings-btn" onclick="handle_add_admin()">${t('btn_add')}</button>`
+                }
+            ];
+
+            let html = '';
+            settings.forEach(item => {
+                html += `
+                    <div class="settings-item">
+                        <div class="settings-left">
+                            <div class="settings-icon">${item.icon}</div>
+                            <span class="settings-label">${item.label}</span>
+                        </div>
+                        <div>${item.control}</div>
+                    </div>
+                `;
+            });
+            document.getElementById('settings_panel').innerHTML = html;
+        }
+
+        /* ============================================
+         * 控制按钮处理
+         * ============================================ */
+        function handle_control(action) {
+            console.log(`执行: ${action}`);
+        }
+
+        // 存储控制按钮当前值
+        let ctrl_dialog_callback = null;
+        let ctrl_dialog_unit = '';
+
+        function handle_ctrl_input(action, text, value, unit, need_confirm) {
+            if (need_confirm) {
+                msgbox_show(text, action);
+                return;
+            }
+            ctrl_dialog_callback = action;
+            ctrl_dialog_unit = unit;
+            document.getElementById('ctrl_dialog_title').textContent = text;
+            document.getElementById('ctrl_dialog_value').innerHTML = `${value}<span class="ctrl-dialog-unit">${unit}</span>`;
+            document.getElementById('ctrl_dialog_cancel').textContent = t('msgbox_cancel');
+            document.getElementById('ctrl_dialog_confirm').textContent = t('ctrl_apply');
+
+            // 渲染弹窗内的触控键盘
+            ctrl_kb_render(value);
+
+            document.getElementById('ctrl_overlay').classList.add('show');
+        }
+
+        function ctrl_kb_render(initial_value) {
+            let kb_value = initial_value || '';
+            let html = '<div class="ctrl-kb">';
+            const rows = [['1','2','3'],['4','5','6'],['7','8','9'],['-','0','.']];
+            rows.forEach(row => {
+                html += '<div class="ctrl-kb-row">';
+                row.forEach(key => {
+                    html += `<button class="ctrl-kb-key" onclick="ctrl_kb_press(this, '${key}')">${key}</button>`;
+                });
+                html += '</div>';
+            });
+            // 底部工具行
+            html += '<div class="ctrl-kb-row">';
+            html += `<button class="ctrl-kb-key kb-fn" onclick="ctrl_kb_backspace(this)">&#x232B;</button>`;
+            html += `<button class="ctrl-kb-key kb-fn" onclick="ctrl_kb_clear(this)">清空</button>`;
+            html += '</div>';
+            html += '</div>';
+            document.getElementById('ctrl_dialog_keyboard').innerHTML = html;
+
+            // 存储当前值在容器上
+            document.getElementById('ctrl_dialog_keyboard').dataset.value = kb_value;
+        }
+
+        function ctrl_kb_update() {
+            const kb = document.getElementById('ctrl_dialog_keyboard');
+            const v = kb.dataset.value || '';
+            document.getElementById('ctrl_dialog_value').innerHTML = `${v || '0'}<span class="ctrl-dialog-unit">${ctrl_dialog_unit}</span>`;
+        }
+
+        function ctrl_kb_press(el, key) {
+            const kb = el.closest('#ctrl_dialog_keyboard');
+            kb.dataset.value = (kb.dataset.value || '') + key;
+            ctrl_kb_update();
+        }
+
+        function ctrl_kb_backspace(el) {
+            const kb = el.closest('#ctrl_dialog_keyboard');
+            kb.dataset.value = (kb.dataset.value || '').slice(0, -1);
+            ctrl_kb_update();
+        }
+
+        function ctrl_kb_clear(el) {
+            const kb = el.closest('#ctrl_dialog_keyboard');
+            kb.dataset.value = '';
+            ctrl_kb_update();
+        }
+
+        function ctrl_kb_apply(el) {
+            const kb = el.closest('#ctrl_dialog_keyboard');
+            const v = kb.dataset.value || '';
+            console.log(`Apply ${ctrl_dialog_callback} = ${v}`);
+            ctrl_dialog_close();
+        }
+
+        function ctrl_dialog_close() {
+            document.getElementById('ctrl_overlay').classList.remove('show');
+            ctrl_dialog_callback = null;
+            ctrl_dialog_unit = '';
+        }
+
+        function ctrl_dialog_apply() {
+            const kb = document.getElementById('ctrl_dialog_keyboard');
+            const v = kb.dataset.value || '';
+            console.log(`Apply ${ctrl_dialog_callback} = ${v}`);
+            ctrl_dialog_close();
+        }
+
+        /* ============================================
+         * 开关切换弹窗 (ON/OFF 选择)
+         * ============================================ */
+        let toggle_callback = null;
+        let toggle_value = 'on';
+
+        function handle_toggle_input(action, text) {
+            toggle_callback = action;
+            toggle_value = 'on';
+            document.getElementById('toggle_dialog_title').textContent = text;
+            const cancelBtn = document.querySelector('#toggle_overlay .msgbox-btn.cancel');
+            if (cancelBtn) cancelBtn.textContent = t('msgbox_cancel');
+            document.getElementById('toggle_overlay').classList.add('show');
+            toggle_update_ui();
+        }
+
+        function toggle_select(value) {
+            toggle_value = value;
+            toggle_update_ui();
+        }
+
+        function toggle_update_ui() {
+            const onBtn = document.getElementById('toggle_btn_on');
+            const offBtn = document.getElementById('toggle_btn_off');
+            if (toggle_value === 'on') {
+                onBtn.style.background = 'var(--COLOR_SUCCESS)';
+                onBtn.style.color = '#fff';
+                offBtn.style.background = 'rgba(255,82,82,0.1)';
+                offBtn.style.color = 'var(--COLOR_ERROR)';
+            } else {
+                offBtn.style.background = 'var(--COLOR_ERROR)';
+                offBtn.style.color = '#fff';
+                onBtn.style.background = 'rgba(0,200,83,0.1)';
+                onBtn.style.color = 'var(--COLOR_SUCCESS)';
+            }
+        }
+
+        function toggle_dialog_close() {
+            console.log(`Toggle ${toggle_callback} = ${toggle_value}`);
+            document.getElementById('toggle_overlay').classList.remove('show');
+            toggle_callback = null;
+        }
+
+        function handle_add_admin() {
+            admin_dialog_show_manage();
+        }
+
+        /* ============================================
+         * 管理员管理弹窗
+         * ============================================ */
+        function admin_dialog_show_manage() {
+            document.getElementById('admin_dialog_title').textContent = t('settings_admin_manage');
+            let html = '<table class="admin-table"><thead><tr>';
+            html += `<th>${t('admin_username')}</th>`;
+            html += `<th>${t('admin_role')}</th>`;
+            html += `<th>${t('admin_action')}</th>`;
+            html += '</tr></thead><tbody>';
+            admin_list.forEach((admin, idx) => {
+                html += '<tr>';
+                html += `<td><span class="admin-badge">${admin.username}</span></td>`;
+                html += `<td>${admin.role}</td>`;
+                html += `<td><button class="admin-delete-btn ${admin.cannot_delete ? 'admin-primary' : ''}" onclick="admin_delete(${idx})">${t('admin_delete')}</button></td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            // 添加新管理员表单
+            html += '<div class="admin-add-form">';
+            html += `<input type="text" id="admin_new_user" placeholder="${t('admin_input_user')}">`;
+            html += `<input type="password" id="admin_new_pass" placeholder="${t('admin_input_pass')}">`;
+            html += `<button class="settings-btn" onclick="admin_add()">${t('btn_add')}</button>`;
+            html += '</div>';
+            document.getElementById('admin_dialog_content').innerHTML = html;
+            document.getElementById('admin_overlay').classList.add('show');
+        }
+
+        function admin_dialog_close() {
+            document.getElementById('admin_overlay').classList.remove('show');
+        }
+
+        function admin_add() {
+            const username = document.getElementById('admin_new_user').value.trim();
+            const password = document.getElementById('admin_new_pass').value.trim();
+            if (!username || !password) return;
+            if (admin_list.some(a => a.username === username)) {
+                alert(t('admin_exists'));
+                return;
+            }
+            admin_list.push({ username, role: '管理员', cannot_delete: false });
+            admin_dialog_show_manage(); // 刷新表格
+        }
+
+        function admin_delete(idx) {
+            const admin = admin_list[idx];
+            if (admin.cannot_delete) {
+                alert(t('admin_cannot_delete'));
+                return;
+            }
+            if (confirm(`${t('admin_delete_confirm')} "${admin.username}"?`)) {
+                admin_list.splice(idx, 1);
+                admin_dialog_show_manage();
+            }
+        }
+
+        /* ============================================
+         * 触控键盘 (模拟 LVGL lv_keyboard)
+         * ============================================ */
+        const KB_LAYOUT_NUMBER = [
+            ['1', '2', '3'],
+            ['4', '5', '6'],
+            ['7', '8', '9'],
+            ['-', '0', '.']
+        ];
+
+        function kb_open(title, initial_value, callback) {
+            kb_callback = callback;
+            kb_current_value = initial_value !== undefined ? String(initial_value) : '';
+            document.getElementById('kb_toolbar_title').textContent = title || t('kb_title');
+            kb_render_keys();
+            kb_update_display();
+            document.getElementById('touch_keyboard').classList.add('show');
+        }
+
+        function kb_render_keys() {
+            let html = '';
+            KB_LAYOUT_NUMBER.forEach(row => {
+                html += '<div class="kb-row">';
+                row.forEach(key => {
+                    html += `<button class="kb-key" onclick="kb_press('${key}')">${key}</button>`;
+                });
+                html += '</div>';
+            });
+            // 底部工具行: 退格 + 应用 + 关闭
+            html += '<div class="kb-row">';
+            html += `<button class="kb-key kb-fn" onclick="kb_backspace()">&#x232B; 退格</button>`;
+            html += `<button class="kb-key kb-fn" onclick="kb_clear()">清空</button>`;
+            html += `<button class="kb-key kb-confirm" onclick="kb_apply()">${t('kb_apply')}</button>`;
+            html += `<button class="kb-key kb-close-key" onclick="kb_close()">&#x2716;</button>`;
+            html += '</div>';
+            document.getElementById('kb_keys_container').innerHTML = html;
+        }
+
+        function kb_press(key) {
+            kb_current_value += key;
+            kb_update_display();
+        }
+
+        function kb_backspace() {
+            kb_current_value = kb_current_value.slice(0, -1);
+            kb_update_display();
+        }
+
+        function kb_clear() {
+            kb_current_value = '';
+            kb_update_display();
+        }
+
+        function kb_update_display() {
+            document.getElementById('kb_display').textContent = kb_current_value || '0';
+        }
+
+        function kb_apply() {
+            if (kb_callback) {
+                kb_callback(kb_current_value);
+            }
+            kb_close();
+        }
+
+        function kb_close() {
+            document.getElementById('touch_keyboard').classList.remove('show');
+            kb_callback = null;
+        }
+
+        /* ============================================
+         * 状态判断
+         * ============================================ */
+        function get_diff_status(diff) {
+            if (diff <= 10) return 'normal';
+            if (diff <= 20) return 'warning';
+            return 'error';
+        }
+
+        /* ============================================
+         * Msgbox
+         * ============================================ */
+        function msgbox_show(text, action) {
+            document.getElementById('msgbox_title').textContent = t('msgbox_title');
+            document.getElementById('msgbox_text').textContent = `是否执行【${text}】操作？`;
+            document.getElementById('msgbox_cancel_btn').textContent = t('msgbox_cancel');
+            document.getElementById('msgbox_confirm_btn').textContent = t('msgbox_confirm');
+            document.getElementById('msgbox_overlay').classList.add('show');
+            msgbox_callback = action;
+        }
+
+        function msgbox_close() {
+            document.getElementById('msgbox_overlay').classList.remove('show');
+            msgbox_callback = null;
+        }
+
+        function msgbox_confirm() {
+            console.log(`Confirm: ${msgbox_callback}`);
+            msgbox_close();
+        }
+
+        /* ============================================
+         * 登录
+         * ============================================ */
+        function handle_boot_login() {
+            const username = document.getElementById('boot_username').value;
+            const password = document.getElementById('boot_password').value;
+
+            if (username === 'admin' && password === '123456') {
+                is_boot_logged_in = true;
+                document.getElementById('boot_overlay').classList.remove('show');
+                ui_apply_language();
+                update_header_status();
+                render_dashboard();
+                render_control_panel();
+                render_settings_panel();
+                ui_init();
+            } else {
+                document.getElementById('boot_error').textContent = t('login_error');
+                document.getElementById('boot_error').classList.add('show');
+            }
+        }
+
+        function show_login_dialog(after_action) {
+            is_admin_logged_in = true;
+            admin_dialog_show_manage();
+        }
+
+        /* ============================================
+         * 初始化
+         * ============================================ */
+        function ui_init() {
+            update_time();
+            setInterval(update_time, 1000);
+            setInterval(update_sim_data, 3000);
+        }
+
+        // 启动时显示登录
+        window.onload = function() {
+            document.getElementById('boot_title').textContent = t('boot_title');
+            document.getElementById('boot_subtitle').textContent = t('boot_subtitle');
+            document.getElementById('boot_user_label').textContent = t('login_username');
+            document.getElementById('boot_pass_label').textContent = t('login_password');
+            document.getElementById('boot_username').placeholder = t('login_placeholder_user');
+            document.getElementById('boot_password').placeholder = t('login_placeholder_pass');
+            document.getElementById('boot_login_btn').textContent = t('login_btn');
+            document.getElementById('boot_error').textContent = t('login_error');
+            document.getElementById('boot_overlay').classList.add('show');
+        };
+    </script>
+</body>
+</html>

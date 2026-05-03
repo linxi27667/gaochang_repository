@@ -1,0 +1,141 @@
+<h2>主页数据卡片布局</h2>
+<p class="subtitle">底部Tab栏导航已确定，现在设计主页的具体卡片排布。核心数据：双立柱高度、高度差、联机状态、一键调平</p>
+
+<div class="cards">
+  <div class="card" data-choice="symmetric" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 240px; position: relative;">
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 44px; display: flex; flex-direction: column; gap: 12px; padding: 8px;">
+        <!-- Row 1: Height cards -->
+        <div style="display: flex; gap: 12px; flex: 1;">
+          <div style="flex: 1; background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div style="color: #8E8E93; font-size: 14px; margin-bottom: 8px;">⬅ 左立柱</div>
+            <div style="color: #1C1C1E; font-size: 36px; font-weight: bold;">1850</div>
+            <div style="color: #8E8E93; font-size: 14px;">mm</div>
+          </div>
+          <div style="flex: 1; background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div style="color: #8E8E93; font-size: 14px; margin-bottom: 8px;">➡ 右立柱</div>
+            <div style="color: #1C1C1E; font-size: 36px; font-weight: bold;">1848</div>
+            <div style="color: #8E8E93; font-size: 14px;">mm</div>
+          </div>
+        </div>
+        <!-- Row 2: Status + Action -->
+        <div style="display: flex; gap: 12px; flex: 1;">
+          <div style="flex: 1; background: white; border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-around;">
+            <div style="text-align: center;"><div style="color: #8E8E93; font-size: 12px;">高度差</div><div style="color: #34C759; font-size: 24px; font-weight: bold;">2mm</div></div>
+            <div style="text-align: center;"><div style="color: #8E8E93; font-size: 12px;">状态</div><div style="width: 16px; height: 16px; background: #34C759; border-radius: 8px; margin: 4px auto;"></div><div style="color: #34C759; font-size: 12px;">已联机</div></div>
+          </div>
+          <div style="flex: 1.2; background: #007AFF; border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: center;">
+            <div style="color: white; font-size: 20px; font-weight: 600;">⚡ 一键调平</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab bar -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around;">
+        <div style="color: #007AFF; font-size: 11px; text-align: center;">📊<br>数据</div>
+        <div style="color: #8E8E93; font-size: 11px;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>对称双栏布局</h3>
+      <p>左右立柱等大并排，高度差和联机状态合并为一个状态卡片，一键调平按钮突出显示。信息均衡，视觉稳定。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="featured" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 240px; position: relative;">
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 44px; display: flex; flex-direction: column; gap: 12px; padding: 8px;">
+        <!-- Hero card: Both heights -->
+        <div style="flex: 1.4; background: white; border-radius: 16px; padding: 20px; display: flex; align-items: center; justify-content: space-around;">
+          <div style="text-align: center;">
+            <div style="color: #8E8E93; font-size: 14px;">左立柱 ⬅</div>
+            <div style="color: #1C1C1E; font-size: 42px; font-weight: bold;">1850</div>
+            <div style="color: #8E8E93; font-size: 14px;">mm</div>
+          </div>
+          <div style="width: 1px; height: 60px; background: #E5E5EA;"></div>
+          <div style="text-align: center;">
+            <div style="color: #8E8E93; font-size: 14px;">右立柱 ➡</div>
+            <div style="color: #1C1C1E; font-size: 42px; font-weight: bold;">1848</div>
+            <div style="color: #8E8E93; font-size: 14px;">mm</div>
+          </div>
+        </div>
+        <!-- Row 2: 3 cards -->
+        <div style="flex: 1; display: flex; gap: 12px;">
+          <div style="flex: 1; background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="color: #8E8E93; font-size: 11px;">高度差</div>
+            <div style="color: #34C759; font-size: 22px; font-weight: bold;">2mm</div>
+          </div>
+          <div style="flex: 1; background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="color: #8E8E93; font-size: 11px;">联机</div>
+            <div style="width: 14px; height: 14px; background: #34C759; border-radius: 7px; margin-top: 6px;"></div>
+          </div>
+          <div style="flex: 1.5; background: #007AFF; border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: center;">
+            <div style="color: white; font-size: 16px; font-weight: 600;">⚡ 调平</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab bar -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around;">
+        <div style="color: #007AFF; font-size: 11px; text-align: center;">📊<br>数据</div>
+        <div style="color: #8E8E93; font-size: 11px;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>大卡片突出布局</h3>
+      <p>立柱高度作为核心数据，用更大卡片突出显示（字号42px）。高度差、联机状态、调平按钮紧凑排列在下。适合"先看主数据"场景。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="visual" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 240px; position: relative;">
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 44px; display: flex; gap: 12px; padding: 8px;">
+        <!-- Left: Visual representation -->
+        <div style="flex: 1.3; background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="display: flex; gap: 32px; align-items: flex-end;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 24px; height: 80px; background: linear-gradient(to top, #007AFF 60%, #E5E5EA 60%); border-radius: 4px;"></div>
+              <div style="color: #1C1C1E; font-size: 18px; font-weight: bold; margin-top: 8px;">1850</div>
+              <div style="color: #8E8E93; font-size: 11px;">左</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 24px; height: 80px; background: linear-gradient(to top, #007AFF 58%, #E5E5EA 58%); border-radius: 4px;"></div>
+              <div style="color: #1C1C1E; font-size: 18px; font-weight: bold; margin-top: 8px;">1848</div>
+              <div style="color: #8E8E93; font-size: 11px;">右</div>
+            </div>
+          </div>
+          <div style="color: #34C759; font-size: 14px; margin-top: 12px; background: #34C75915; padding: 4px 12px; border-radius: 6px;">高度差 2mm ✓</div>
+        </div>
+        <!-- Right: Status + Action -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+          <div style="flex: 1; background: white; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="width: 18px; height: 18px; background: #34C759; border-radius: 9px;"></div>
+            <div style="color: #34C759; font-size: 14px; margin-top: 6px;">已联机</div>
+          </div>
+          <div style="flex: 2; background: #007AFF; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="color: white; font-size: 28px;">⚡</div>
+            <div style="color: white; font-size: 16px; font-weight: 600; margin-top: 6px;">一键调平</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab bar -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around;">
+        <div style="color: #007AFF; font-size: 11px; text-align: center;">📊<br>数据</div>
+        <div style="color: #8E8E93; font-size: 11px;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>可视化图表布局</h3>
+      <p>用柱状图可视化立柱高度比例，直观显示高度差。适合工程师快速判断"是否需要调平"。更有工业仪表感。</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #8E8E93;"><strong>注意：</strong>联机状态可用颜色区分：<br>
+• 🟢 绿色 = 已联机正常<br>
+• 🟠 橙色 = 已联机但有警告(高度差偏大)<br>
+• 🔴 红色 = 断联/报警</p>

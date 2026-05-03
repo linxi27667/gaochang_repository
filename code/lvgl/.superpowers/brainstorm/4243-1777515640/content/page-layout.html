@@ -1,0 +1,114 @@
+<h2>其他页面布局风格</h2>
+<p class="subtitle">已确定：底部Tab栏 + 主页可视化图表。现在确定控制页、设置页、用户页的布局风格</p>
+
+<div class="cards">
+  <div class="card" data-choice="ios-list" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 220px; position: relative;">
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 44px; padding: 12px; overflow: hidden;">
+        <!-- iOS Settings-style list -->
+        <div style="background: white; border-radius: 12px; overflow: hidden;">
+          <div style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E5E5EA;">
+            <span style="color: #1C1C1E;">最小高度</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #8E8E93;">150mm</span>
+              <span style="color: #C7C7CC;">›</span>
+            </div>
+          </div>
+          <div style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E5E5EA;">
+            <span style="color: #1C1C1E;">最大高度</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #8E8E93;">2000mm</span>
+              <span style="color: #C7C7CC;">›</span>
+            </div>
+          </div>
+          <div style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E5E5EA;">
+            <span style="color: #1C1C1E;">ID设置</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #8E8E93;">#001</span>
+              <span style="color: #C7C7CC;">›</span>
+            </div>
+          </div>
+          <div style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #1C1C1E;">起始高度</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #8E8E93;">500mm</span>
+              <span style="color: #C7C7CC;">›</span>
+            </div>
+          </div>
+        </div>
+        <div style="background: white; border-radius: 12px; margin-top: 12px; overflow: hidden;">
+          <div style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #1C1C1E;">联机设置</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #34C759;">ON</span>
+              <span style="color: #C7C7CC;">›</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab bar -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around;">
+        <div style="color: #8E8E93; font-size: 11px;">📊<br>数据</div>
+        <div style="color: #007AFF; font-size: 11px;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>iOS设置列表风格</h3>
+      <p>经典iOS Settings样式：分组圆角卡片列表，右箭头指示可点击，灰色副标题显示当前值。信息密度高，操作直观。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="big-btns" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #F2F2F7; padding: 12px; border-radius: 12px; height: 220px; position: relative;">
+      <div style="position: absolute; left: 8px; right: 8px; top: 8px; bottom: 44px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); gap: 12px;">
+        <div style="background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #007AFF; font-size: 24px;">⬇</div>
+          <div style="color: #1C1C1E; font-size: 14px; font-weight: 500; margin-top: 8px;">最小高度</div>
+          <div style="color: #8E8E93; font-size: 12px;">150mm</div>
+        </div>
+        <div style="background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #007AFF; font-size: 24px;">⬆</div>
+          <div style="color: #1C1C1E; font-size: 14px; font-weight: 500; margin-top: 8px;">最大高度</div>
+          <div style="color: #8E8E93; font-size: 12px;">2000mm</div>
+        </div>
+        <div style="background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #007AFF; font-size: 24px;">#</div>
+          <div style="color: #1C1C1E; font-size: 14px; font-weight: 500; margin-top: 8px;">ID设置</div>
+          <div style="color: #8E8E93; font-size: 12px;">#001</div>
+        </div>
+        <div style="background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #007AFF; font-size: 24px;">🏁</div>
+          <div style="color: #1C1C1E; font-size: 14px; font-weight: 500; margin-top: 8px;">起始高度</div>
+          <div style="color: #8E8E93; font-size: 12px;">500mm</div>
+        </div>
+        <div style="background: white; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: #34C759; font-size: 24px;">🔗</div>
+          <div style="color: #1C1C1E; font-size: 14px; font-weight: 500; margin-top: 8px;">联机设置</div>
+          <div style="color: #34C759; font-size: 12px;">已联机</div>
+        </div>
+        <div style="background: #007AFF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="color: white; font-size: 24px;">⚡</div>
+          <div style="color: white; font-size: 14px; font-weight: 500; margin-top: 8px;">自动调平</div>
+        </div>
+      </div>
+      <!-- Tab bar -->
+      <div style="position: absolute; left: 8px; right: 8px; bottom: 8px; height: 44px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: space-around;">
+        <div style="color: #8E8E93; font-size: 11px;">📊<br>数据</div>
+        <div style="color: #007AFF; font-size: 11px;">⚙<br>控制</div>
+        <div style="color: #8E8E93; font-size: 11px;">🔧<br>设置</div>
+        <div style="color: #8E8E93; font-size: 11px;">👤<br>用户</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>大按钮网格风格</h3>
+      <p>2×3大按钮网格，每个按钮显示图标+名称+当前值。适合触控操作，与主页风格统一。点击后弹出设置弹窗。</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #8E8E93;"><strong>建议：</strong><br>
+• <strong>控制页</strong>：大按钮网格（与主页可视化风格统一，触控友好）<br>
+• <strong>设置页</strong>：iOS列表风格（信息密度高，适合WiFi、语言、亮度等详细设置）<br>
+• <strong>用户页</strong>：iOS列表风格（登录表单、管理员列表）</p>

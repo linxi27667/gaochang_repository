@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp \"C:/Users/30817/.claude/skills/嵌入式架构师\\(RTOS版\\)/SKILL.md\" \"C:/Users/30817/.trae-cn/skills/嵌入式架构师\\(RTOS版\\)/SKILL.md\")",
+      "Bash(cp \"C:/Users/30817/.claude/skills/嵌入式架构师\\(RTOS版\\)/SKILL.md\" \"E:/MCU/BSP/skills/嵌入式架构师\\(RTOS版\\)/SKILL.md\")",
+      "Bash(cp \"C:/Users/30817/.claude/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\" \"C:/Users/30817/.trae-cn/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\")",
+      "Bash(cp \"C:/Users/30817/.claude/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\" \"E:/MCU/BSP/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\")",
+      "Bash(cp \"C:\\\\Users\\\\30817\\\\.claude\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\" \"C:\\\\Users\\\\30817\\\\.trae-cn\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\")",
+      "Bash(cp \"C:\\\\Users\\\\30817\\\\.claude\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\" \"E:\\\\MCU\\\\BSP\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\")"
+    ]
+  }
+}

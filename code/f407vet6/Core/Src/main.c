@@ -28,6 +28,10 @@
 /* USER CODE BEGIN Includes */
 #include "SEGGER_RTT.h"
 #include "app_w25qxx.h"
+#include "motor.h"
+#include "encoder.h"
+#include "safety.h"
+#include "key.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,7 +111,12 @@ int main(void)
 	
 	elog_start();
 	App_W25Qxx_System_Init();
-	
+	App_W25Qxx_Height_Load();
+	Motor_Init();
+	Safety_Init();
+	Key_Init();
+	Encoder_Init();
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -177,6 +186,23 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/* TIM2 输入捕获回调 → 编码器模块 */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM2) return;
+
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+        Encoder_Capture_ISR(1);
+    else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
+        Encoder_Capture_ISR(2);
+}
+
+/* EXTI 回调 → 安全模块 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    Safety_EXTI_Handler(GPIO_Pin);
+}
 
 /* USER CODE END 4 */
 

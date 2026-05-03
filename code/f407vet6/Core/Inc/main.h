@@ -75,6 +75,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+/* ===== 各模块独立调试开关 - 默认全关，需调试哪个就开哪个 ===== */
+#define MOTOR_DEBUG          0   /* motor.c 启停日志 */
+#define BALANCE_DEBUG        0   /* balance.c 平衡算法日志 */
+#define SAFETY_DEBUG         0   /* safety.c 安全保护日志 */
+#define KEY_DEBUG            0   /* key.c 按键+蜂鸣器日志 */
+#define W25Q_DEBUG           0   /* app_w25qxx.c W25Q存取日志 */
+#define CTRL_DEBUG           0   /* dri_motor.c 控制任务日志 */
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

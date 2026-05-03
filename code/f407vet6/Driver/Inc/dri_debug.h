@@ -4,7 +4,7 @@
 #include "main.h"
 #include "gpio.h"
 #include "app_w25qxx.h"
-#include "app.h"
+#include "main.h"
 
 /* ============ 硬件配置 ============ */
 #define LED_DEBUG_PORT      GPIOB

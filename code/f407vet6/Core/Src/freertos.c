@@ -28,6 +28,9 @@
 #include "elog.h"
 #include "gpio.h"
 #include "dri_debug.h"
+#include "dri_motor.h"
+#include "dri_safety.h"
+#include "dri_key.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -98,7 +101,10 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  Debug_Task_Create();
+  /* Debug_Task_Create(); */  /* 调试任务已注释 */
+  Control_Task_Create();
+  Safety_Task_Create();
+  Key_Task_Create();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

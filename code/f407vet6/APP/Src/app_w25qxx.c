@@ -1,13 +1,27 @@
 #include "app_w25qxx.h"
 #include "app_spi.h"
+#include "motor.h"
 
-#if W25Qxx_DEBUG_MODE == 1
+#if W25Q_DEBUG == 1
 #include "elog.h"
 #endif
 
 /* ================= 全局数据 ================= */
 
 w25q_storage_t g_w25q_storage = {0};
+
+w25q_config_t g_config = {
+    .header                   = 0xA5A5,
+    .tolerance_up             = 4,
+    .tolerance_down           = 4,
+    .stall_timeout_ms         = 2000,
+    .balance_wait_max_ms      = 10000,
+    .collision_debounce_ms    = 50,
+    .secondary_descent_pulses = 30,
+    .dual_column_mode         = 1,
+    .screw_lead_mm            = 5,
+    .max_pulses               = 2000,      /* 约10米（2000脉冲 × 5mm） */
+};
 
 /* ================= 实例化 W25Q128 对象 ================= */
 w25q_t W25Q_Flash = {
@@ -45,7 +59,7 @@ void App_W25Qxx_System_Init(void)
 {
     App_SPI_System_Init();
 
-    #if W25Qxx_DEBUG_MODE == 1
+    #if W25Q_DEBUG == 1
     uint32_t jedec_id = W25Q_Read_JEDEC_ID(&W25Q_Flash);
     elog_i("W25Q", "JEDEC ID raw: 0x%06lX", jedec_id);
     #endif
@@ -55,13 +69,13 @@ void App_W25Qxx_System_Init(void)
     if (ret == W25Q_OK)
     {
         App_W25Qxx_Storage_Load();
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_i("W25Q", "Init OK, JEDEC ID: 0x%06lX", W25Q_Read_JEDEC_ID(&W25Q_Flash));
         #endif
     }
     else
     {
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_e("W25Q", "Init FAILED! JEDEC ID: 0x%06lX (expected 0xEF4014)", W25Q_Read_JEDEC_ID(&W25Q_Flash));
         #endif
     }
@@ -86,7 +100,7 @@ void App_W25Qxx_Storage_Load(void)
             g_w25q_storage = slot_b;
         else
             g_w25q_storage = slot_a;
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_i("W25Q", "Storage loaded: counter=%lu (both valid, A=%lu B=%lu)",
                g_w25q_storage.debug_counter, slot_a.debug_counter, slot_b.debug_counter);
         #endif
@@ -94,20 +108,20 @@ void App_W25Qxx_Storage_Load(void)
     else if (a_ok == W25Q_OK)
     {
         g_w25q_storage = slot_a;
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_i("W25Q", "Storage loaded: counter=%lu (slot A only)", g_w25q_storage.debug_counter);
         #endif
     }
     else if (b_ok == W25Q_OK)
     {
         g_w25q_storage = slot_b;
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_i("W25Q", "Storage loaded: counter=%lu (slot B only)", g_w25q_storage.debug_counter);
         #endif
     }
     else
     {
-        #if W25Qxx_DEBUG_MODE == 1
+        #if W25Q_DEBUG == 1
         elog_w("W25Q", "No valid storage data, using defaults");
         #endif
         g_w25q_storage.magic = W25Q_STORAGE_MAGIC;
@@ -140,13 +154,13 @@ uint8_t App_W25Qxx_Storage_Save(void)
     else
         target_addr = W25Q_SLOT_B_ADDR;
 
-    #if W25Qxx_DEBUG_MODE == 1
+    #if W25Q_DEBUG == 1
     elog_i("W25Q", "Save slot=0x%08lX counter=%lu",
            target_addr, g_w25q_storage.debug_counter);
     #endif
 
     uint8_t ret = W25Q_Sector_Erase(&W25Q_Flash, target_addr);
-    #if W25Qxx_DEBUG_MODE == 1
+    #if W25Q_DEBUG == 1
     if (ret != W25Q_OK)
     {
         elog_e("W25Q", "Sector erase FAILED");
@@ -159,7 +173,7 @@ uint8_t App_W25Qxx_Storage_Save(void)
 
     ret = W25Q_Page_Program(&W25Q_Flash, target_addr,
                             (uint8_t *)&g_w25q_storage, W25Q_STORAGE_SIZE);
-    #if W25Qxx_DEBUG_MODE == 1
+    #if W25Q_DEBUG == 1
     if (ret != W25Q_OK)
     {
         elog_e("W25Q", "Page program FAILED");
@@ -171,4 +185,72 @@ uint8_t App_W25Qxx_Storage_Save(void)
     #endif
 
     return ret;
+}
+
+/* ================= 高度存储 ================= */
+
+static uint32_t Height_CRC32(const w25q_height_t *storage)
+{
+    uint32_t crc = 0xFFFFFFFF;
+    const uint8_t *data = (const uint8_t *)storage;
+    for (uint16_t i = 0; i < sizeof(w25q_height_t) - 4; i++) {
+        crc ^= data[i];
+        for (int j = 0; j < 8; j++)
+            crc = (crc >> 1) ^ ((crc & 1) ? 0xEDB88320 : 0);
+    }
+    return crc;
+}
+
+void App_W25Qxx_Height_Load(void)
+{
+    w25q_height_t buffer;
+
+    if (W25Q_Read_Buffer(&W25Q_Flash, HEIGHT_FLASH_ADDR,
+                         (uint8_t *)&buffer, sizeof(buffer)) != W25Q_OK)
+        return;
+
+    if (buffer.magic != 0x48494748) return;
+    if (buffer.crc != Height_CRC32(&buffer)) return;
+
+    g_column[0].pulse_count = buffer.heights[0];
+    g_column[1].pulse_count = buffer.heights[1];
+
+    #if W25Q_DEBUG == 1
+    elog_i("W25Q", "Height loaded: col0=%ld col1=%ld", buffer.heights[0], buffer.heights[1]);
+    #endif
+}
+
+uint8_t App_W25Qxx_Height_Save(void)
+{
+    w25q_height_t data;
+    data.magic = 0x48494748;
+
+    /* 原子读取两个立柱的脉冲计数，防止 ISR 在读取间修改 */
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    data.heights[0] = g_column[0].pulse_count;
+    data.heights[1] = g_column[1].pulse_count;
+    __set_PRIMASK(primask);
+
+    data.crc = Height_CRC32(&data);
+
+    #if W25Q_DEBUG == 1
+    elog_i("W25Q", "Height save: h0=%ld h1=%ld", data.heights[0], data.heights[1]);
+    #endif
+
+    uint8_t result = W25Q_Sector_Erase(&W25Q_Flash, HEIGHT_FLASH_ADDR);
+    if (result != W25Q_OK) {
+        #if W25Q_DEBUG == 1
+        elog_e("W25Q", "Height save ERASE FAILED");
+        #endif
+        return result;
+    }
+
+    result = W25Q_Page_Program(&W25Q_Flash, HEIGHT_FLASH_ADDR,
+                               (uint8_t *)&data, sizeof(data));
+    #if W25Q_DEBUG == 1
+    if (result != W25Q_OK)
+        elog_e("W25Q", "Height save PROGRAM FAILED");
+    #endif
+    return result;
 }

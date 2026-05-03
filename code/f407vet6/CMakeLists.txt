@@ -58,6 +58,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     RTT_easylog/RTT/SEGGER_RTT.c
     RTT_easylog/RTT/SEGGER_RTT_printf.c
     Driver/Src/dri_debug.c
+    Driver/Src/dri_motor.c
+    Driver/Src/dri_safety.c
+    Driver/Src/dri_key.c
+    APP/Src/motor.c
+    APP/Src/encoder.c
+    APP/Src/balance.c
+    APP/Src/safety.c
+    APP/Src/key.c
 )
 
 # Add include paths

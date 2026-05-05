@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "dma.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -96,19 +97,22 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   MX_SPI1_Init();
+  MX_TIM3_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
 	SEGGER_RTT_Init();
 	elog_init();
-	
+
 	elog_set_fmt(ELOG_LVL_ASSERT, ELOG_FMT_LVL | ELOG_FMT_TAG | ELOG_FMT_TIME);
   elog_set_fmt(ELOG_LVL_ERROR, ELOG_FMT_LVL | ELOG_FMT_TAG | ELOG_FMT_TIME);
   elog_set_fmt(ELOG_LVL_WARN, ELOG_FMT_LVL | ELOG_FMT_TAG | ELOG_FMT_TIME);
   elog_set_fmt(ELOG_LVL_INFO, ELOG_FMT_LVL | ELOG_FMT_TAG | ELOG_FMT_TIME);
   elog_set_fmt(ELOG_LVL_DEBUG, ELOG_FMT_ALL & ~ELOG_FMT_FUNC);
-	
+
 	elog_start();
 	App_W25Qxx_System_Init();
 	App_W25Qxx_Height_Load();
@@ -116,6 +120,7 @@ int main(void)
 	Safety_Init();
 	Key_Init();
 	Encoder_Init();
+	/* TIM7 未使用，按键消抖改为纯轮询 */
 
   /* USER CODE END 2 */
 

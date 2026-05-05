@@ -20,6 +20,6 @@ void Key_Task(void *pvParameters)
         Key_Scan();
         Buzzer_Poll();
 
-        osDelay(50);
+        osDelay(20);
     }
 }

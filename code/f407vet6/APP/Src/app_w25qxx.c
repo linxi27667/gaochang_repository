@@ -19,8 +19,8 @@ w25q_config_t g_config = {
     .collision_debounce_ms    = 50,
     .secondary_descent_pulses = 30,
     .dual_column_mode         = 1,
-    .screw_lead_mm            = 5,
-    .max_pulses               = 2000,      /* 约10米（2000脉冲 × 5mm） */
+    .screw_lead_mm            = 6,          /* 丝杆每圈6mm */
+    .max_pulses               = MAX_PULSES, /* main.h 宏定义 */
 };
 
 /* ================= 实例化 W25Q128 对象 ================= */
@@ -59,24 +59,19 @@ void App_W25Qxx_System_Init(void)
 {
     App_SPI_System_Init();
 
-    #if W25Q_DEBUG == 1
-    uint32_t jedec_id = W25Q_Read_JEDEC_ID(&W25Q_Flash);
-    elog_i("W25Q", "JEDEC ID raw: 0x%06lX", jedec_id);
-    #endif
-
     uint8_t ret = W25Q_Init_Device(&W25Q_Flash);
 
     if (ret == W25Q_OK)
     {
         App_W25Qxx_Storage_Load();
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Init OK, JEDEC ID: 0x%06lX", W25Q_Read_JEDEC_ID(&W25Q_Flash));
+        elog_i("W25Q", "W25Q: ready");
         #endif
     }
     else
     {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "Init FAILED! JEDEC ID: 0x%06lX (expected 0xEF4014)", W25Q_Read_JEDEC_ID(&W25Q_Flash));
+        elog_e("W25Q", "W25Q: FAILED");
         #endif
     }
 }
@@ -216,7 +211,9 @@ void App_W25Qxx_Height_Load(void)
     g_column[1].pulse_count = buffer.heights[1];
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Height loaded: col0=%ld col1=%ld", buffer.heights[0], buffer.heights[1]);
+    elog_i("W25Q", "Flash: loaded %ldmm/%ldmm",
+           buffer.heights[0] * g_config.screw_lead_mm,
+           buffer.heights[1] * g_config.screw_lead_mm);
     #endif
 }
 
@@ -235,7 +232,9 @@ uint8_t App_W25Qxx_Height_Save(void)
     data.crc = Height_CRC32(&data);
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Height save: h0=%ld h1=%ld", data.heights[0], data.heights[1]);
+    elog_i("W25Q", "Flash: saved %ldmm/%ldmm",
+           data.heights[0] * g_config.screw_lead_mm,
+           data.heights[1] * g_config.screw_lead_mm);
     #endif
 
     uint8_t result = W25Q_Sector_Erase(&W25Q_Flash, HEIGHT_FLASH_ADDR);

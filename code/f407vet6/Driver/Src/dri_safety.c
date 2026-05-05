@@ -27,7 +27,7 @@ void Safety_Task(void *pvParameters)
         }
 
         /* 报警状态下按停止键 → 复位报警 */
-        if (g_safety.alarm_state != ALARM_NONE && g_command.button_stop) {
+        if (g_safety.alarm != ALARM_NONE && g_command.button_stop) {
             Safety_Alarm_Reset();
         }
 

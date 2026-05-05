@@ -2,21 +2,15 @@
 #define __DRI_DEBUG_H__
 
 #include "main.h"
-#include "gpio.h"
-#include "app_w25qxx.h"
-#include "main.h"
 
-/* ============ 硬件配置 ============ */
-#define LED_DEBUG_PORT      GPIOB
-#define LED_DEBUG_PIN       GPIO_PIN_2
-#define LED_BLINK_MS        100
+/* 模拟编码器：每 50ms 1 个脉冲 */
+#define SIM_PULSE_INTERVAL_MS  50
 
-/* ============ 对外接口 ============ */
+/* 模拟防碰杆高度（仅 COLLISION_ENABLE=0 时有效） */
+#define SIM_COLLISION_HEIGHT_MM  500
 
-// 创建 Debug 任务
-void Debug_Task_Create(void);
+void Sim_Encoder_Init(void);
+void Sim_Encoder_Run(void);
+void Sim_Collision_Check(void);
 
-// 获取当前计数器值
-uint32_t Counter_Get(void);
-
-#endif /* __DRI_DEBUG_H__ */
+#endif

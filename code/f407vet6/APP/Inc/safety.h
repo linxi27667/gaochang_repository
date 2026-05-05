@@ -4,24 +4,23 @@
 #include <stdint.h>
 #include "main.h"
 
+/* ==================== 告警枚举 ==================== */
+typedef enum {
+    ALARM_NONE            = 0,   /* 正常 */
+    ALARM_COLLISION       = 1,   /* 防碰杆触发 */
+    ALARM_STALL           = 2,   /* 堵转（无脉冲） */
+    ALARM_BALANCE_TIMEOUT = 3,   /* 平衡超时 */
+} alarm_t;
+
 /* ==================== 安全状态 ==================== */
 typedef struct {
-    volatile uint8_t  collision_triggered;          /* 防碰杆触发 */
-    uint8_t           stall_detected;               /* 堵转检测 */
-    uint8_t           balance_timeout;              /* 平衡超时 */
+    volatile alarm_t  alarm;                       /* 当前告警 */
     uint8_t           secondary_descent_triggered;  /* 二次下降触发 */
     uint8_t           secondary_descent_confirmed;  /* 二次下降确认 */
     volatile uint8_t  at_lower_limit;               /* 已到下限位 */
-    volatile uint8_t  alarm_state;                  /* 报警状态 */
-    volatile uint32_t last_pulse_tick[2];           /* 每个立柱最后脉冲时刻 */
+    volatile uint8_t  at_upper_limit;               /* 已到上限位 */
+    volatile uint32_t last_pulse_tick[2];           /* 最后脉冲时刻 */
 } safety_state_t;
-
-/* ==================== 报警码 ==================== */
-#define ALARM_NONE            0
-#define ALARM_COLLISION       1
-#define ALARM_STALL           2
-#define ALARM_BALANCE_TIMEOUT 3
-#define ALARM_UPPER_LIMIT     4
 
 /* ==================== 全局变量 ==================== */
 extern safety_state_t g_safety;

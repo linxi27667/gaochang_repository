@@ -6,7 +6,12 @@
       "Bash(cp \"C:/Users/30817/.claude/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\" \"C:/Users/30817/.trae-cn/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\")",
       "Bash(cp \"C:/Users/30817/.claude/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\" \"E:/MCU/BSP/skills/轻量FreeRTOS架构师/轻量FreeRTOS架构师.md\")",
       "Bash(cp \"C:\\\\Users\\\\30817\\\\.claude\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\" \"C:\\\\Users\\\\30817\\\\.trae-cn\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\")",
-      "Bash(cp \"C:\\\\Users\\\\30817\\\\.claude\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\" \"E:\\\\MCU\\\\BSP\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\")"
+      "Bash(cp \"C:\\\\Users\\\\30817\\\\.claude\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\" \"E:\\\\MCU\\\\BSP\\\\skills\\\\嵌入式架构师\\(RTOS版\\)\\\\SKILL.md\")",
+      "Bash(pandoc \"res/260410.OMCN丝杆控制方式分析.docx\" -t markdown --wrap=none)",
+      "Bash(python3 *)",
+      "Bash(xxd \"res/6.0丝杠4圈（单感应柱改诊断模式改延时方式）--4-6T通用20231021/Resource/POU/Body/MAIN.wpg\")",
+      "Read(//c/Users/30817/.trae-cn/skills/**)",
+      "Read(//e/MCU/BSP/skills/**)"
     ]
   }
 }

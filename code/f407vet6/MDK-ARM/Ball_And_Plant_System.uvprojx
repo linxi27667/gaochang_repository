@@ -461,6 +461,62 @@
               </FileOption>
             </File>
             <File>
+              <FileName>dma.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/dma.c</FilePath>
+              <FileOption>
+                <CommonProperty>
+                  <UseCPPCompiler>2</UseCPPCompiler>
+                  <RVCTCodeConst>0</RVCTCodeConst>
+                  <RVCTZI>0</RVCTZI>
+                  <RVCTOtherData>0</RVCTOtherData>
+                  <ModuleSelection>0</ModuleSelection>
+                  <IncludeInBuild>1</IncludeInBuild>
+                  <AlwaysBuild>2</AlwaysBuild>
+                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
+                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
+                  <PublicsOnly>2</PublicsOnly>
+                  <StopOnExitCode>11</StopOnExitCode>
+                  <CustomArgument></CustomArgument>
+                  <IncludeLibraryModules></IncludeLibraryModules>
+                  <ComprImg>1</ComprImg>
+                </CommonProperty>
+                <FileArmAds>
+                  <Cads>
+                    <interw>2</interw>
+                    <Optim>0</Optim>
+                    <oTime>2</oTime>
+                    <SplitLS>2</SplitLS>
+                    <OneElfS>2</OneElfS>
+                    <Strict>2</Strict>
+                    <EnumInt>2</EnumInt>
+                    <PlainCh>2</PlainCh>
+                    <Ropi>2</Ropi>
+                    <Rwpi>2</Rwpi>
+                    <wLevel>0</wLevel>
+                    <uThumb>2</uThumb>
+                    <uSurpInc>2</uSurpInc>
+                    <uC99>2</uC99>
+                    <uGnu>2</uGnu>
+                    <useXO>2</useXO>
+                    <v6Lang>0</v6Lang>
+                    <v6LangP>0</v6LangP>
+                    <vShortEn>2</vShortEn>
+                    <vShortWch>2</vShortWch>
+                    <v6Lto>2</v6Lto>
+                    <v6WtE>2</v6WtE>
+                    <v6Rtti>2</v6Rtti>
+                    <VariousControls>
+                      <MiscControls></MiscControls>
+                      <Define></Define>
+                      <Undefine></Undefine>
+                      <IncludePath></IncludePath>
+                    </VariousControls>
+                  </Cads>
+                </FileArmAds>
+              </FileOption>
+            </File>
+            <File>
               <FileName>spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/spi.c</FilePath>
@@ -1022,6 +1078,56 @@
               <FileName>app_w25qxx.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\APP\Inc\app_w25qxx.h</FilePath>
+            </File>
+            <File>
+              <FileName>balance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\balance.c</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>key.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\key.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>safety.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\safety.c</FilePath>
+            </File>
+            <File>
+              <FileName>balance.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\balance.h</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>key.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\key.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>safety.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\safety.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1733,9 +1839,39 @@
               <FilePath>..\Driver\Src\dri_debug.c</FilePath>
             </File>
             <File>
+              <FileName>dri_key.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\Src\dri_key.c</FilePath>
+            </File>
+            <File>
+              <FileName>dri_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\Src\dri_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>dri_safety.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\Src\dri_safety.c</FilePath>
+            </File>
+            <File>
               <FileName>dri_debug.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Driver\Inc\dri_debug.h</FilePath>
+            </File>
+            <File>
+              <FileName>dri_key.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Driver\Inc\dri_key.h</FilePath>
+            </File>
+            <File>
+              <FileName>dri_motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Driver\Inc\dri_motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>dri_safety.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Driver\Inc\dri_safety.h</FilePath>
             </File>
           </Files>
         </Group>

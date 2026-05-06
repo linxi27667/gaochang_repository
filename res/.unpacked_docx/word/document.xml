@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:oel="http://schemas.microsoft.com/office/2019/extlst" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml" xmlns:w16du="http://schemas.microsoft.com/office/word/2023/wordml/word16du" xmlns:w16sdtdh="http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash" xmlns:w16sdtfl="http://schemas.microsoft.com/office/word/2024/wordml/sdtformatlock" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se w16cid w16 w16cex w16sdtdh w16sdtfl w16du wp14">
+  <w:body>
+    <w:p w14:paraId="1531D946" w14:textId="5164089E" w:rsidR="005F325D" w:rsidRPr="00772CA3" w:rsidRDefault="00BB2516">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>升降过程接近开关检测丝杆转动圈数，通过对比圈数，快的一边停下等慢的（</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>与现有程序相同，</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>目前我们是误差4圈，开始快的等慢的四圈后立即动作</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="4AF8D151" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="742C4B12" w14:textId="3AF7B005" w:rsidR="00BB2516" w:rsidRPr="00772CA3" w:rsidRDefault="00BB2516">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>举升臂下方出现障碍物，检测电机通电丝杆不转，停机报警</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>（可以实现，</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>目前2秒检测不到丝杆转动信号才开始停机，需要将时间具体缩短，是否需要自动解除报警？意大利提供视频看是将到最低自动解除，我们目前标准是断电重启解除</w:t>
+      </w:r>
+      
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>。）</w:t>
+      </w:r>
+      
+    </w:p>
+    <w:p w14:paraId="2542BCD2" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="4663725C" w14:textId="00651093" w:rsidR="00BB2516" w:rsidRPr="00772CA3" w:rsidRDefault="00BB2516">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>上限位和下限位重置圈数</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>（现有程序下限位重置圈数</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>（目前标准到下限位就自动清零到原始点状态）</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>，两个上限位和防碰杆限位串联（</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>我们这边不具备上限位清理功能）</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>，如需上限位重置，需要把3个上限位分别接3个输入点）（</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>后续可以考虑顶部防碰杆限位动作上升动作整个停止，两个立柱顶部限位参考下限位进行清零）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="5475B89B" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="649E5520" w14:textId="5A7CD097" w:rsidR="00BB2516" w:rsidRDefault="00BB2516">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>螺母磨损采用机械结构使电机堵转，从而停机报警</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>（可以实现，是否需要自动解除报警）</w:t>
+      </w:r>
+      
+      
+    </w:p>
+    <w:p w14:paraId="535160A4" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="1E20500B" w14:textId="4E8DD92A" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>低于二次下降位置，举升动作开始前，蜂鸣器将鸣响2秒；举升机从距地面150毫米处开始进入下降最后阶段时，蜂鸣器也将发出报警。</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>（可以实现）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="2465B685" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="09E0622F" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>报警状态下的操作</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="00235230" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>当举升机出现报警状态时，设备将卡滞，显示屏将显示报警信息。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="6614ACE1" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>若需将载荷回落至地面，按以下步骤操作：</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="42392030" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>1. 按下A键，查看报警信息。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="2494BAB7" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>2. 同时按住A键和B键10秒，进入解锁模式。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="78CBB9D2" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>3. 按下B键，确认启动紧急操作流程。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="3AA4A819" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>4. 下降立柱1的底座：同时按下A键和下降按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="59D195D5" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>5. 下降立柱2的底座：同时按下B键和下降按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="586DE28C" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>6. 举升立柱1的底座：同时按下A键和举升按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="0A98EA5B" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>7. 举升立柱2的底座：同时按下B键和举升按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="27636234" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>8. 同时下降两个底座：同时按下A键、B键和下降按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="2ABB20C3" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>9. 同时举升两个底座：同时按下A键、B键和举升按钮。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="76904A3C" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>10. 将底座降至触发下降限位开关的位置，此时举升机将自动重置，解除紧急模式。</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="16623666" w14:textId="61ED166B" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>（目前程序用钥匙开关实现单边升降，重启电路解除报警）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="408CAFEA" w14:textId="77777777" w:rsidR="003D3226" w:rsidRPr="00772CA3" w:rsidRDefault="003D3226" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="45CC01E6" w14:textId="65CCB388" w:rsidR="00772CA3" w:rsidRPr="003D3226" w:rsidRDefault="003D3226" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>举升机在距地面约 150 毫米处，将因脚部保护装置触发而停止，此时操作人员需再次检查举升机作业区域无障碍物，然后再次按下下降按钮，完成下降动作；</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="EE0000"/>
+        </w:rPr>
+        <w:t>（</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>初步分析依据控制板自动计数实现高度判断，并进行首次触发停机，程序控制需要二次按下降按钮，设备再次运行到最低位，目前我们控制无法不通过外部给信号实现这个功能，需要增加二次下降按钮。</w:t>
+      </w:r>
+      
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="EE0000"/>
+        </w:rPr>
+        <w:t>）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="5012BF50" w14:textId="77777777" w:rsidR="003D3226" w:rsidRDefault="003D3226" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="14FDF323" w14:textId="04F760F1" w:rsidR="00772CA3" w:rsidRPr="003D3226" w:rsidRDefault="003D3226" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="EE0000"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>显示屏显示丝杆转动圈数，手机查看举升机转态，设置上限位等</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="EE0000"/>
+        </w:rPr>
+        <w:t>（</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+        <w:t>显示屏涉及物联网，无法实现</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="EE0000"/>
+        </w:rPr>
+        <w:t>）</w:t>
+      </w:r>
+    </w:p>
+    <w:p w14:paraId="282B4229" w14:textId="77777777" w:rsidR="00772CA3" w:rsidRDefault="00772CA3" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:color w:val="FF0000"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p w14:paraId="483414B5" w14:textId="235F7E6D" w:rsidR="00716981" w:rsidRPr="00716981" w:rsidRDefault="00716981" w:rsidP="00772CA3">
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+          <w:color w:val="4C94D8" w:themeColor="text2" w:themeTint="80"/>
+        </w:rPr>
+        <w:t>总结：目前大部分功能现有控制板可以实现（目前板是否有存储功能，需要和供应商沟通了解，目前知晓可能停电后数据恢复初始设置状态），但如果实现OMCN完全相同的方式，包括显示屏及物联等等，还不具备条件，需要找第三方合作单位共同开发。目前在没有新</w:t>
+      <w:lastRenderedPageBreak/><w:t>开发控制板前，我们会按照现有控制板方式，优化并进行测试。</w:t></w:r>
+      
+      
+      
+      
+      
+      
+    </w:p>
+    <w:sectPr w:rsidR="00716981" w:rsidRPr="00716981">
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1440" w:right="1800" w:bottom="1440" w:left="1800" w:header="851" w:footer="992" w:gutter="0"/>
+      <w:cols w:space="425"/>
+      <w:docGrid w:type="lines" w:linePitch="312"/>
+    </w:sectPr>
+  </w:body>
+</w:document>

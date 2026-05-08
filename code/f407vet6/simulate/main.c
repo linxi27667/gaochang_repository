@@ -99,12 +99,10 @@ static void test_01_power_on_safe_state(void)
     Safety_Init();
     Key_Init();
 
-    CHECK_EQ(sim_pin_read(MOTOR1_UP_PORT, MOTOR1_UP_PIN),     0, "MOTOR1_UP OFF");
-    CHECK_EQ(sim_pin_read(MOTOR2_UP_PORT, MOTOR2_UP_PIN),     0, "MOTOR2_UP OFF");
-    CHECK_EQ(sim_pin_read(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN), 0, "MOTOR1_MAIN OFF");
-    CHECK_EQ(sim_pin_read(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN), 0, "MOTOR2_MAIN OFF");
-    CHECK_EQ(sim_pin_read(REVERSE_PORT, REVERSE_PIN),         0, "REVERSE OFF");
-    CHECK_EQ(sim_pin_read(BRAKE_PORT, BRAKE_PIN),             0, "BRAKE HOLD");
+    CHECK_EQ(sim_pin_read(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN),  0, "COL_LEFT_MAIN OFF");
+    CHECK_EQ(sim_pin_read(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN), 0, "COL_RIGHT_MAIN OFF");
+    CHECK_EQ(sim_pin_read(RELAY_UP_PORT,       RELAY_UP_PIN),       0, "RELAY_UP OFF");
+    CHECK_EQ(sim_pin_read(RELAY_DOWN_PORT,     RELAY_DOWN_PIN),     0, "RELAY_DOWN OFF");
     CHECK_EQ(sim_pin_read(BUZZER_PORT, BUZZER_PIN),           0, "BUZZER OFF");
     CHECK_EQ(g_safety.alarm_state, ALARM_NONE, "Alarm NONE");
 }
@@ -121,9 +119,8 @@ static void test_02_button_up_starts_motor(void)
     sim_button_press(BUTTON_UP_PIN);
     sim_control_cycle();
 
-    CHECK_EQ(sim_pin_read(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN), 1, "M1 MAIN ON");
-    CHECK_EQ(sim_pin_read(MOTOR1_UP_PORT, MOTOR1_UP_PIN),     1, "M1 UP ON");
-    CHECK_EQ(sim_pin_read(BRAKE_PORT, BRAKE_PIN),             1, "BRAKE RELEASE");
+    CHECK_EQ(sim_pin_read(RELAY_UP_PORT,       RELAY_UP_PIN),       1, "RELAY_UP ON");
+    CHECK_EQ(sim_pin_read(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN),  1, "COL_LEFT_MAIN ON");
     CHECK_EQ(g_column[0].motor_state, MOTOR_RUNNING, "Column 0 RUNNING");
     CHECK_EQ(g_command.direction, DIR_UP, "Direction UP");
 
@@ -199,7 +196,7 @@ static void test_06_button_down_reverse_and_buzzer(void)
     sim_button_press(BUTTON_DOWN_PIN);
     sim_control_cycle();
 
-    CHECK_EQ(sim_pin_read(REVERSE_PORT, REVERSE_PIN), 1, "REVERSE ON");
+    CHECK_EQ(sim_pin_read(RELAY_DOWN_PORT, RELAY_DOWN_PIN), 1, "RELAY_DOWN ON");
     CHECK_EQ(g_command.direction, DIR_DOWN, "Direction DOWN");
     CHECK_EQ(sim_pin_read(BUZZER_PORT, BUZZER_PIN), 1, "BUZZER ON when descending");
 
@@ -225,9 +222,9 @@ static void test_07_button_stop_motors(void)
     sim_button_release(BUTTON_STOP_PIN);
 
     CHECK_EQ(g_command.direction, DIR_STOP, "Direction STOP");
-    CHECK_EQ(sim_pin_read(MOTOR1_UP_PORT, MOTOR1_UP_PIN),   0, "M1 UP OFF");
-    CHECK_EQ(sim_pin_read(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN), 0, "M1 MAIN OFF");
-    CHECK_EQ(sim_pin_read(BRAKE_PORT, BRAKE_PIN),             0, "BRAKE HOLD");
+    CHECK_EQ(sim_pin_read(RELAY_UP_PORT,        RELAY_UP_PIN),        0, "RELAY_UP OFF");
+    CHECK_EQ(sim_pin_read(RELAY_DOWN_PORT,      RELAY_DOWN_PIN),      0, "RELAY_DOWN OFF");
+    CHECK_EQ(sim_pin_read(COL_LEFT_MAIN_PORT,   COL_LEFT_MAIN_PIN),   0, "COL_LEFT_MAIN OFF");
 }
 
 static void test_08_collision_immediate_stop(void)

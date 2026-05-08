@@ -10,12 +10,20 @@
 
 motor_column_t g_column[2] = {0};
 
+/* ==================== 内部辅助 ==================== */
+
+static GPIO_TypeDef* GetColPort(uint8_t col) {
+    return COL_MAIN_PORT(col);
+}
+static uint16_t GetColPin(uint8_t col) {
+    return COL_MAIN_PIN(col);
+}
+
 /* ==================== 电机初始化 ==================== */
 
 void Motor_Init(void)
 {
     Motor_Stop_All();
-    HAL_GPIO_WritePin(BRAKE_PORT, BRAKE_PIN, BRAKE_HOLD);
 }
 
 /* ==================== 启动单柱电机 ==================== */
@@ -23,40 +31,24 @@ void Motor_Init(void)
 void Motor_Start(uint8_t column_index, direction_t direction)
 {
     if (direction == DIR_UP) {
-        /* 上升：主接触器合 → 延时 → 上升接触器合 */
-        if (column_index == 0) {
-            HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_ON);
-            osDelay(20);
-            HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_ON);
-        } else {
-            HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_ON);
-            osDelay(20);
-            HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_ON);
-        }
-    } else if (direction == DIR_DOWN) {
-        /* 下降：反转继电器合 → 延时 → 主接触器合 → 延时 → 上升接触器合 */
-        HAL_GPIO_WritePin(REVERSE_PORT, REVERSE_PIN, RELAY_ON);
+        /* 方向先铺路 → 等20ms → 主开关扛冲击 */
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_ON);
         osDelay(20);
-        if (column_index == 0) {
-            HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_ON);
-            osDelay(20);
-            HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_ON);
-        } else {
-            HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_ON);
-            osDelay(20);
-            HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_ON);
-        }
+        HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_ON);
+    } else if (direction == DIR_DOWN) {
+        /* 方向先铺路 → 等20ms → 主开关扛冲击 */
+        HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_ON);
+        osDelay(20);
+        HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_ON);
     } else {
         return;
     }
 
-    /* 通电释放刹车 */
-    HAL_GPIO_WritePin(BRAKE_PORT, BRAKE_PIN, BRAKE_RELEASE);
-
     g_column[column_index].motor_state    = MOTOR_RUNNING;
     g_column[column_index].counting_enable = 1;
 
-    /* 初始化堵转检测时间基准，防止启动瞬间误报 */
     g_safety.last_pulse_tick[column_index] = HAL_GetTick();
 
     #if MOTOR_DEBUG == 1
@@ -68,20 +60,9 @@ void Motor_Start(uint8_t column_index, direction_t direction)
 
 void Motor_Stop(uint8_t column_index)
 {
-    /* 先关上升接触器 → 关主接触器 */
-    if (column_index == 0) {
-        HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_OFF);
-        osDelay(10);
-        HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_OFF);
-    } else {
-        HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_OFF);
-        osDelay(10);
-        HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_OFF);
-    }
-
-    /* 关反转、抱紧刹车 */
-    HAL_GPIO_WritePin(REVERSE_PORT, REVERSE_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(BRAKE_PORT, BRAKE_PIN, BRAKE_HOLD);
+    /* 主开关先断电灭弧 → 不动方向（另一柱可能还在跑） */
+    HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
+    osDelay(10);
 
     g_column[column_index].motor_state    = MOTOR_STOPPED;
     g_column[column_index].counting_enable = 0;
@@ -91,39 +72,26 @@ void Motor_Stop(uint8_t column_index)
     #endif
 }
 
-/* ==================== 暂停单柱（平衡用，保留方向和刹车） ==================== */
+/* ==================== 暂停单柱（平衡用，只断总开关，保留方向继电器） ==================== */
 
 void Motor_Pause(uint8_t column_index)
 {
-    if (column_index == 0) {
-        HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_OFF);
-        osDelay(10);
-        HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_OFF);
-    } else {
-        HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_OFF);
-        osDelay(10);
-        HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_OFF);
-    }
-    /* 不动 REVERSE 和 BRAKE，另一根柱子继续跑 */
+    HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
 
     g_column[column_index].motor_state    = MOTOR_STOPPED;
     g_column[column_index].counting_enable = 0;
 }
 
-/* ==================== 停止所有电机（并行，单次延时） ==================== */
+/* ==================== 停止所有电机 ==================== */
 
 void Motor_Stop_All(void)
 {
-    /* 关两路上升接触器 */
-    HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_OFF);
+    /* 主开关先断电灭弧 → 等10ms → 方向继电器换向（无电不打火花） */
+    HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_OFF);
+    HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_OFF);
     osDelay(10);
-    /* 关两路主接触器 */
-    HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_OFF);
-    /* 关反转、抱紧刹车 */
-    HAL_GPIO_WritePin(REVERSE_PORT, REVERSE_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(BRAKE_PORT, BRAKE_PIN, BRAKE_HOLD);
+    HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);
+    HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
 
     g_column[0].motor_state    = MOTOR_STOPPED;
     g_column[0].counting_enable = 0;
@@ -139,25 +107,44 @@ void Motor_Stop_All(void)
 
 void Motor_Start_All(direction_t direction)
 {
-    Motor_Start(0, direction);
-    Motor_Start(1, direction);
+    if (direction == DIR_UP) {
+        /* 方向先铺路 → 等20ms → 两个主开关扛冲击 */
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_ON);
+        osDelay(20);
+        HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_ON);
+        HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_ON);
+
+        g_column[0].motor_state = MOTOR_RUNNING;
+        g_column[0].counting_enable = 1;
+        g_column[1].motor_state = MOTOR_RUNNING;
+        g_column[1].counting_enable = 1;
+    } else if (direction == DIR_DOWN) {
+        /* 方向先铺路 → 等20ms → 两个主开关扛冲击 */
+        HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_ON);
+        osDelay(20);
+        HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_ON);
+        HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_ON);
+
+        g_column[0].motor_state = MOTOR_RUNNING;
+        g_column[0].counting_enable = 1;
+        g_column[1].motor_state = MOTOR_RUNNING;
+        g_column[1].counting_enable = 1;
+    }
+
+    g_safety.last_pulse_tick[0] = HAL_GetTick();
+    g_safety.last_pulse_tick[1] = HAL_GetTick();
 }
 
 /* ==================== ISR 安全紧急停机（无延时） ==================== */
 
 void Motor_Stop_All_Immediate(void)
 {
-    /* 关两路上升接触器 */
-    HAL_GPIO_WritePin(MOTOR1_UP_PORT, MOTOR1_UP_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(MOTOR2_UP_PORT, MOTOR2_UP_PIN, RELAY_OFF);
-
-    /* 关两路主接触器 */
-    HAL_GPIO_WritePin(MOTOR1_MAIN_PORT, MOTOR1_MAIN_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(MOTOR2_MAIN_PORT, MOTOR2_MAIN_PIN, RELAY_OFF);
-
-    /* 关反转、抱紧刹车 */
-    HAL_GPIO_WritePin(REVERSE_PORT, REVERSE_PIN, RELAY_OFF);
-    HAL_GPIO_WritePin(BRAKE_PORT, BRAKE_PIN, BRAKE_HOLD);
+    HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);
+    HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
+    HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_OFF);
+    HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_OFF);
 
     g_column[0].motor_state    = MOTOR_STOPPED;
     g_column[0].counting_enable = 0;

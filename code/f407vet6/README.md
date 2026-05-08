@@ -69,15 +69,16 @@ f407vet6/
 
 ### 电机输出（继电器）
 
-| 功能        | 引脚  | CubeMX 配置      | 宏定义                               |
-| --------- | --- | -------------- | --------------------------------- |
-| 1# 上升接触器  | PC0 | GPIO_Output PP | `motor.h`: `MOTOR1_UP_PORT/PIN`   |
-| 2# 上升接触器  | PC1 | GPIO_Output PP | `motor.h`: `MOTOR2_UP_PORT/PIN`   |
-| 1# 主接触器   | PC2 | GPIO_Output PP | `motor.h`: `MOTOR1_MAIN_PORT/PIN` |
-| 2# 主接触器   | PC3 | GPIO_Output PP | `motor.h`: `MOTOR2_MAIN_PORT/PIN` |
-| 刹车（常闭继电器） | PC4 | GPIO_Output PP | `motor.h`: `BRAKE_PORT/PIN`       |
-| 反转（下降方向）  | PC5 | GPIO_Output PP | `motor.h`: `REVERSE_PORT/PIN`     |
-|           |     |                |                                   |
+左右两柱共用上升/下降方向继电器，仅总开关已闭合的电机受方向继电器控制。全部低电平吸合。
+
+| 功能 | 引脚 | CubeMX 配置 | 宏定义 |
+|------|------|------------|--------|
+| 左柱主接触器 | PC0 | GPIO_Output PP | `motor.h`: `COL_LEFT_MAIN_PORT/PIN` |
+| 上升继电器（共享） | PC2 | GPIO_Output PP | `motor.h`: `RELAY_UP_PORT/PIN` |
+| 右柱主接触器 | PC4 | GPIO_Output PP | `motor.h`: `COL_RIGHT_MAIN_PORT/PIN` |
+| 下降继电器（共享） | PC5 | GPIO_Output PP | `motor.h`: `RELAY_DOWN_PORT/PIN` |
+
+**互斥规则**：RELAY_UP 和 RELAY_DOWN 绝对不能同时闭合，否则电源短路。切换方向必须先关一个再开另一个。
 
 ### 安全输入（EXTI 中断）
 
@@ -115,8 +116,10 @@ f407vet6/
 - Counter Period: 65535-1
 - NVIC: 勾选 TIM2 global interrupt, Preemption=0, Sub=0
 
-### 2. PC0-PC5 输出
-- 全部设为 GPIO_Output PP, Low, No pull
+### 2. PC0/PC2/PC4/PC5 输出（电机继电器）
+- 全部设为 GPIO_Output PP, High, No pull
+- **重要**：默认输出 High（高电平），继电器驱动为低电平吸合
+- PC0=左柱主接触器, PC2=上升继电器, PC4=右柱主接触器, PC5=下降继电器
 
 ### 3. PB8 输出（蜂鸣器）
 - GPIO_Output PP, Low, No pull
@@ -211,13 +214,27 @@ typedef struct {
 
 ## 核心模块说明
 
-### motor.h/c — 电机控制（继电器时序）
+### motor.h/c — 电机控制（4 继电器时序）
 
-- **上升**: 主接触器合 → 20ms → 上升接触器合 → 刹车释放
-- **下降**: 反转继电器合 → 20ms → 主接触器合 → 20ms → 上升接触器合 → 刹车释放
-- **停止**: 上升接触器断 → 10ms → 主接触器断 → 反转断 → 刹车抱紧
-- **紧急停机(ISR安全)**: `Motor_Stop_All_Immediate()` — 无延时，ISR 中直接调用
-- **失效安全**: MCU 死机→GPIO高阻→光耦不导通→继电器全断→刹车抱紧
+```
+架构说明：
+  PC2 (RELAY_UP)        ──→ 共享上升继电器 ──→ 两条柱子 (仅总开关闭合的生效)
+  PC5 (RELAY_DOWN)      ──→ 共享下降继电器 ──→ 两条柱子
+  PC0 (COL_LEFT_MAIN)   ──→ 左柱主接触器
+  PC4 (COL_RIGHT_MAIN)  ──→ 右柱主接触器
+```
+
+**通电（先铺路，再通电）：** 方向继电器先吸合 → 20ms → 主接触器吸合（扛冲击）
+**断电（先断电，再换向）：** 主接触器先断开 → 10ms灭弧 → 方向继电器可换向
+
+- **上升**: 关DOWN → 开UP → 20ms → 开总开关
+- **下降**: 关UP → 开DOWN → 20ms → 开总开关
+- **停止单柱**: 关总开关 → 10ms灭弧（不动方向继电器，另一柱可能还在跑）
+- **停止全部**: 关所有总开关 → 10ms灭弧 → 关方向继电器（无电不打火花）
+- **平衡暂停**: `Motor_Pause(col)` — 只断 col 总开关，保留方向继电器
+- **紧急停机**: `Motor_Stop_All_Immediate()` — 全部同时关，无延时
+- **失效安全**: MCU 死机→GPIO高阻→光耦断开→4 继电器全断→所有电机停机
+- **互斥保护**: `Motor_Start` 内部先关旧方向继电器再开新的，防止 RELAY_UP/RELAY_DOWN 同时闭合造成短路
 
 ### key.h/c — 按键 + 蜂鸣器
 
@@ -289,7 +306,7 @@ typedef struct {
 | 按键 | KEY_前缀+key_t结构体+状态机+两帧确认消抖(40ms) | `key.h/c` |
 | 编码器 | 模拟脉冲(每50ms)，6mm/脉冲，5:4两柱偏差 | `dri_debug.c/h` |
 | 安全 | 上限位/下限位不设告警只停，防碰模拟(500mm) | `safety.c/h`, `dri_debug.c` |
-| 平衡 | Motor_Pause(单柱暂停不关REVERSE/BRAKE)，下降方向反向判定 | `motor.c/h`, `balance.c` |
+| 平衡 | Motor_Pause(单柱暂停只断总开关，保留方向继电器)，下降方向反向判定 | `motor.c/h`, `balance.c` |
 | 存储 | 高度变化且>5s才写Flash | `dri_motor.c` |
 | 日志 | mm单位+简洁英文+蜂鸣告警级+A/Assert红 | 全模块 |
 | 枚举 | motor_state_t, direction_t, alarm_t, key_state_t | `motor.h`, `safety.h`, `key.h` |
@@ -299,7 +316,7 @@ typedef struct {
 
 ```c
 // main.h
-MAX_HEIGHT_MM     4000    // 最大高度 4m（可改）
+MAX_HEIGHT_MM     1000    // 最大高度 1m（调试用）
 MAX_PULSES        666     // 4000/6
 COLLISION_ENABLE  0       // 真机改1
 SECONDARY_DESCENT_ENABLE 0   // 真机改1
@@ -327,16 +344,16 @@ Control_Task 10ms:
 |------|--------|------|
 | 上升 | 脉冲多(升得高) | 等慢柱升上来 |
 | 下降 | 脉冲少(降得多) | 等慢柱降下来 |
-| 偏差 | >4脉冲(24mm) | Motor_Pause(只停主+上，保留反转) |
+| 偏差 | >4脉冲(24mm) | Motor_Pause(只断总开关，保留方向继电器) |
 
 ### 关键修复
 
 | Bug | 根因 | 修复 |
 |-----|------|------|
-| 上电4继电器全吸合 | 低电平继电器，RELAY_ON定义反了 | 反转 RELAY_ON=RESET |
+| 上电4继电器全吸合 | 低电平继电器，RELAY_ON定义反了 | 确认 RELAY_ON=RESET(低电平吸合) |
 | 堵转误报2秒必触发 | Sim_Encoder不更新g_safety.last_pulse_tick | 同步更新 |
 | 平衡暂停的柱子还在涨脉冲 | Sim_Encoder不管motor_state | 加 MOTOR_RUNNING 判断 |
-| Motor_Stop关全系统反转 | 平衡暂停单柱时把另一柱也停了 | 新建 Motor_Pause |
+| Motor_Stop关方向继电器影响另一柱 | 平衡暂停单柱时把方向继电器也关了 | 新建 Motor_Pause(只断总开关) |
 | 二次下降保护死循环 | 无确认键，永远通不过 | SECONDARY_DESCENT_ENABLE=0 |
 | 幽灵按键反复触发 | PB12-15 CubeMX配成GPIO_NOPULL浮空 | CubeMX改为GPIO_PULLUP + 两帧消抖 |
 

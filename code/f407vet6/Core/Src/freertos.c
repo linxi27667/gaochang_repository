@@ -31,6 +31,7 @@
 #include "dri_motor.h"
 #include "dri_safety.h"
 #include "dri_key.h"
+#include "bsp_rs485.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,7 +63,7 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void RS485_Echo_Task(void *pvParameters);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -105,6 +106,9 @@ void MX_FREERTOS_Init(void) {
   Control_Task_Create();
   Safety_Task_Create();
   Key_Task_Create();
+
+  /* RS485回显测试任务 */
+  xTaskCreate(RS485_Echo_Task, "rs485_echo", 256, NULL, tskIDLE_PRIORITY + 2, NULL);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -133,6 +137,41 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
+/**
+  * @brief  RS485自测任务
+  *         - 每2秒发送测试消息
+  *         - 同时检测接收到的数据并回传（回显模式）
+  *         - 短接PA2(USART2_TX)和PA3(USART2_RX)可实现回环自测
+  *         - 接入RS485模块后自动变为总线模式
+  */
+void RS485_Echo_Task(void *pvParameters)
+{
+    (void)pvParameters;
+    uint8_t buf[128];
+    uint32_t last_test_tick = 0;
+
+    while (1) {
+        /* 每2秒发送一次测试消息 */
+        uint32_t now = HAL_GetTick();
+        if (now - last_test_tick > 2000) {
+            last_test_tick = now;
+            char *test_msg = "RS485 self-test OK\r\n";
+            RS485_Transmit(&rs485_handle, (uint8_t *)test_msg, strlen(test_msg), 100);
+        }
+
+        /* 处理接收 */
+        uint16_t count = RS485_GetRxCount(&rs485_handle);
+        if (count > 0) {
+            uint16_t len = RS485_Receive(&rs485_handle, buf, sizeof(buf));
+            if (len > 0) {
+                /* 回传给发送方 */
+                RS485_Transmit(&rs485_handle, buf, len, 100);
+            }
+        }
+        osDelay(10);
+    }
+}
 
 /* USER CODE END Application */
 

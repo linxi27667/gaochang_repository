@@ -10,7 +10,7 @@
       <TargetName>Ball_And_Plant_System</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>5060528::V5.06 update 5 (build 528)::ARMCC</pCCUsed>
+      <pCCUsed>5060960::V5.06 update 7 (build 960)::.\ARMCC_v5</pCCUsed>
       <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -137,7 +137,7 @@
             <DriverSelection>4101</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
-          <Flash2>BIN\UL2V8M.DLL</Flash2>
+          <Flash2>BIN\UL2CM3.DLL</Flash2>
           <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
@@ -1153,6 +1153,16 @@
               <FileName>bsp_w25qxx.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\BSP\Inc\bsp_w25qxx.h</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_rs485.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\Src\bsp_rs485.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_rs485.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\Inc\bsp_rs485.h</FilePath>
             </File>
           </Files>
         </Group>

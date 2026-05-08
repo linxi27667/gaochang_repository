@@ -29,31 +29,27 @@ typedef struct {
 /* ==================== 全局变量 ==================== */
 extern motor_column_t g_column[2];
 
-/* ==================== 引脚宏（用户可按实际接线修改）==================== */
+/* ==================== 引脚宏 ==================== */
 
-#define MOTOR1_UP_PORT   GPIOC
-#define MOTOR1_UP_PIN    GPIO_PIN_0
+#define COL_LEFT_MAIN_PORT   GPIOC
+#define COL_LEFT_MAIN_PIN    GPIO_PIN_0    /* 左柱主接触器 */
 
-#define MOTOR2_UP_PORT   GPIOC
-#define MOTOR2_UP_PIN    GPIO_PIN_1
+#define COL_RIGHT_MAIN_PORT  GPIOC
+#define COL_RIGHT_MAIN_PIN   GPIO_PIN_4    /* 右柱主接触器 */
 
-#define MOTOR1_MAIN_PORT GPIOC
-#define MOTOR1_MAIN_PIN  GPIO_PIN_2
+#define RELAY_UP_PORT        GPIOC
+#define RELAY_UP_PIN         GPIO_PIN_2    /* 上升继电器（共享） */
 
-#define MOTOR2_MAIN_PORT GPIOC
-#define MOTOR2_MAIN_PIN  GPIO_PIN_3
-
-#define BRAKE_PORT       GPIOC
-#define BRAKE_PIN        GPIO_PIN_4
-
-#define REVERSE_PORT     GPIOC
-#define REVERSE_PIN      GPIO_PIN_5
+#define RELAY_DOWN_PORT      GPIOC
+#define RELAY_DOWN_PIN       GPIO_PIN_5    /* 下降继电器（共享） */
 
 /* 继电器驱动电平：低电平吸合 */
 #define RELAY_ON         GPIO_PIN_RESET
 #define RELAY_OFF        GPIO_PIN_SET
-#define BRAKE_RELEASE    GPIO_PIN_RESET  /* 通电释放刹车 */
-#define BRAKE_HOLD       GPIO_PIN_SET    /* 断电抱紧 */
+
+/* 总开关宏（按列索引查引脚） */
+#define COL_MAIN_PORT(col)  ((col) == 0 ? COL_LEFT_MAIN_PORT  : COL_RIGHT_MAIN_PORT)
+#define COL_MAIN_PIN(col)   ((col) == 0 ? COL_LEFT_MAIN_PIN   : COL_RIGHT_MAIN_PIN)
 
 /* ==================== API ==================== */
 

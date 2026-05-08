@@ -33,6 +33,7 @@
 #include "encoder.h"
 #include "safety.h"
 #include "key.h"
+#include "bsp_rs485.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -103,6 +104,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM3_Init();
   MX_TIM7_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	SEGGER_RTT_Init();
 	elog_init();
@@ -120,6 +122,10 @@ int main(void)
 	Safety_Init();
 	Key_Init();
 	Encoder_Init();
+
+	/* RS485初始化 */
+	App_RS485_Init();
+
 	/* TIM7 未使用，按键消抖改为纯轮询 */
 
   /* USER CODE END 2 */

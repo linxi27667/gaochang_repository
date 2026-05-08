@@ -141,12 +141,10 @@ uint8_t sim_pin_read(GPIO_TypeDef *port, uint16_t pin)
 
 static const char *pin_name(GPIO_TypeDef *port, uint16_t pin)
 {
-    if (port == GPIOC && pin == GPIO_PIN_0) return "MOTOR1_UP";
-    if (port == GPIOC && pin == GPIO_PIN_1) return "MOTOR2_UP";
-    if (port == GPIOC && pin == GPIO_PIN_2) return "MOTOR1_MAIN";
-    if (port == GPIOC && pin == GPIO_PIN_3) return "MOTOR2_MAIN";
-    if (port == GPIOC && pin == GPIO_PIN_4) return "BRAKE";
-    if (port == GPIOC && pin == GPIO_PIN_5) return "REVERSE";
+    if (port == GPIOC && pin == GPIO_PIN_0) return "COL_LEFT_MAIN";
+    if (port == GPIOC && pin == GPIO_PIN_2) return "RELAY_UP";
+    if (port == GPIOC && pin == GPIO_PIN_4) return "COL_RIGHT_MAIN";
+    if (port == GPIOC && pin == GPIO_PIN_5) return "RELAY_DOWN";
     if (port == GPIOB && pin == GPIO_PIN_8)  return "BUZZER";
     return "?";
 }

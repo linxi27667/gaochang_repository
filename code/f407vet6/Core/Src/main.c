@@ -33,7 +33,7 @@
 #include "encoder.h"
 #include "safety.h"
 #include "key.h"
-#include "bsp_rs485.h"
+#include "app_rs485.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -124,7 +124,7 @@ int main(void)
 	Encoder_Init();
 
 	/* RS485初始化 */
-	App_RS485_Init();
+	RS485_Init();
 
 	/* TIM7 未使用，按键消抖改为纯轮询 */
 
@@ -198,46 +198,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-/* TIM2 输入捕获回调 → 编码器模块 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance != TIM2) return;
-
-    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
-        Encoder_Capture_ISR(1);
-    else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
-        Encoder_Capture_ISR(2);
-}
-
-/* EXTI 回调 → 安全模块 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    Safety_EXTI_Handler(GPIO_Pin);
-}
-
 /* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM6 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM6)
-  {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.

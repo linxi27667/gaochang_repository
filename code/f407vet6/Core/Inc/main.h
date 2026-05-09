@@ -87,7 +87,7 @@ void Error_Handler(void);
 #define KEY_DEBUG            1   /* key.c 按键+蜂鸣器日志 */
 #define W25Q_DEBUG           1   /* app_w25qxx.c W25Q存取日志 */
 #define CTRL_DEBUG           1   /* dri_motor.c 控制任务日志 */
-#define RS485_DEBUG          1   /* bsp_rs485.c RS485通信日志 */
+#define RS485_DEBUG          1   /* app_rs485.c */
 
 /* ===== 硬件开关：真机接好传感器后改为 1 ===== */
 #define COLLISION_ENABLE             0   /* 防碰杆实物（调试阶段关） */

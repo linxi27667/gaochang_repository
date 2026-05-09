@@ -21,8 +21,8 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-DMA_HandleTypeDef hdma_usart2_rx;
-DMA_HandleTypeDef hdma_usart2_tx;
+#include "bsp_uart_dma.h"
+#include "app_rs485.h"
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -289,6 +289,21 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    BSP_UART_TxCpltCallback(huart);
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    BSP_UART_ErrorCallback(huart);
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    RS485_OnRxEvent(huart, Size);
+}
 
 /* USER CODE END 1 */
 

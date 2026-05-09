@@ -21,7 +21,7 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "encoder.h"
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim2;
@@ -277,4 +277,20 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
 /* USER CODE BEGIN 1 */
 
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM2) return;
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+        Encoder_Capture_ISR(1);
+    else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
+        Encoder_Capture_ISR(2);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM6)
+        HAL_IncTick();
+}
+
 /* USER CODE END 1 */
+

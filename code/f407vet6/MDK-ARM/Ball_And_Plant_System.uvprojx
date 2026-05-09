@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../APP/Inc;../APP/Src;../BSP/Inc;../BSP/Src;../RTT_easylog/easylogger/inc;../RTT_easylog/easylogger/plugins;../RTT_easylog/easylogger/port;../RTT_easylog/easylogger/src;../RTT_easylog/RTT;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Driver;../Driver/Inc;../Driver/Src</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../APP/Inc;../APP/Src;../BSP/Inc;../BSP/Src;../RTT_easylog/easylogger/inc;../RTT_easylog/easylogger/plugins;../RTT_easylog/easylogger/port;../RTT_easylog/easylogger/src;../RTT_easylog/RTT;../Middlewares/FIFO;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Driver;../Driver/Inc;../Driver/Src</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1080,6 +1080,16 @@
               <FilePath>..\APP\Inc\app_w25qxx.h</FilePath>
             </File>
             <File>
+              <FileName>app_rs485.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\app_rs485.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rs485.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\app_rs485.h</FilePath>
+            </File>
+            <File>
               <FileName>balance.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\APP\Src\balance.c</FilePath>
@@ -1155,14 +1165,29 @@
               <FilePath>..\BSP\Inc\bsp_w25qxx.h</FilePath>
             </File>
             <File>
-              <FileName>bsp_rs485.c</FileName>
+              <FileName>bsp_uart_dma.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\BSP\Src\bsp_rs485.c</FilePath>
+              <FilePath>..\BSP\Src\bsp_uart_dma.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_rs485.h</FileName>
+              <FileName>bsp_uart_dma.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\BSP\Inc\bsp_rs485.h</FilePath>
+              <FilePath>..\BSP\Inc\bsp_uart_dma.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Middlewares/FIFO</GroupName>
+          <Files>
+            <File>
+              <FileName>fifo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Middlewares\FIFO\fifo.c</FilePath>
+            </File>
+            <File>
+              <FileName>fifo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\FIFO\fifo.h</FilePath>
             </File>
           </Files>
         </Group>

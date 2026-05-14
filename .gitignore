@@ -21,6 +21,7 @@ JLinkLog.txt
 DebugConfig/
 Listings/
 Objects/
+*/MDK-ARM/*-*/
 
 # IDE
 *.uvguix.*

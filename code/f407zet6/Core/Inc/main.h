@@ -75,29 +75,46 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define W25Q_CS_Pin GPIO_PIN_4
-#define W25Q_CS_GPIO_Port GPIOA
+#define Stop_Key_Pin GPIO_PIN_2
+#define Stop_Key_GPIO_Port GPIOE
+#define Left_Moter_Realy_Pin GPIO_PIN_8
+#define Left_Moter_Realy_GPIO_Port GPIOD
+#define Right_Moter_Realy_Pin GPIO_PIN_9
+#define Right_Moter_Realy_GPIO_Port GPIOD
+#define Up_Realy_Pin GPIO_PIN_10
+#define Up_Realy_GPIO_Port GPIOD
+#define Down_Realy_Pin GPIO_PIN_11
+#define Down_Realy_GPIO_Port GPIOD
+#define Led_Run_Pin GPIO_PIN_2
+#define Led_Run_GPIO_Port GPIOG
+#define Up_Key_Pin GPIO_PIN_0
+#define Up_Key_GPIO_Port GPIOE
+#define Down_Key_Pin GPIO_PIN_1
+#define Down_Key_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
 
-/* ===== 各模块独立调试开关 - 默认全关，需调试哪个就开哪个 ===== */
-#define MOTOR_DEBUG          0   /* motor.c 启停日志（静默，由 dri_motor 统一输出） */
-#define BALANCE_DEBUG        1   /* balance.c 平衡算法日志 */
-#define SAFETY_DEBUG         1   /* safety.c 安全保护日志 */
-#define KEY_DEBUG            1   /* key.c 按键+蜂鸣器日志 */
-#define W25Q_DEBUG           1   /* app_w25qxx.c W25Q存取日志 */
-#define CTRL_DEBUG           1   /* dri_motor.c 控制任务日志 */
-#define RS485_DEBUG          1   /* app_rs485.c */
+/* PG2 运行指示灯：低电平点亮 */
+#define LED_RUN_ON()          HAL_GPIO_WritePin(Led_Run_GPIO_Port, Led_Run_Pin, GPIO_PIN_RESET)
+#define LED_RUN_OFF()         HAL_GPIO_WritePin(Led_Run_GPIO_Port, Led_Run_Pin, GPIO_PIN_SET)
+#define LED_RUN_TOGGLE()      HAL_GPIO_TogglePin(Led_Run_GPIO_Port, Led_Run_Pin)
 
-/* ===== 硬件开关：真机接好传感器后改为 1 ===== */
-#define COLLISION_ENABLE             0   /* 防碰杆实物（调试阶段关） */
-#define SECONDARY_DESCENT_ENABLE     0   /* 二次下降保护（需确认键，调试关） */
+/* ===== 各模块调试开关 ===== */
+#define MOTOR_DEBUG          1
+#define BALANCE_DEBUG        1
+#define SAFETY_DEBUG         1
+#define KEY_DEBUG            1
+#define W25Q_DEBUG           0
+#define CTRL_DEBUG           1
+#define RS485_DEBUG          0
 
-/* SIM_COLLISION_HEIGHT_MM 见 Driver/Inc/dri_debug.h */   /* 上升到 500mm 触发防碰杆 */
+/* ===== 硬件开关 ===== */
+#define COLLISION_ENABLE             0
+#define SECONDARY_DESCENT_ENABLE     0
 
 /* 最大高度（mm），丝杆导程 6mm/脉冲 */
 #define MAX_HEIGHT_MM      1000
-#define MAX_PULSES         (MAX_HEIGHT_MM / 6)    /* 4000/6 ≈ 666 */
+#define MAX_PULSES         (MAX_HEIGHT_MM / 6)
 
 /* USER CODE END Private defines */
 

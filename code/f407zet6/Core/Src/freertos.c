@@ -27,11 +27,11 @@
 /* USER CODE BEGIN Includes */
 #include "elog.h"
 #include "gpio.h"
-#include "dri_debug.h"
+/* #include "dri_debug.h" -- 屏蔽: 模拟编码器 */
 #include "dri_motor.h"
 #include "dri_safety.h"
 #include "dri_key.h"
-#include "dri_rs485.h"
+/* #include "dri_rs485.h" -- 屏蔽: RS485 */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,8 +105,7 @@ void MX_FREERTOS_Init(void) {
   Control_Task_Create();
   Safety_Task_Create();
   Key_Task_Create();
-
-  RS485_Task_Create();
+  /* RS485_Task_Create(); -- 屏蔽 */
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

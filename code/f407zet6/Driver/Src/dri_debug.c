@@ -87,7 +87,7 @@ void Sim_Collision_Check(void)
     if (h0_mm >= SIM_COLLISION_HEIGHT_MM || h1_mm >= SIM_COLLISION_HEIGHT_MM) {
         Motor_Stop_All_Immediate();
         g_safety.alarm = ALARM_COLLISION;
-        Buzzer_On();
+        /* Buzzer_On() -- 屏蔽: 无蜂鸣器 */
         #if SAFETY_DEBUG == 1
         elog_e("SAFETY", "Collision! sim at %dmm", SIM_COLLISION_HEIGHT_MM);
         #endif

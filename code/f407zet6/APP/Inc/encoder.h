@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-/* ==================== API ==================== */
-
 void     Encoder_Init(void);
 int32_t  Encoder_Get_Count(uint8_t column_index);
 void     Encoder_Reset_Count(uint8_t column_index);

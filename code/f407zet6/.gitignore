@@ -1,0 +1,37 @@
+# Keil build output
+MDK-ARM/gaochang_lift_2/
+MDK-ARM/build_log.txt
+MDK-ARM/JLinkLog.txt
+*.uvguix.*
+*.uvoptx
+
+# EWARM build output
+EWARM/settings/
+EWARM/Debug/
+EWARM/Release/
+
+# Compiled objects
+*.o
+*.d
+*.crf
+*.axf
+*.hex
+*.bin
+*.map
+*.lst
+*.dep
+*.htm
+*.sct
+*.lnp
+*.tra
+*.opt
+*.feedback
+*.plg
+*.cref
+*.pbi
+*.pbd
+*.iex
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -9,8 +9,6 @@
 #include "elog.h"
 #endif
 
-/* ==================== 双柱平衡算法 ==================== */
-
 void Balance_Run(void)
 {
     if (!g_config.dual_column_mode) return;
@@ -21,9 +19,6 @@ void Balance_Run(void)
     int32_t  difference;
     uint8_t  faster_column;
 
-    /* 判定"快柱"：
-     *   上升：脉冲多 = 升得高 = 快 → 暂停让它等慢柱
-     *   下降：脉冲少 = 降得多 = 快 → 暂停让它等慢柱 */
     if (g_command.direction == DIR_UP) {
         if (count_0 > count_1) {
             difference = count_0 - count_1;
@@ -32,13 +27,13 @@ void Balance_Run(void)
             difference = count_1 - count_0;
             faster_column = 1;
         }
-    } else {   /* DIR_DOWN */
+    } else {
         if (count_0 < count_1) {
             difference = count_1 - count_0;
-            faster_column = 0;    /* 0#脉冲少，降得快 */
+            faster_column = 0;
         } else {
             difference = count_0 - count_1;
-            faster_column = 1;    /* 1#脉冲少，降得快 */
+            faster_column = 1;
         }
     }
 
@@ -47,28 +42,27 @@ void Balance_Run(void)
                          : g_config.tolerance_down;
 
     if (difference > tolerance) {
-        /* 快柱超出允差 → 暂停快柱 */
         if (g_column[faster_column].motor_state == MOTOR_RUNNING) {
-            Motor_Pause(faster_column);   /* 只停单柱，保留REVERSE/BRAKE */
+            Motor_Pause(faster_column);
             g_column[faster_column].motor_state = MOTOR_WAITING_BALANCE;
             g_column[faster_column].wait_start_tick = HAL_GetTick();
             #if BALANCE_DEBUG == 1
-            elog_i("BAL", "PAUSE column=%d difference=%d tolerance=%d", faster_column, difference, tolerance);
+            elog_i("BAL", "PAUSE col=%d diff=%ld tol=%d dir=%s",
+                   faster_column, difference, tolerance,
+                   g_command.direction == DIR_UP ? "UP" : "DOWN");
             #endif
         }
     } else {
-        /* 差值回到允差内 → 恢复等待中的柱子 */
         for (int i = 0; i < 2; i++) {
             if (g_column[i].motor_state == MOTOR_WAITING_BALANCE) {
                 Motor_Start(i, g_command.direction);
                 #if BALANCE_DEBUG == 1
-                elog_i("BAL", "RESUME column=%d difference=%d", i, difference);
+                elog_i("BAL", "RESUME col=%d diff=%ld", i, difference);
                 #endif
             }
         }
     }
 
-    /* 超时检查 */
     uint32_t now = HAL_GetTick();
     for (int i = 0; i < 2; i++) {
         if (g_column[i].motor_state == MOTOR_WAITING_BALANCE) {

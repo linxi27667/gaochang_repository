@@ -37,27 +37,29 @@ void Balance_Run(void)
         }
     }
 
-    uint16_t tolerance = (g_command.direction == DIR_UP)
-                         ? g_config.tolerance_up
-                         : g_config.tolerance_down;
+    uint16_t tolerance_pause = (g_command.direction == DIR_UP)
+                                ? g_config.tolerance_up
+                                : g_config.tolerance_down;
+    uint16_t tolerance_resume = 1;  /* 恢复阈值，与暂停阈值形成滞回防抖 */
 
-    if (difference > tolerance) {
+    if (difference > tolerance_pause) {
         if (g_column[faster_column].motor_state == MOTOR_RUNNING) {
             Motor_Pause(faster_column);
             g_column[faster_column].motor_state = MOTOR_WAITING_BALANCE;
             g_column[faster_column].wait_start_tick = HAL_GetTick();
             #if BALANCE_DEBUG == 1
-            elog_i("BAL", "PAUSE col=%d diff=%ld tol=%d dir=%s",
-                   faster_column, difference, tolerance,
+            elog_i("BAL", "PAUSE col=%d diff=%ld pause_tol=%d dir=%s",
+                   faster_column, difference, tolerance_pause,
                    g_command.direction == DIR_UP ? "UP" : "DOWN");
             #endif
         }
     } else {
         for (int i = 0; i < 2; i++) {
-            if (g_column[i].motor_state == MOTOR_WAITING_BALANCE) {
+            if (g_column[i].motor_state == MOTOR_WAITING_BALANCE
+                && difference <= tolerance_resume) {
                 Motor_Start(i, g_command.direction);
                 #if BALANCE_DEBUG == 1
-                elog_i("BAL", "RESUME col=%d diff=%ld", i, difference);
+                elog_i("BAL", "RESUME col=%d diff=%ld resume_tol=%d", i, difference, tolerance_resume);
                 #endif
             }
         }

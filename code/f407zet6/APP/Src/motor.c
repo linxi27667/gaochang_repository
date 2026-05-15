@@ -26,6 +26,10 @@ void Motor_Init(void)
     g_column[1].pulse_count     = 0;
 }
 
+/* 启动单柱电机
+ * 时序：先合方向继电器 → 延时20ms → 再合电源继电器
+ * 原因：方向继电器先吸合，避免电源继电器带载切换
+ * 安全检查：告警/上限位/下限位/堵转均不启动 */
 void Motor_Start(uint8_t column_index, direction_t direction)
 {
     if (g_safety.alarm != ALARM_NONE)            return;
@@ -56,6 +60,8 @@ void Motor_Start(uint8_t column_index, direction_t direction)
     #endif
 }
 
+/* 停止单柱：只关电源继电器，方向继电器不动
+ * 用于平衡恢复后重新启动时的状态管理 */
 void Motor_Stop(uint8_t column_index)
 {
     HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
@@ -69,6 +75,9 @@ void Motor_Stop(uint8_t column_index)
     #endif
 }
 
+/* 暂停单柱（平衡用）
+ * 只关电源继电器，方向继电器保持吸合
+ * 追上后调用 Motor_Start 恢复，方向继电器此时已是ON无需切换 */
 void Motor_Pause(uint8_t column_index)
 {
     HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
@@ -77,6 +86,10 @@ void Motor_Pause(uint8_t column_index)
     g_column[column_index].counting_enable = 0;
 }
 
+/* 全部停止（正常停机）
+ * 时序：先断方向继电器 → 延时10ms → 再断电源继电器
+ * 目的：方向继电器在无电流下断开，延长触点寿命
+ * 附带堵转检测：若运行中超过堵转超时则置位嫌疑标志 */
 void Motor_Stop_All(void)
 {
     uint32_t now = HAL_GetTick();
@@ -103,6 +116,8 @@ void Motor_Stop_All(void)
     #endif
 }
 
+/* 双柱同时启动
+ * 时序同 Motor_Start：方向继电器 → 20ms → 双电源继电器 */
 void Motor_Start_All(direction_t direction)
 {
     if (g_safety.alarm != ALARM_NONE)            return;
@@ -138,6 +153,9 @@ void Motor_Start_All(direction_t direction)
     g_safety.last_pulse_tick[1] = HAL_GetTick();
 }
 
+/* 紧急停止（防碰杆触发用）
+ * 四路继电器同时断开，无延时
+ * 与 Motor_Stop_All 的区别：不做堵转判断，不等延时 */
 void Motor_Stop_All_Immediate(void)
 {
     HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);

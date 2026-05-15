@@ -122,6 +122,10 @@ void Safety_Alarm_Reset(void)
     #endif
 }
 
+/* 告警状态处理（Control_Task每周期调用）
+ * 返回0=无告警或已清除，1=告警中（跳过控制操作）
+ * 碰撞告警：只能按下降键退出（上升方向危险）
+ * 其他告警：双键同按复位 */
 uint8_t Safety_Alarm_Handle(void)
 {
     if (g_safety.alarm == ALARM_NONE)
@@ -131,6 +135,12 @@ uint8_t Safety_Alarm_Handle(void)
         && g_command.button_down && !g_command.button_up) {
         Safety_Alarm_Reset();
         g_safety.at_upper_limit = 0;
+        return 0;
+    }
+
+    /* 堵转/平衡超时等告警：双键同按复位 */
+    if (g_command.button_up && g_command.button_down) {
+        Safety_Alarm_Reset();
         return 0;
     }
 

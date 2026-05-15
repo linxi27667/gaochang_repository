@@ -103,9 +103,11 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* Debug_Task_Create(); */  /* 调试任务已注释 */
   Control_Task_Create();
+  elog_i("SYS", "Control task started");
   Safety_Task_Create();
+  elog_i("SYS", "Safety task started");
   Key_Task_Create();
-  /* RS485_Task_Create(); -- 屏蔽 */
+  elog_i("SYS", "Key task started");
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

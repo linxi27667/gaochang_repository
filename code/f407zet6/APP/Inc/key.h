@@ -5,18 +5,16 @@
 #include "main.h"
 #include "motor.h"
 
-/* ===== 按键引脚：PE0=上升 PE1=下降 PE2=停止 ===== */
+/* ===== 按键引脚：PE0=上升 PE1=下降 ===== */
 #define KEY_UP_PORT         GPIOE
 #define KEY_UP_PIN          GPIO_PIN_0
 #define KEY_DOWN_PORT       GPIOE
 #define KEY_DOWN_PIN        GPIO_PIN_1
-#define KEY_STOP_PORT       GPIOE
-#define KEY_STOP_PIN        GPIO_PIN_2
 
 #define KEY_PRESS   0
 #define KEY_RELEASE 1
 
-#define MAX_KEY_NUM 3
+#define MAX_KEY_NUM 2
 
 typedef enum {
     KEY_STATE_IDLE      = 0,
@@ -37,7 +35,6 @@ extern key_t g_key[MAX_KEY_NUM];
 typedef struct {
     uint8_t      button_up;
     uint8_t      button_down;
-    uint8_t      button_stop;
     direction_t  direction;
 } key_command_t;
 extern key_command_t g_command;

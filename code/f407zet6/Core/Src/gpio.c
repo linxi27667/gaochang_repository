@@ -45,25 +45,16 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Left_Moter_Realy_GPIO_Port, Left_Moter_Realy_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOD, Left_Moter_Realy_Pin|Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Led_Run_GPIO_Port, Led_Run_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pins : Stop_Key_Pin Up_Key_Pin Down_Key_Pin */
-  GPIO_InitStruct.Pin = Stop_Key_Pin|Up_Key_Pin|Down_Key_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Left_Moter_Realy_Pin */
   GPIO_InitStruct.Pin = Left_Moter_Realy_Pin;
@@ -85,6 +76,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Led_Run_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Up_Key_Pin Down_Key_Pin */
+  GPIO_InitStruct.Pin = Up_Key_Pin|Down_Key_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
 }
 

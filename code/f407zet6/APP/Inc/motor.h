@@ -43,9 +43,9 @@ extern motor_column_t g_column[2];
 #define RELAY_DOWN_PORT      GPIOD
 #define RELAY_DOWN_PIN       GPIO_PIN_11
 
-/* 继电器驱动电平：低电平吸合 */
-#define RELAY_ON         GPIO_PIN_RESET
-#define RELAY_OFF        GPIO_PIN_SET
+/* 继电器驱动电平：高电平吸合 */
+#define RELAY_ON         GPIO_PIN_SET
+#define RELAY_OFF        GPIO_PIN_RESET
 
 #define COL_MAIN_PORT(col)  ((col) == 0 ? COL_LEFT_MAIN_PORT  : COL_RIGHT_MAIN_PORT)
 #define COL_MAIN_PIN(col)   ((col) == 0 ? COL_LEFT_MAIN_PIN   : COL_RIGHT_MAIN_PIN)

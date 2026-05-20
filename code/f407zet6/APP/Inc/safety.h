@@ -5,11 +5,11 @@
 #include "main.h"
 
 typedef enum {
-    ALARM_NONE            = 0,
-    ALARM_COLLISION       = 1,
-    ALARM_STALL           = 2,
-    ALARM_BALANCE_TIMEOUT = 3,
-} alarm_t;
+    ALARM_NONE            = 0,   // 无报警状态
+    ALARM_COLLISION       = 1,   // 碰撞报警（检测到碰撞）
+    ALARM_STALL           = 2,   // 失速报警（电机堵转）
+    ALARM_BALANCE_TIMEOUT = 3,   // 平衡超时报警（平衡控制超时）
+} alarm_t;                       // 报警类型枚举
 
 typedef struct {
     volatile alarm_t  alarm;

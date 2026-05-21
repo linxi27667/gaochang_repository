@@ -18,14 +18,9 @@ void Key_Init(void)
 }
 
 /* 按键扫描状态机 — 每20ms调用一次
- *
  * 两个按键(上升/下降)独立处理：空闲 → 消抖 → 确认按下 → 空闲
- *
  * f_push: 按下边沿标志，确认按下瞬间置1
- * f_hold: 保持标志，按下期间持续为1，松开清零
- *         方向键用 f_hold（长按），按住才运动
- *
- * 双键同按：运动中视为停止，告警中视为复位 */
+ * f_hold: 保持标志，按下期间持续为1，松开清零 */
 void Key_Scan(void)
 {
     for (int i = 0; i < MAX_KEY_NUM; i++) {
@@ -66,9 +61,7 @@ void Key_Scan(void)
     g_command.button_down = g_key[1].f_hold;
 }
 
-/* 松手停止检测
- * 上升键松手 且 当前方向=上升 → 停止
- * 下降键松手 且 当前方向=下降 → 停止 */
+/* 松手停止：松开按键 → 停止 */
 void Key_Jog_Release_Check(void)
 {
     if (!g_command.button_up && g_command.direction == DIR_UP) {
@@ -87,10 +80,7 @@ void Key_Jog_Release_Check(void)
     }
 }
 
-/* 按下启动检测（点动逻辑）
- * 仅当前方向=停止时才能启动（不在运动中切换方向）
- * 上升：检查上限位，清除下限位标志
- * 下降：检查下限位，清除上限位标志 */
+/* 点动启动：按住才动，松手就停 */
 void Key_Jog_Start_Check(void)
 {
     if (g_command.button_up && !g_command.button_down
@@ -129,10 +119,29 @@ void Key_Jog_Start_Check(void)
         elog_i("CTRL", "Status: DOWN");
         #endif
     }
+
+    /* 双键强制下降：绕过下限位，防撞杆仍有效 */
+    if (g_command.button_up && g_command.button_down
+        && g_command.direction == DIR_STOP) {
+
+        if (HAL_GPIO_ReadPin(Left_Down_Safety_GPIO_Port, Left_Down_Safety_Pin) ||
+            HAL_GPIO_ReadPin(Right_Down_Safety_GPIO_Port, Right_Down_Safety_Pin)) {
+            #if CTRL_DEBUG == 1
+            elog_w("CTRL", "Force DOWN blocked by collision rod");
+            #endif
+            return;
+        }
+
+        g_safety.at_lower_limit = 0;
+        Motor_Start_All(DIR_DOWN);
+        g_command.direction = DIR_DOWN;
+        #if CTRL_DEBUG == 1
+        elog_i("CTRL", "Force DOWN (dual key)");
+        #endif
+    }
 }
 
-/* 按键冲突检测
- * 运动中同时按下上升+下降 → 立即停止 */
+/* 双键冲突：运动中同时按下 → 停止 */
 void Key_Jog_Conflict_Check(void)
 {
     if (g_command.button_up && g_command.button_down

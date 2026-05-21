@@ -19,6 +19,10 @@ typedef struct {
     volatile uint8_t  at_upper_limit;
     volatile uint8_t  stall_suspected;
     volatile uint32_t last_pulse_tick[2];
+    volatile uint8_t  left_up_collision;
+    volatile uint8_t  right_up_collision;
+    volatile uint8_t  left_down_collision;
+    volatile uint8_t  right_down_collision;
 } safety_state_t;
 
 extern safety_state_t g_safety;
@@ -32,5 +36,6 @@ void Safety_Check_Lower_Limit(void);
 void Safety_Alarm_Reset(void);
 uint8_t Safety_Alarm_Handle(void);
 void    Safety_Running_Update(void);
+void    Safety_Check_Collision(void);
 
 #endif

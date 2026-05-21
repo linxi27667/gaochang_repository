@@ -6,7 +6,7 @@
 /* 模拟编码器：每 50ms 1 个脉冲 */
 #define SIM_PULSE_INTERVAL_MS  50
 
-/* 模拟防碰杆高度（仅 COLLISION_ENABLE=0 时有效） */
+/* 模拟防碰杆高度（COLLISION_ENABLE=1时由真实GPIO替代） */
 #define SIM_COLLISION_HEIGHT_MM  500
 
 void Sim_Encoder_Init(void);

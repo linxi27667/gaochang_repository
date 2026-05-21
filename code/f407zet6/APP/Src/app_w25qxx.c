@@ -255,23 +255,30 @@ uint8_t App_W25Qxx_Height_Save(void)
     return result;
 }
 
-/* ================= 有条件高度存储 ================= */
-
 void App_W25Qxx_Height_Save_If_Needed(void)
 {
-    static uint32_t last_save_tick = 0;
-    static int32_t  last_saved[2]  = {0, 0};
+    static uint8_t  saved = 1;
+    static uint32_t stop_tick = 0;
 
-    if (g_command.direction == DIR_STOP) return;
-
-    if (g_column[0].pulse_count != last_saved[0]
-        || g_column[1].pulse_count != last_saved[1]) {
-        uint32_t now = HAL_GetTick();
-        if (now - last_save_tick > 5000) {
-            App_W25Qxx_Height_Save();
-            last_saved[0] = g_column[0].pulse_count;
-            last_saved[1] = g_column[1].pulse_count;
-            last_save_tick = now;
-        }
+    if (g_command.direction != DIR_STOP) {
+        saved = 0;
+        return;
     }
+
+    if (saved) return;
+
+    if (stop_tick == 0) {
+        stop_tick = HAL_GetTick();
+        return;
+    }
+
+    if (HAL_GetTick() - stop_tick < 200) return;
+
+    App_W25Qxx_Height_Save();
+    saved = 1;
+    stop_tick = 0;
+
+    #if W25Q_DEBUG == 1
+    elog_i("W25Q", "Height saved on stop");
+    #endif
 }

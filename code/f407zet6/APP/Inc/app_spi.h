@@ -6,8 +6,8 @@
 
 /* ============ SPI1 硬件配置 ============ */
 #define SPI_BUS_HANDLE        &hspi1
-#define SPI_CS_PORT           GPIOA
-#define SPI_CS_PIN            GPIO_PIN_4
+#define SPI_CS_PORT           GPIOB
+#define SPI_CS_PIN            GPIO_PIN_6
 
 /* ============ 全局对象 ============ */
 extern spi_bus_t SPI_Bus;

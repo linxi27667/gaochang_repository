@@ -2,6 +2,7 @@
 #include "key.h"
 #include "safety.h"
 #include "motor.h"
+#include "app_w25qxx.h"
 #include "cmsis_os.h"
 
 #if CTRL_DEBUG == 1
@@ -43,7 +44,7 @@ void Control_Task(void *pvParameters)
         /* 运行中保护：平衡同步、上限位、下限位 */
         Safety_Running_Update();
 
-        /* App_W25Qxx_Height_Save_If_Needed(); -- 屏蔽 */
+        App_W25Qxx_Height_Save_If_Needed();
 
         /* 运动中实时打印高度 */
         #if CTRL_DEBUG == 1

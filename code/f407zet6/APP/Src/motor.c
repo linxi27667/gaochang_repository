@@ -26,10 +26,7 @@ void Motor_Init(void)
     g_column[1].pulse_count     = 0;
 }
 
-/* 启动单柱电机
- * 时序：先合方向继电器 → 延时20ms → 再合电源继电器
- * 原因：方向继电器先吸合，避免电源继电器带载切换
- * 安全检查：告警/上限位/下限位/堵转均不启动 */
+/* 启动单柱：先合方向继电器→延时20ms→再合电源继电器 */
 void Motor_Start(uint8_t column_index, direction_t direction)
 {
     if (g_safety.alarm != ALARM_NONE)            return;
@@ -60,8 +57,7 @@ void Motor_Start(uint8_t column_index, direction_t direction)
     #endif
 }
 
-/* 停止单柱：只关电源继电器，方向继电器不动
- * 用于平衡恢复后重新启动时的状态管理 */
+/* 停止单柱：只关电源继电器 */
 void Motor_Stop(uint8_t column_index)
 {
     HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
@@ -116,8 +112,7 @@ void Motor_Stop_All(void)
     #endif
 }
 
-/* 双柱同时启动
- * 时序同 Motor_Start：方向继电器 → 20ms → 双电源继电器 */
+/* 双柱同时启动 */
 void Motor_Start_All(direction_t direction)
 {
     if (g_safety.alarm != ALARM_NONE)            return;
@@ -128,29 +123,27 @@ void Motor_Start_All(direction_t direction)
     if (direction == DIR_UP) {
         HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
         HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_ON);
-        osDelay(20);
-        HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_ON);
-        HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_ON);
-
-        g_column[0].motor_state = MOTOR_RUNNING;
-        g_column[0].counting_enable = 1;
-        g_column[1].motor_state = MOTOR_RUNNING;
-        g_column[1].counting_enable = 1;
     } else if (direction == DIR_DOWN) {
         HAL_GPIO_WritePin(RELAY_UP_PORT,   RELAY_UP_PIN,   RELAY_OFF);
         HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_ON);
-        osDelay(20);
-        HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_ON);
-        HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_ON);
-
-        g_column[0].motor_state = MOTOR_RUNNING;
-        g_column[0].counting_enable = 1;
-        g_column[1].motor_state = MOTOR_RUNNING;
-        g_column[1].counting_enable = 1;
+    } else {
+        return;
     }
 
+    osDelay(20);
+    HAL_GPIO_WritePin(COL_LEFT_MAIN_PORT,  COL_LEFT_MAIN_PIN,  RELAY_ON);
+    HAL_GPIO_WritePin(COL_RIGHT_MAIN_PORT, COL_RIGHT_MAIN_PIN, RELAY_ON);
+
+    g_column[0].motor_state = MOTOR_RUNNING;
+    g_column[0].counting_enable = 1;
+    g_column[1].motor_state = MOTOR_RUNNING;
+    g_column[1].counting_enable = 1;
     g_safety.last_pulse_tick[0] = HAL_GetTick();
     g_safety.last_pulse_tick[1] = HAL_GetTick();
+
+    #if MOTOR_DEBUG == 1
+    elog_i("MOTOR", "START ALL dir=%s", direction==DIR_UP?"UP":"DOWN");
+    #endif
 }
 
 /* 紧急停止（防碰杆触发用）

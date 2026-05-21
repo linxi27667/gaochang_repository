@@ -22,7 +22,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN 0 */
-/* #include "safety.h" -- 屏蔽: EXTI防碰杆暂不使用 */
+/* #include "safety.h" -- 防撞杆已改用轮询，EXTI暂不需要 */
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
@@ -45,16 +45,36 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, Left_Moter_Realy_Pin|Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(Left_Moter_Realy_GPIO_Port, Left_Moter_Realy_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Led_Run_GPIO_Port, Led_Run_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOD, Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOG, Led_Run_Pin|Led_Com_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOG, Led_Power_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(W25Q_CS_GPIO_Port, W25Q_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pins : Stop_Key_Pin Up_Key_Pin Down_Key_Pin */
+  GPIO_InitStruct.Pin = Stop_Key_Pin|Up_Key_Pin|Down_Key_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Left_Up_Safety_Pin Right_Up_Safety_Pin Left_Down_Safety_Pin Right_Down_Safety_Pin */
+  GPIO_InitStruct.Pin = Left_Up_Safety_Pin|Right_Up_Safety_Pin|Left_Down_Safety_Pin|Right_Down_Safety_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Left_Moter_Realy_Pin */
   GPIO_InitStruct.Pin = Left_Moter_Realy_Pin;
@@ -70,18 +90,19 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Led_Run_Pin */
-  GPIO_InitStruct.Pin = Led_Run_Pin;
+  /*Configure GPIO pins : Led_Run_Pin Led_Com_Pin Led_Power_Pin */
+  GPIO_InitStruct.Pin = Led_Run_Pin|Led_Com_Pin|Led_Power_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Led_Run_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Up_Key_Pin Down_Key_Pin */
-  GPIO_InitStruct.Pin = Up_Key_Pin|Down_Key_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : W25Q_CS_Pin */
+  GPIO_InitStruct.Pin = W25Q_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(W25Q_CS_GPIO_Port, &GPIO_InitStruct);
 
 }
 
@@ -89,7 +110,7 @@ void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    /* 预留: 防碰杆EXTI启用时取消屏蔽 Safety_EXTI_Handler(GPIO_Pin) */
+    /* 防撞杆已改用轮询，EXTI预留 */
     (void)GPIO_Pin;
 }
 

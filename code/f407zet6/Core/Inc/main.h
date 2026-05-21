@@ -77,6 +77,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define Stop_Key_Pin GPIO_PIN_2
 #define Stop_Key_GPIO_Port GPIOE
+#define Left_Up_Safety_Pin GPIO_PIN_5
+#define Left_Up_Safety_GPIO_Port GPIOE
+#define Right_Up_Safety_Pin GPIO_PIN_6
+#define Right_Up_Safety_GPIO_Port GPIOE
+#define Left_Down_Safety_Pin GPIO_PIN_7
+#define Left_Down_Safety_GPIO_Port GPIOE
+#define Right_Down_Safety_Pin GPIO_PIN_8
+#define Right_Down_Safety_GPIO_Port GPIOE
 #define Left_Moter_Realy_Pin GPIO_PIN_8
 #define Left_Moter_Realy_GPIO_Port GPIOD
 #define Right_Moter_Realy_Pin GPIO_PIN_9
@@ -87,6 +95,12 @@ void Error_Handler(void);
 #define Down_Realy_GPIO_Port GPIOD
 #define Led_Run_Pin GPIO_PIN_2
 #define Led_Run_GPIO_Port GPIOG
+#define Led_Com_Pin GPIO_PIN_3
+#define Led_Com_GPIO_Port GPIOG
+#define Led_Power_Pin GPIO_PIN_4
+#define Led_Power_GPIO_Port GPIOG
+#define W25Q_CS_Pin GPIO_PIN_6
+#define W25Q_CS_GPIO_Port GPIOB
 #define Up_Key_Pin GPIO_PIN_0
 #define Up_Key_GPIO_Port GPIOE
 #define Down_Key_Pin GPIO_PIN_1
@@ -104,12 +118,12 @@ void Error_Handler(void);
 #define BALANCE_DEBUG        1
 #define SAFETY_DEBUG         1
 #define KEY_DEBUG            1
-#define W25Q_DEBUG           0
+#define W25Q_DEBUG           1
 #define CTRL_DEBUG           1
 #define RS485_DEBUG          0
 
 /* ===== 硬件开关 ===== */
-#define COLLISION_ENABLE             0
+#define COLLISION_ENABLE             1
 #define SECONDARY_DESCENT_ENABLE     0
 
 /* 最大高度（mm），丝杆导程 6mm/脉冲 */

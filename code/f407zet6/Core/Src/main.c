@@ -28,7 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_RTT.h"
-/* #include "app_w25qxx.h" -- 屏蔽: 上机测试暂不用外部Flash */
+#include "app_w25qxx.h"
 #include "motor.h"
 #include "encoder.h"
 #include "safety.h"
@@ -113,8 +113,8 @@ int main(void)
   elog_set_fmt(ELOG_LVL_DEBUG, ELOG_FMT_ALL & ~ELOG_FMT_FUNC);
 
 	elog_start();
-	/* App_W25Qxx_System_Init(); -- 屏蔽 */
-	/* App_W25Qxx_Height_Load(); -- 屏蔽 */
+	App_W25Qxx_System_Init();
+	App_W25Qxx_Height_Load();
 	Motor_Init();
 	Safety_Init();
 	Key_Init();

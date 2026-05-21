@@ -75,8 +75,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define Stop_Key_Pin GPIO_PIN_2
-#define Stop_Key_GPIO_Port GPIOE
 #define Left_Up_Safety_Pin GPIO_PIN_5
 #define Left_Up_Safety_GPIO_Port GPIOE
 #define Right_Up_Safety_Pin GPIO_PIN_6

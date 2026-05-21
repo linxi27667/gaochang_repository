@@ -52,41 +52,29 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Left_Moter_Realy_GPIO_Port, Left_Moter_Realy_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOD, Left_Moter_Realy_Pin|Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, Led_Run_Pin|Led_Com_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOG, Led_Power_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(Led_Power_GPIO_Port, Led_Power_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(W25Q_CS_GPIO_Port, W25Q_CS_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : Stop_Key_Pin Up_Key_Pin Down_Key_Pin */
-  GPIO_InitStruct.Pin = Stop_Key_Pin|Up_Key_Pin|Down_Key_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : Left_Up_Safety_Pin Right_Up_Safety_Pin Left_Down_Safety_Pin Right_Down_Safety_Pin */
-  GPIO_InitStruct.Pin = Left_Up_Safety_Pin|Right_Up_Safety_Pin|Left_Down_Safety_Pin|Right_Down_Safety_Pin;
+  /*Configure GPIO pins : Left_Up_Safety_Pin Right_Up_Safety_Pin Left_Down_Safety_Pin Right_Down_Safety_Pin
+                           Up_Key_Pin Down_Key_Pin */
+  GPIO_InitStruct.Pin = Left_Up_Safety_Pin|Right_Up_Safety_Pin|Left_Down_Safety_Pin|Right_Down_Safety_Pin
+                          |Up_Key_Pin|Down_Key_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Left_Moter_Realy_Pin */
-  GPIO_InitStruct.Pin = Left_Moter_Realy_Pin;
+  /*Configure GPIO pins : Left_Moter_Realy_Pin Right_Moter_Realy_Pin Up_Realy_Pin Down_Realy_Pin */
+  GPIO_InitStruct.Pin = Left_Moter_Realy_Pin|Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(Left_Moter_Realy_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : Right_Moter_Realy_Pin Up_Realy_Pin Down_Realy_Pin */
-  GPIO_InitStruct.Pin = Right_Moter_Realy_Pin|Up_Realy_Pin|Down_Realy_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 

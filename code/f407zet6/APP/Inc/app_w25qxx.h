@@ -43,12 +43,19 @@ typedef struct {
 
 typedef struct {
     uint32_t magic;         /* 0x48494748 = "HIGH" */
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t sequence;
     int32_t  heights[2];    /* 两个立柱脉冲计数 */
     uint32_t crc;           /* CRC32 */
 } w25q_height_t;
 
-/* 高度存储地址：Sector 2，避开 Slot A(0x0000) 和 Slot B(0x1000) */
-#define HEIGHT_FLASH_ADDR   0x00002000U
+/* Height dual-slot storage, each slot occupies one 4KB sector. */
+#define HEIGHT_SLOT_A_ADDR  0x00002000U
+#define HEIGHT_SLOT_B_ADDR  0x00003000U
+#define HEIGHT_FLASH_ADDR   HEIGHT_SLOT_A_ADDR
+#define W25Q_HEIGHT_MAGIC   0x48494748U
+#define W25Q_HEIGHT_VERSION 2U
 
 /* ============ 全局对象 ============ */
 
@@ -72,6 +79,8 @@ void App_W25Qxx_Storage_Load(void);
 void    App_W25Qxx_Height_Load(void);
 
 uint8_t App_W25Qxx_Height_Save(void);
+
+uint8_t App_W25Qxx_Height_Is_Loaded(void);
 
 /* ============ 高度脉冲 → mm 换算宏 ============ */
 

@@ -59,7 +59,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     RTT_easylog/easylogger/plugins/file/elog_file_port.c
     RTT_easylog/RTT/SEGGER_RTT.c
     RTT_easylog/RTT/SEGGER_RTT_printf.c
-    Driver/Src/dri_debug.c
     Driver/Src/dri_motor.c
     Driver/Src/dri_safety.c
     Driver/Src/dri_key.c

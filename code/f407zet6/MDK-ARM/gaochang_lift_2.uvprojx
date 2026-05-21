@@ -1869,11 +1869,6 @@
           <GroupName>Driver</GroupName>
           <Files>
             <File>
-              <FileName>dri_debug.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Driver\Src\dri_debug.c</FilePath>
-            </File>
-            <File>
               <FileName>dri_key.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Driver\Src\dri_key.c</FilePath>
@@ -1892,11 +1887,6 @@
               <FileName>dri_rs485.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Driver\Src\dri_rs485.c</FilePath>
-            </File>
-            <File>
-              <FileName>dri_debug.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\Driver\Inc\dri_debug.h</FilePath>
             </File>
             <File>
               <FileName>dri_key.h</FileName>

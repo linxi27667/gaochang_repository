@@ -20,19 +20,18 @@ void Motor_Init(void)
 {
     g_column[0].motor_state    = MOTOR_STOPPED;
     g_column[0].counting_enable = 0;
-    g_column[0].pulse_count     = 0;
     g_column[1].motor_state    = MOTOR_STOPPED;
     g_column[1].counting_enable = 0;
-    g_column[1].pulse_count     = 0;
+    if (!App_W25Qxx_Height_Is_Loaded()) {
+        g_column[0].pulse_count = 0;
+        g_column[1].pulse_count = 0;
+    }
 }
 
 /* 启动单柱：先合方向继电器→延时20ms→再合电源继电器 */
 void Motor_Start(uint8_t column_index, direction_t direction)
 {
-    if (g_safety.alarm != ALARM_NONE)            return;
-    if (direction == DIR_UP && g_safety.at_upper_limit)  return;
-    if (direction == DIR_DOWN && g_safety.at_lower_limit)return;
-    if (g_safety.stall_suspected)                return;
+    if (!Safety_Can_Move(direction)) return;
 
     if (direction == DIR_UP) {
         HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
@@ -115,10 +114,7 @@ void Motor_Stop_All(void)
 /* 双柱同时启动 */
 void Motor_Start_All(direction_t direction)
 {
-    if (g_safety.alarm != ALARM_NONE)            return;
-    if (direction == DIR_UP && g_safety.at_upper_limit)  return;
-    if (direction == DIR_DOWN && g_safety.at_lower_limit)return;
-    if (g_safety.stall_suspected)                return;
+    if (!Safety_Can_Move(direction)) return;
 
     if (direction == DIR_UP) {
         HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);

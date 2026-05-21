@@ -1,0 +1,12 @@
+# ninja log v5
+207	615	8004371794798078	CMakeFiles/Ball_And_Plant_System.dir/startup_stm32f407xx.s.obj	2ecb2ac243b04e86
+286	927	8004371797657502	CMakeFiles/Ball_And_Plant_System.dir/BSP/Src/bsp_spi.c.obj	d67879ec9a0070d4
+186	1320	8004371801718656	CMakeFiles/Ball_And_Plant_System.dir/Core/Src/stm32f4xx_hal_timebase_tim.c.obj	143e3b37ed2b7790
+387	1421	8004371802780295	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/src/elog_async.c.obj	7aa8d16760fc1db6
+430	1438	8004371802760128	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/src/elog_utils.c.obj	1b9b387b2785e589
+361	1471	8004371803253511	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/src/elog.c.obj	a9b40d5097719591
+410	1472	8004371803334451	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/src/elog_buf.c.obj	fdc56d01d1494cbe
+552	1498	8004371803609965	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/RTT/SEGGER_RTT_printf.c.obj	516e8720c2cfa40d
+504	1500	8004371803606807	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/plugins/file/elog_file_port.c.obj	86fc28388d6ae3ba
+479	1534	8004371804007375	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/easylogger/plugins/file/elog_file.c.obj	e71d740df5e2d9de
+532	1569	8004371804382630	CMakeFiles/Ball_And_Plant_System.dir/RTT_easylog/RTT/SEGGER_RTT.c.obj	96db859f0884cfa8

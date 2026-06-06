@@ -100,8 +100,9 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_TIM1_Init();
-  MX_USART2_UART_Init();
   MX_SPI1_Init();
+  MX_USART3_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 	SEGGER_RTT_Init();
 	elog_init();
@@ -120,7 +121,7 @@ int main(void)
 	Key_Init();
 	Encoder_Init();
 
-	elog_i("SYS", "System ready - waiting for keys");
+	elog_i("SYS", "[SYS] System ready - waiting for keys");
 
 	/* RS485_Init(); -- 屏蔽 */
 

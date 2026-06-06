@@ -21,7 +21,7 @@ void Key_Task(void *pvParameters)
         if (last_up != g_command.button_up || last_down != g_command.button_down) {
             last_up = g_command.button_up;
             last_down = g_command.button_down;
-            elog_i("KEY", "state up=%d down=%d", last_up, last_down);
+            elog_i("KEY", "[KEY] state up=%d down=%d", last_up, last_down);
         }
 
         osDelay(20);

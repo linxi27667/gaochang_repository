@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #ifndef FIFO_BUFFER_SIZE
-#define FIFO_BUFFER_SIZE 256
+#define FIFO_BUFFER_SIZE 1024
 #endif
 
 typedef struct {

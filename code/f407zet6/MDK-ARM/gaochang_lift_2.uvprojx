@@ -1070,6 +1070,26 @@
               <FilePath>..\APP\Inc\app_spi.h</FilePath>
             </File>
             <File>
+              <FileName>app_lift_iot.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\app_lift_iot.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_lift_iot.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\app_lift_iot.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_tas_dtu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Src\app_tas_dtu.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_tas_dtu.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Inc\app_tas_dtu.h</FilePath>
+            </File>
+            <File>
               <FileName>app_w25qxx.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\APP\Src\app_w25qxx.c</FilePath>
@@ -1078,11 +1098,6 @@
               <FileName>app_w25qxx.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\APP\Inc\app_w25qxx.h</FilePath>
-            </File>
-            <File>
-              <FileName>app_rs485.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\APP\Src\app_rs485.c</FilePath>
             </File>
             <File>
               <FileName>app_rs485.h</FileName>
@@ -1165,14 +1180,14 @@
               <FilePath>..\BSP\Inc\bsp_w25qxx.h</FilePath>
             </File>
             <File>
-              <FileName>bsp_uart_dma.c</FileName>
+              <FileName>bsp_uart.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\BSP\Src\bsp_uart_dma.c</FilePath>
+              <FilePath>..\BSP\Src\bsp_uart.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_uart_dma.h</FileName>
+              <FileName>bsp_uart.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\BSP\Inc\bsp_uart_dma.h</FilePath>
+              <FilePath>..\BSP\Inc\bsp_uart.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1884,9 +1899,9 @@
               <FilePath>..\Driver\Src\dri_safety.c</FilePath>
             </File>
             <File>
-              <FileName>dri_rs485.c</FileName>
+              <FileName>dri_tas_dtu.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Driver\Src\dri_rs485.c</FilePath>
+              <FilePath>..\Driver\Src\dri_tas_dtu.c</FilePath>
             </File>
             <File>
               <FileName>dri_key.h</FileName>
@@ -1902,6 +1917,11 @@
               <FileName>dri_safety.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Driver\Inc\dri_safety.h</FilePath>
+            </File>
+            <File>
+              <FileName>dri_tas_dtu.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Driver\Inc\dri_tas_dtu.h</FilePath>
             </File>
             <File>
               <FileName>dri_rs485.h</FileName>

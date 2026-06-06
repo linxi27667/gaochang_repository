@@ -2,6 +2,9 @@
 MDK-ARM/gaochang_lift_2/
 MDK-ARM/build_log.txt
 MDK-ARM/JLinkLog.txt
+MDK-ARM/*.log
+MDK-ARM/*.err
+MDK-ARM/jlink_reset.txt
 *.uvguix.*
 *.uvoptx
 
@@ -11,6 +14,8 @@ EWARM/Debug/
 EWARM/Release/
 
 # Compiled objects
+build/
+node_modules/
 *.o
 *.d
 *.crf

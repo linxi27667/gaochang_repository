@@ -60,5 +60,6 @@ void Motor_Pause(uint8_t column_index);
 void Motor_Stop_All(void);
 void Motor_Start_All(direction_t direction);
 void Motor_Stop_All_Immediate(void);
+uint8_t Motor_Admin_Jog(uint8_t column_index, direction_t direction, uint32_t duration_ms);
 
 #endif

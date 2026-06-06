@@ -42,7 +42,7 @@ static void reset_height_to_zero_on_lower_limit(void)
     __set_PRIMASK(primask);
 
     #if SAFETY_DEBUG == 1
-    elog_w("SAFETY", "Lower limit reached, height reset old=%ld/%ldmm new=0/0mm",
+    elog_w("SAFETY", "[SAFETY] Lower limit reached, height reset old=%ld/%ldmm new=0/0mm",
            HEIGHT_MM(old_left), HEIGHT_MM(old_right));
     #endif
 }
@@ -89,7 +89,7 @@ void Safety_Report_Blocked_Move(direction_t direction)
 
     if (s_last_reported_block != direction) {
         #if SAFETY_DEBUG == 1
-        elog_w("SAFETY", "Collision blocks %s: up=%d%d down=%d%d left=%ldmm right=%ldmm",
+        elog_w("SAFETY", "[SAFETY] Collision blocks %s: up=%d%d down=%d%d left=%ldmm right=%ldmm",
                direction_name(direction),
                g_safety.left_up_collision, g_safety.right_up_collision,
                g_safety.left_down_collision, g_safety.right_down_collision,
@@ -117,14 +117,14 @@ void Safety_Check_Collision(void)
 
     if (up_raw && !last_up_raw) {
         #if SAFETY_DEBUG == 1
-        elog_w("SAFETY", "Upper collision input HIGH left=%d right=%d",
+        elog_w("SAFETY", "[SAFETY] Upper collision input HIGH left=%d right=%d",
                g_safety.left_up_collision, g_safety.right_up_collision);
         #endif
     }
     if (down_raw && !last_down_raw) {
         reset_height_to_zero_on_lower_limit();
         #if SAFETY_DEBUG == 1
-        elog_w("SAFETY", "Lower collision input HIGH left=%d right=%d",
+        elog_w("SAFETY", "[SAFETY] Lower collision input HIGH left=%d right=%d",
                g_safety.left_down_collision, g_safety.right_down_collision);
         #endif
     }
@@ -142,7 +142,7 @@ void Safety_Check_Collision(void)
         s_last_reported_block = DIR_STOP;
         App_Buzzer_Off();
         #if SAFETY_DEBUG == 1
-        elog_a("SAFETY", "Collision alarm cleared by pins LOW left=%ldmm right=%ldmm",
+        elog_a("SAFETY", "[SAFETY] Collision alarm cleared by pins LOW left=%ldmm right=%ldmm",
                HEIGHT_MM(g_column[0].pulse_count), HEIGHT_MM(g_column[1].pulse_count));
         #endif
     } else if (!up_raw && !down_raw) {
@@ -182,7 +182,7 @@ void Safety_Check_Stall(void)
             g_safety.stall_suspected = 1;
             App_Buzzer_Alarm(1000);
             #if SAFETY_DEBUG == 1
-            elog_e("SAFETY", "Stall col=%d left=%ldmm right=%ldmm",
+            elog_e("SAFETY", "[SAFETY] Stall col=%d left=%ldmm right=%ldmm",
                    i, HEIGHT_MM(g_column[0].pulse_count), HEIGHT_MM(g_column[1].pulse_count));
             #endif
             return;
@@ -205,7 +205,7 @@ void Safety_Check_Secondary_Descent(void)
         g_command.direction = DIR_STOP;
         g_safety.secondary_descent_triggered = 1;
         #if SAFETY_DEBUG == 1
-        elog_w("SAFETY", "Near bottom, confirm to continue");
+        elog_w("SAFETY", "[SAFETY] Near bottom, confirm to continue");
         #endif
     }
 }
@@ -224,7 +224,7 @@ void Safety_Alarm_Reset(void)
     g_command.direction = DIR_STOP;
     App_Buzzer_Off();
     #if SAFETY_DEBUG == 1
-    elog_i("SAFETY", "Alarm reset");
+    elog_i("SAFETY", "[SAFETY] Alarm reset");
     #endif
 }
 

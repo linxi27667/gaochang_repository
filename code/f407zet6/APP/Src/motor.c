@@ -1,6 +1,8 @@
 #include "motor.h"
 #include "safety.h"
+#include "app_lift_iot.h"
 #include "app_w25qxx.h"
+#include "key.h"
 #include "cmsis_os.h"
 
 #if MOTOR_DEBUG == 1
@@ -31,6 +33,7 @@ void Motor_Init(void)
 /* 启动单柱：先合方向继电器→延时20ms→再合电源继电器 */
 void Motor_Start(uint8_t column_index, direction_t direction)
 {
+    if (App_LiftIot_IsLocked()) return;
     if (!Safety_Can_Move(direction)) return;
 
     if (direction == DIR_UP) {
@@ -52,7 +55,7 @@ void Motor_Start(uint8_t column_index, direction_t direction)
     g_safety.last_pulse_tick[column_index] = HAL_GetTick();
 
     #if MOTOR_DEBUG == 1
-    elog_i("MOTOR", "START col=%d dir=%s", column_index, direction==DIR_UP?"UP":"DOWN");
+    elog_i("MOTOR", "[MOTOR] START col=%d dir=%s", column_index, direction==DIR_UP?"UP":"DOWN");
     #endif
 }
 
@@ -66,7 +69,7 @@ void Motor_Stop(uint8_t column_index)
     g_column[column_index].counting_enable = 0;
 
     #if MOTOR_DEBUG == 1
-    elog_i("MOTOR", "STOP col=%d", column_index);
+    elog_i("MOTOR", "[MOTOR] STOP col=%d", column_index);
     #endif
 }
 
@@ -107,13 +110,14 @@ void Motor_Stop_All(void)
     g_column[1].counting_enable = 0;
 
     #if MOTOR_DEBUG == 1
-    elog_i("MOTOR", "STOP ALL");
+    elog_i("MOTOR", "[MOTOR] STOP ALL");
     #endif
 }
 
 /* 双柱同时启动 */
 void Motor_Start_All(direction_t direction)
 {
+    if (App_LiftIot_IsLocked()) return;
     if (!Safety_Can_Move(direction)) return;
 
     if (direction == DIR_UP) {
@@ -138,7 +142,7 @@ void Motor_Start_All(direction_t direction)
     g_safety.last_pulse_tick[1] = HAL_GetTick();
 
     #if MOTOR_DEBUG == 1
-    elog_i("MOTOR", "START ALL dir=%s", direction==DIR_UP?"UP":"DOWN");
+    elog_i("MOTOR", "[MOTOR] START ALL dir=%s", direction==DIR_UP?"UP":"DOWN");
     #endif
 }
 
@@ -158,6 +162,45 @@ void Motor_Stop_All_Immediate(void)
     g_column[1].counting_enable = 0;
 
     #if MOTOR_DEBUG == 1
-    elog_w("MOTOR", "STOP_ALL_EMERGENCY");
+    elog_w("MOTOR", "[MOTOR] STOP_ALL_EMERGENCY");
     #endif
+}
+
+/* 管理员点动调平：只用于授权排故，保留硬限位碰撞保护 */
+uint8_t Motor_Admin_Jog(uint8_t column_index, direction_t direction, uint32_t duration_ms)
+{
+    if (column_index >= 2U) return 0U;
+    if ((direction != DIR_UP) && (direction != DIR_DOWN)) return 0U;
+    if ((direction == DIR_UP) && (g_safety.left_up_collision || g_safety.right_up_collision)) return 0U;
+    if ((direction == DIR_DOWN) && (g_safety.left_down_collision || g_safety.right_down_collision)) return 0U;
+
+    if (duration_ms == 0U) duration_ms = 100U;
+    if (duration_ms > 500U) duration_ms = 500U;
+
+    if (direction == DIR_UP) {
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_UP_PORT, RELAY_UP_PIN, RELAY_ON);
+    } else {
+        HAL_GPIO_WritePin(RELAY_UP_PORT, RELAY_UP_PIN, RELAY_OFF);
+        HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_ON);
+    }
+
+    osDelay(20);
+    g_command.direction = direction;
+    g_column[column_index].motor_state = MOTOR_RUNNING;
+    g_column[column_index].counting_enable = 1U;
+    g_safety.last_pulse_tick[column_index] = HAL_GetTick();
+    HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_ON);
+
+    osDelay(duration_ms);
+
+    HAL_GPIO_WritePin(GetColPort(column_index), GetColPin(column_index), RELAY_OFF);
+    osDelay(10);
+    HAL_GPIO_WritePin(RELAY_UP_PORT, RELAY_UP_PIN, RELAY_OFF);
+    HAL_GPIO_WritePin(RELAY_DOWN_PORT, RELAY_DOWN_PIN, RELAY_OFF);
+    g_column[column_index].motor_state = MOTOR_STOPPED;
+    g_column[column_index].counting_enable = 0U;
+    g_command.direction = DIR_STOP;
+
+    return 1U;
 }

@@ -31,6 +31,7 @@
 #include "dri_motor.h"
 #include "dri_safety.h"
 #include "dri_key.h"
+#include "dri_tas_dtu.h"
 /* #include "dri_rs485.h" -- 屏蔽: RS485 */
 /* USER CODE END Includes */
 
@@ -103,11 +104,13 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* Debug_Task_Create(); */  /* 调试任务已注释 */
   Control_Task_Create();
-  elog_i("SYS", "Control task started");
+  elog_i("SYS", "[SYS] Control task started");
   Safety_Task_Create();
-  elog_i("SYS", "Safety task started");
+  elog_i("SYS", "[SYS] Safety task started");
   Key_Task_Create();
-  elog_i("SYS", "Key task started");
+  elog_i("SYS", "[SYS] Key task started");
+  TasDtu_Task_Create();
+  elog_i("SYS", "[SYS] TAS DTU task started");
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -129,7 +132,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   while (1)
   {
-    vTaskDelay(1);
+    osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
 }

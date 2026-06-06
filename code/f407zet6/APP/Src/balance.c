@@ -48,7 +48,7 @@ void Balance_Run(void)
             g_column[faster_column].motor_state = MOTOR_WAITING_BALANCE;
             g_column[faster_column].wait_start_tick = HAL_GetTick();
             #if BALANCE_DEBUG == 1
-            elog_i("BAL", "PAUSE col=%d diff=%ld pause_tol=%d dir=%s",
+            elog_i("BAL", "[BAL] PAUSE col=%d diff=%ld pause_tol=%d dir=%s",
                    faster_column, difference, tolerance_pause,
                    g_command.direction == DIR_UP ? "UP" : "DOWN");
             #endif
@@ -59,7 +59,7 @@ void Balance_Run(void)
                 && difference <= tolerance_resume) {
                 Motor_Start(i, g_command.direction);
                 #if BALANCE_DEBUG == 1
-                elog_i("BAL", "RESUME col=%d diff=%ld resume_tol=%d", i, difference, tolerance_resume);
+                elog_i("BAL", "[BAL] RESUME col=%d diff=%ld resume_tol=%d", i, difference, tolerance_resume);
                 #endif
             }
         }
@@ -72,7 +72,7 @@ void Balance_Run(void)
                 Motor_Stop_All();
                 g_safety.alarm = ALARM_BALANCE_TIMEOUT;
                 #if BALANCE_DEBUG == 1
-                elog_e("BAL", "Balance timeout! col=%d", i);
+                elog_e("BAL", "[BAL] Balance timeout! col=%d", i);
                 #endif
             }
         }

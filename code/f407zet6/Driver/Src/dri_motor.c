@@ -2,6 +2,7 @@
 #include "key.h"
 #include "safety.h"
 #include "motor.h"
+#include "app_lift_iot.h"
 #include "app_w25qxx.h"
 #include "cmsis_os.h"
 
@@ -32,6 +33,8 @@ void Control_Task(void *pvParameters)
 
     while (1)
     {
+        App_LiftIot_Poll();
+
         if (Safety_Alarm_Handle()) {
             osDelay(10);
             continue;
@@ -50,7 +53,7 @@ void Control_Task(void *pvParameters)
 
         #if CTRL_DEBUG == 1
         if (last_dir != g_command.direction) {
-            elog_i("CTRL", "state %s left=%ldmm right=%ldmm diff=%ld",
+            elog_i("CTRL", "[CTRL] state %s left=%ldmm right=%ldmm diff=%ld",
                    ctrl_dir_name(g_command.direction), left_mm, right_mm, left_mm - right_mm);
             last_dir = g_command.direction;
             last_left_mm = left_mm;
@@ -59,7 +62,7 @@ void Control_Task(void *pvParameters)
         } else if (g_command.direction != DIR_STOP &&
                    (HAL_GetTick() - last_motion_log_tick >= 1000) &&
                    (left_mm != last_left_mm || right_mm != last_right_mm)) {
-            elog_i("HEIGHT", "dir=%s left=%ldmm right=%ldmm pulse=%ld/%ld diff=%ld",
+            elog_i("HEIGHT", "[HEIGHT] dir=%s left=%ldmm right=%ldmm pulse=%ld/%ld diff=%ld",
                    ctrl_dir_name(g_command.direction), left_mm, right_mm,
                    g_column[0].pulse_count, g_column[1].pulse_count, left_mm - right_mm);
             last_left_mm = left_mm;

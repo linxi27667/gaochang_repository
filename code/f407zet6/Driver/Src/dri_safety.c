@@ -28,7 +28,7 @@ void Safety_Task(void *pvParameters)
             last_stall = g_safety.stall_suspected;
             last_upper = g_safety.at_upper_limit;
             last_lower = g_safety.at_lower_limit;
-            elog_i("SAFETY", "state alarm=%d stall=%d upper=%d lower=%d",
+            elog_i("SAFETY", "[SAFETY] state alarm=%d stall=%d upper=%d lower=%d",
                    last_alarm, last_stall, last_upper, last_lower);
         }
 

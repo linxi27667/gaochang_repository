@@ -60,19 +60,19 @@ void App_W25Qxx_System_Init(void)
     if (ret == W25Q_OK)
     {
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "JEDEC=0x%06lX DEV=0x%04X",
+        elog_i("W25Q", "[W25Q] JEDEC=0x%06lX DEV=0x%04X",
                W25Q_Read_JEDEC_ID(&W25Q_Flash),
                W25Q_Read_Device_ID(&W25Q_Flash));
         #endif
         App_W25Qxx_Storage_Load();
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "W25Q: ready");
+        elog_i("W25Q", "[W25Q] ready");
         #endif
     }
     else
     {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "W25Q: FAILED");
+        elog_e("W25Q", "[W25Q] FAILED");
         #endif
     }
 }
@@ -92,7 +92,7 @@ void App_W25Qxx_Storage_Load(void)
     {
         g_w25q_storage = (slot_b.debug_counter > slot_a.debug_counter) ? slot_b : slot_a;
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Storage loaded: counter=%lu (both valid, A=%lu B=%lu)",
+        elog_i("W25Q", "[W25Q] Storage loaded: counter=%lu (both valid, A=%lu B=%lu)",
                g_w25q_storage.debug_counter, slot_a.debug_counter, slot_b.debug_counter);
         #endif
     }
@@ -100,20 +100,20 @@ void App_W25Qxx_Storage_Load(void)
     {
         g_w25q_storage = slot_a;
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Storage loaded: counter=%lu (slot A only)", g_w25q_storage.debug_counter);
+        elog_i("W25Q", "[W25Q] Storage loaded: counter=%lu (slot A only)", g_w25q_storage.debug_counter);
         #endif
     }
     else if (b_ok == W25Q_OK)
     {
         g_w25q_storage = slot_b;
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Storage loaded: counter=%lu (slot B only)", g_w25q_storage.debug_counter);
+        elog_i("W25Q", "[W25Q] Storage loaded: counter=%lu (slot B only)", g_w25q_storage.debug_counter);
         #endif
     }
     else
     {
         #if W25Q_DEBUG == 1
-        elog_w("W25Q", "No valid storage data, using defaults");
+        elog_w("W25Q", "[W25Q] No valid storage data, using defaults");
         #endif
         g_w25q_storage.magic = W25Q_STORAGE_MAGIC;
         g_w25q_storage.debug_counter = 0;
@@ -142,13 +142,13 @@ uint8_t App_W25Qxx_Storage_Save(void)
         target_addr = W25Q_SLOT_B_ADDR;
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Save slot=0x%08lX counter=%lu", target_addr, g_w25q_storage.debug_counter);
+    elog_i("W25Q", "[W25Q] Save slot=0x%08lX counter=%lu", target_addr, g_w25q_storage.debug_counter);
     #endif
 
     uint8_t ret = W25Q_Sector_Erase(&W25Q_Flash, target_addr);
     if (ret != W25Q_OK) {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "Sector erase FAILED");
+        elog_e("W25Q", "[W25Q] Sector erase FAILED");
         #endif
         return W25Q_ERR;
     }
@@ -156,9 +156,9 @@ uint8_t App_W25Qxx_Storage_Save(void)
     ret = W25Q_Page_Program(&W25Q_Flash, target_addr, (uint8_t *)&g_w25q_storage, W25Q_STORAGE_SIZE);
     #if W25Q_DEBUG == 1
     if (ret != W25Q_OK)
-        elog_e("W25Q", "Page program FAILED");
+        elog_e("W25Q", "[W25Q] Page program FAILED");
     else
-        elog_i("W25Q", "Page program OK");
+        elog_i("W25Q", "[W25Q] Page program OK");
     #endif
 
     return ret;
@@ -219,9 +219,9 @@ void App_W25Qxx_Height_Load(void)
     uint8_t b_ok = height_read_slot(HEIGHT_SLOT_B_ADDR, &slot_b, &reason_b);
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Height slot A: %s seq=%lu left=%ld right=%ld crc=0x%08lX",
+    elog_i("W25Q", "[W25Q] Height slot A: %s seq=%lu left=%ld right=%ld crc=0x%08lX",
            reason_a, slot_a.sequence, slot_a.heights[0], slot_a.heights[1], slot_a.crc);
-    elog_i("W25Q", "Height slot B: %s seq=%lu left=%ld right=%ld crc=0x%08lX",
+    elog_i("W25Q", "[W25Q] Height slot B: %s seq=%lu left=%ld right=%ld crc=0x%08lX",
            reason_b, slot_b.sequence, slot_b.heights[0], slot_b.heights[1], slot_b.crc);
     #endif
 
@@ -231,7 +231,7 @@ void App_W25Qxx_Height_Load(void)
         g_height_sequence = slot_a.sequence;
         g_height_loaded = 1;
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Flash: loaded slot=A seq=%lu left=%ldmm right=%ldmm",
+        elog_i("W25Q", "[W25Q] Flash: loaded slot=A seq=%lu left=%ldmm right=%ldmm",
                g_height_sequence, HEIGHT_MM(slot_a.heights[0]), HEIGHT_MM(slot_a.heights[1]));
         #endif
         return;
@@ -243,7 +243,7 @@ void App_W25Qxx_Height_Load(void)
         g_height_sequence = slot_b.sequence;
         g_height_loaded = 1;
         #if W25Q_DEBUG == 1
-        elog_i("W25Q", "Flash: loaded slot=B seq=%lu left=%ldmm right=%ldmm",
+        elog_i("W25Q", "[W25Q] Flash: loaded slot=B seq=%lu left=%ldmm right=%ldmm",
                g_height_sequence, HEIGHT_MM(slot_b.heights[0]), HEIGHT_MM(slot_b.heights[1]));
         #endif
         return;
@@ -252,7 +252,7 @@ void App_W25Qxx_Height_Load(void)
     g_height_loaded = 0;
     g_height_sequence = 0;
     #if W25Q_DEBUG == 1
-    elog_w("W25Q", "Flash: no valid height, defaults left=0mm right=0mm");
+    elog_w("W25Q", "[W25Q] Flash: no valid height, defaults left=0mm right=0mm");
     #endif
 }
 
@@ -295,7 +295,7 @@ uint8_t App_W25Qxx_Height_Save(void)
     data.crc = Height_CRC32(&data);
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Height save begin slot=%s seq=%lu left=%ldmm right=%ldmm crc=0x%08lX",
+    elog_i("W25Q", "[W25Q] Height save begin slot=%s seq=%lu left=%ldmm right=%ldmm crc=0x%08lX",
            height_slot_name(target_addr), data.sequence,
            HEIGHT_MM(data.heights[0]), HEIGHT_MM(data.heights[1]), data.crc);
     #endif
@@ -303,7 +303,7 @@ uint8_t App_W25Qxx_Height_Save(void)
     uint8_t result = W25Q_Sector_Erase(&W25Q_Flash, target_addr);
     if (result != W25Q_OK) {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "Height save erase FAILED slot=%s", height_slot_name(target_addr));
+        elog_e("W25Q", "[W25Q] Height save erase FAILED slot=%s", height_slot_name(target_addr));
         #endif
         return result;
     }
@@ -311,7 +311,7 @@ uint8_t App_W25Qxx_Height_Save(void)
     result = W25Q_Page_Program(&W25Q_Flash, target_addr, (uint8_t *)&data, sizeof(data));
     if (result != W25Q_OK) {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "Height save program FAILED slot=%s", height_slot_name(target_addr));
+        elog_e("W25Q", "[W25Q] Height save program FAILED slot=%s", height_slot_name(target_addr));
         #endif
         return result;
     }
@@ -322,7 +322,7 @@ uint8_t App_W25Qxx_Height_Save(void)
         || verify.heights[0] != data.heights[0]
         || verify.heights[1] != data.heights[1]) {
         #if W25Q_DEBUG == 1
-        elog_e("W25Q", "Height save verify FAILED slot=%s", height_slot_name(target_addr));
+        elog_e("W25Q", "[W25Q] Height save verify FAILED slot=%s", height_slot_name(target_addr));
         #endif
         return W25Q_ERR;
     }
@@ -331,7 +331,7 @@ uint8_t App_W25Qxx_Height_Save(void)
     g_height_loaded = 1;
 
     #if W25Q_DEBUG == 1
-    elog_i("W25Q", "Height save OK slot=%s seq=%lu left=%ld right=%ld",
+    elog_i("W25Q", "[W25Q] Height save OK slot=%s seq=%lu left=%ld right=%ld",
            height_slot_name(target_addr), data.sequence, data.heights[0], data.heights[1]);
     #endif
 

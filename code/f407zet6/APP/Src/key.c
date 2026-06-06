@@ -35,7 +35,7 @@ void Key_Scan(void)
                     g_key[i].f_hold = 1;
                     g_key[i].state = KEY_STATE_CONFIRMED;
                     #if KEY_DEBUG == 1
-                    elog_i("KEY", "Key%d PRESS", i);
+                    elog_i("KEY", "[KEY] Key%d PRESS", i);
                     #endif
                 } else {
                     g_key[i].state = KEY_STATE_IDLE;
@@ -47,7 +47,7 @@ void Key_Scan(void)
                     g_key[i].f_hold = 0;
                     g_key[i].state = KEY_STATE_IDLE;
                     #if KEY_DEBUG == 1
-                    elog_i("KEY", "Key%d RELEASE", i);
+                    elog_i("KEY", "[KEY] Key%d RELEASE", i);
                     #endif
                 }
                 break;
@@ -64,14 +64,14 @@ void Key_Jog_Release_Check(void)
         Motor_Stop_All();
         g_command.direction = DIR_STOP;
         #if CTRL_DEBUG == 1
-        elog_i("CTRL", "Stopped: up released");
+        elog_i("CTRL", "[CTRL] Stopped: up released");
         #endif
     }
     if (!g_command.button_down && g_command.direction == DIR_DOWN) {
         Motor_Stop_All();
         g_command.direction = DIR_STOP;
         #if CTRL_DEBUG == 1
-        elog_i("CTRL", "Stopped: down released");
+        elog_i("CTRL", "[CTRL] Stopped: down released");
         #endif
     }
 }
@@ -91,7 +91,7 @@ void Key_Jog_Start_Check(void)
         if (g_column[0].motor_state == MOTOR_RUNNING || g_column[1].motor_state == MOTOR_RUNNING) {
             g_command.direction = DIR_UP;
             #if CTRL_DEBUG == 1
-            elog_i("CTRL", "Direction UP left=%ldmm right=%ldmm",
+            elog_i("CTRL", "[CTRL] Direction UP left=%ldmm right=%ldmm",
                    HEIGHT_MM(g_column[0].pulse_count), HEIGHT_MM(g_column[1].pulse_count));
             #endif
         }
@@ -108,7 +108,7 @@ void Key_Jog_Start_Check(void)
         if (g_column[0].motor_state == MOTOR_RUNNING || g_column[1].motor_state == MOTOR_RUNNING) {
             g_command.direction = DIR_DOWN;
             #if CTRL_DEBUG == 1
-            elog_i("CTRL", "Direction DOWN left=%ldmm right=%ldmm",
+            elog_i("CTRL", "[CTRL] Direction DOWN left=%ldmm right=%ldmm",
                    HEIGHT_MM(g_column[0].pulse_count), HEIGHT_MM(g_column[1].pulse_count));
             #endif
         }
@@ -127,7 +127,7 @@ void Key_Jog_Conflict_Check(void)
         if (!conflict_active) {
             conflict_active = 1;
             #if CTRL_DEBUG == 1
-            elog_w("CTRL", "Dual key conflict: motion inhibited");
+            elog_w("CTRL", "[CTRL] Dual key conflict: motion inhibited");
             #endif
         }
         return;

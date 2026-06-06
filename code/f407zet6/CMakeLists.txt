@@ -45,11 +45,13 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add user application sources
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     APP/Src/app_spi.c
+    APP/Src/app_lift_iot.c
+    APP/Src/app_tas_dtu.c
     APP/Src/app_w25qxx.c
-    APP/Src/app_rs485.c
     BSP/Src/bsp_spi.c
     BSP/Src/bsp_w25qxx.c
-    BSP/Src/bsp_uart_dma.c
+    BSP/Src/bsp_uart.c
+    Middlewares/FIFO/fifo.c
     RTT_easylog/easylogger/src/elog.c
     RTT_easylog/easylogger/src/elog_async.c
     RTT_easylog/easylogger/src/elog_buf.c
@@ -62,7 +64,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Driver/Src/dri_motor.c
     Driver/Src/dri_safety.c
     Driver/Src/dri_key.c
-    Driver/Src/dri_rs485.c
+    Driver/Src/dri_tas_dtu.c
     APP/Src/motor.c
     APP/Src/encoder.c
     APP/Src/balance.c
@@ -74,6 +76,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     APP/Inc
     BSP/Inc
+    Middlewares/FIFO
     Core/Inc
     Drivers/CMSIS/Device/ST/STM32F4xx/Include
     Drivers/CMSIS/Include

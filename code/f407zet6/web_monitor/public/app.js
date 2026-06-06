@@ -128,11 +128,12 @@ function connectWS() {
 }
 
 function updateDeviceFromWS(deviceId, data) {
+  const receivedAt = Date.now();
   const idx = devices.findIndex(d => d.device_id === deviceId);
   if (idx >= 0) {
-    devices[idx] = { ...devices[idx], ...data, updated_at: new Date().toISOString() };
+    devices[idx] = { ...devices[idx], ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt };
   } else {
-    devices.push({ device_id: deviceId, ...data, updated_at: new Date().toISOString() });
+    devices.push({ device_id: deviceId, ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt });
   }
   if (['overview', 'devices'].includes(currentPage)) renderCurrentPage();
 }
@@ -151,7 +152,11 @@ function handleCommandResponse(deviceId, data) {
 /* ===== Data Fetching ===== */
 async function fetchDevices() {
   try {
-    devices = await api('/devices');
+    const receivedAt = Date.now();
+    devices = (await api('/devices')).map(d => ({
+      ...d,
+      received_at_ms: receivedAt
+    }));
     renderCurrentPage();
   } catch (e) { /* handled */ }
 }
@@ -215,8 +220,8 @@ function formatTime(s) {
 }
 function getLiveUptimeSeconds(d) {
   const base = Number(d.uptime_s || 0);
-  if (!d.online || !d.updated_at) return base;
-  const elapsed = Math.max(0, Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 1000));
+  if (!d.online || !d.received_at_ms) return base;
+  const elapsed = Math.max(0, Math.floor((Date.now() - d.received_at_ms) / 1000));
   return base + elapsed;
 }
 function formatLiveTime(s) {
@@ -278,7 +283,7 @@ function renderDeviceCard(d) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
         <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
+        <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
     </div>`;
@@ -324,7 +329,7 @@ function renderDeviceCardWithActions(d, canControl) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
         <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}: ${d.height_right_mm || 0}mm</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
+        <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       <div class="device-card-actions">
         <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>

@@ -228,13 +228,6 @@ function formatLiveTime(s) {
   if (m > 0) return `${m}${t('unit.minute')}${sec}${t('unit.second')}`;
   return `${sec}${t('unit.second')}`;
 }
-function renderUptimeBlock(d) {
-  return `
-    <div class="device-card-uptime">
-      <span>${t('devices.onlineDuration')}</span>
-      <strong data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</strong>
-    </div>`;
-}
 function refreshLiveUptimeDisplays() {
   document.querySelectorAll('[data-uptime-device]').forEach(el => {
     const d = devices.find(x => x.device_id === el.dataset.uptimeDevice);
@@ -274,7 +267,6 @@ function renderDeviceCard(d) {
         <div><div class="device-card-name">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
-      ${renderUptimeBlock(d)}
       <div class="device-card-grid">
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightLeft')}</div><div class="device-card-metric-value">${d.height_left_mm || 0}<small>mm</small></div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightRight')}</div><div class="device-card-metric-value">${d.height_right_mm || 0}<small>mm</small></div></div>
@@ -286,6 +278,7 @@ function renderDeviceCard(d) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
         <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
     </div>`;
@@ -320,7 +313,6 @@ function renderDeviceCardWithActions(d, canControl) {
         <div><div class="device-card-name" style="cursor:pointer" onclick="showDeviceDetail('${d.device_id}')">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
-      ${renderUptimeBlock(d)}
       <div class="device-card-grid">
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
@@ -332,6 +324,7 @@ function renderDeviceCardWithActions(d, canControl) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
         <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}: ${d.height_right_mm || 0}mm</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       <div class="device-card-actions">
         <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>

@@ -104,7 +104,7 @@
                         <div class="user-name" id="user-name">管理员</div>
                         <div class="user-role" id="user-role">admin</div>
                     </div>
-                    <button class="btn-icon" onclick="handleLogout()" title="退出登录">
+                    <button class="btn-icon" onclick="handleLogout()" data-i18n-title="login.logout" title="退出登录">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     </button>
                 </div>
@@ -181,7 +181,7 @@
     <div class="modal" id="device-modal">
         <div class="modal-content" style="max-width:700px;">
             <div class="modal-header">
-                <h3 id="device-modal-title">设备详情</h3>
+                <h3 id="device-modal-title" data-i18n="devices.detailTitle">设备详情</h3>
                 <button class="close-btn" onclick="closeModal('device-modal')">&times;</button>
             </div>
             <div class="modal-body" id="device-modal-body"></div>
@@ -191,7 +191,7 @@
     <div class="modal" id="alarm-modal">
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
-                <h3>报警详情</h3>
+                <h3 data-i18n="alarms.detailTitle">报警详情</h3>
                 <button class="close-btn" onclick="closeModal('alarm-modal')">&times;</button>
             </div>
             <div class="modal-body" id="alarm-modal-body"></div>
@@ -201,7 +201,7 @@
     <div class="modal" id="maintenance-modal">
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
-                <h3 id="maintenance-modal-title">添加维修记录</h3>
+                <h3 id="maintenance-modal-title" data-i18n="maintenance.add">添加维修记录</h3>
                 <button class="close-btn" onclick="closeModal('maintenance-modal')">&times;</button>
             </div>
             <div class="modal-body" id="maintenance-modal-body"></div>

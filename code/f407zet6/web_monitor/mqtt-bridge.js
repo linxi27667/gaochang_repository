@@ -193,6 +193,9 @@ function normalizeTelemetry(data) {
   const safety = data.safety || {};
   const dtu = data.dtu || {};
   const alarm = data.alarm || safety.alarm || 'none';
+  const totalRunMs = Number(runtime.total_ms || 0);
+  const currentRunMs = Number(runtime.current_ms || 0);
+  const effectiveRunTimeS = Math.floor((totalRunMs + currentRunMs) / 1000);
 
   return {
     ...data,
@@ -207,7 +210,7 @@ function normalizeTelemetry(data) {
     height_right_mm: data.height_right_mm ?? height.right_mm ?? 0,
     height_diff_mm: data.height_diff_mm ?? height.diff_mm ?? 0,
     run_count: data.run_count ?? runtime.run_count ?? 0,
-    run_time_s: data.run_time_s ?? Math.floor((runtime.total_ms || 0) / 1000),
+    run_time_s: data.run_time_s ?? effectiveRunTimeS,
     ts_ms: data.ts_ms ?? data.tick ?? Date.now(),
     dtu_state: dtu.state,
     csq: dtu.csq

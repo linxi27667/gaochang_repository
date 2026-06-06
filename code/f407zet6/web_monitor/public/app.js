@@ -183,7 +183,7 @@ function loadPage(page) {
   const titles = { overview: t('overview.title'), devices: t('devices.title'), alarms: t('alarms.title'), maintenance: t('maintenance.title'), statistics: t('statistics.title'), logs: t('logs.title') };
   const breadcrumbs = { overview: t('nav.overview'), devices: t('nav.devices'), alarms: t('nav.alarms'), maintenance: t('nav.maintenance'), statistics: t('nav.statistics'), logs: t('nav.logs') };
   document.getElementById('page-title').textContent = titles[page] || '';
-  document.getElementById('breadcrumb').textContent = breadcrumbs[page] || '';
+  document.getElementById('breadcrumb').textContent = `${t('common.home')} / ${breadcrumbs[page] || ''}`;
   renderCurrentPage();
 }
 
@@ -207,8 +207,13 @@ function getStatusText(s) {
 function getStatusClass(d) { if (!d.online) return 'offline'; if (d.locked) return 'locked'; if (d.alarm && d.alarm !== 'none') return 'fault'; return 'normal'; }
 function getStateText(s) { const map = { idle: t('state.idle'), up: t('state.up'), down: t('state.down'), stop: t('state.stop') }; return map[s] || s; }
 function getAlarmText(a) { const map = { none: t('alarm.none'), collision: t('alarm.collision'), stall: t('alarm.stall'), balance_timeout: t('alarm.balance_timeout'), safety_bar: t('alarm.safety_bar'), overheight: t('alarm.overheight'), Emergency: t('alarm.Emergency') }; return map[a] || a; }
-function formatTime(s) { if (!s) return '0h'; const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h${m}m` : `${m}m`; }
-function formatTs(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString('zh-CN'); } catch { return iso; } }
+function formatTime(s) {
+  if (!s) return `0${t('unit.minute')}`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}${t('unit.hour')}${m}${t('unit.minute')}` : `${m}${t('unit.minute')}`;
+}
+function formatTs(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString(currentLang === 'zh' ? 'zh-CN' : currentLang); } catch { return iso; } }
 
 /* ===== Overview Page ===== */
 function renderOverview() {
@@ -222,10 +227,10 @@ function renderOverview() {
 
   return `
     <div class="cards-grid">
-      <div class="card online"><div class="card-title">${t('overview.online')}</div><div class="card-value">${online}</div><div class="card-subtitle">/${devices.length}台</div></div>
+      <div class="card online"><div class="card-title">${t('overview.online')}</div><div class="card-value">${online}</div><div class="card-subtitle">/${devices.length}${t('unit.device')}</div></div>
       <div class="card offline"><div class="card-title">${t('overview.offline')}</div><div class="card-value">${offline}</div></div>
       <div class="card fault"><div class="card-title">${t('overview.fault')}</div><div class="card-value">${fault}</div></div>
-      <div class="card locked"><div class="card-title">已锁机</div><div class="card-value">${locked}</div></div>
+      <div class="card locked"><div class="card-title">${t('overview.locked')}</div><div class="card-value">${locked}</div></div>
       <div class="card"><div class="card-title">${t('overview.totalRuns')}</div><div class="card-value">${totalRuns.toLocaleString()}</div></div>
       <div class="card"><div class="card-title">${t('overview.totalTime')}</div><div class="card-value">${formatTime(totalRunTime)}</div></div>
     </div>
@@ -244,15 +249,15 @@ function renderDeviceCard(d) {
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
       <div class="device-card-grid">
-        <div class="device-card-metric"><div class="device-card-metric-label">左高度</div><div class="device-card-metric-value">${d.height_left_mm || 0}<small>mm</small></div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">右高度</div><div class="device-card-metric-value">${d.height_right_mm || 0}<small>mm</small></div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">偏差</div><div class="device-card-metric-value">${d.height_diff_mm || 0}<small>mm</small></div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">运行次数</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightLeft')}</div><div class="device-card-metric-value">${d.height_left_mm || 0}<small>mm</small></div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightRight')}</div><div class="device-card-metric-value">${d.height_right_mm || 0}<small>mm</small></div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightDiff')}</div><div class="device-card-metric-value">${d.height_diff_mm || 0}<small>mm</small></div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
       </div>
       <div style="margin-top:8px;">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">左高度</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${t('devices.heightLeft')}</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
-        <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">右高度</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
       </div>
       ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
@@ -268,10 +273,10 @@ function renderDevices() {
   return `
     <div class="filter-bar">
       <div class="tab-group">
-        <button class="tab-btn active" onclick="filterDeviceView('all', this)">全部(${devices.length})</button>
+        <button class="tab-btn active" onclick="filterDeviceView('all', this)">${t('common.all')}(${devices.length})</button>
         ${groups.map(g => `<button class="tab-btn" onclick="filterDeviceView('${g}', this)">${g}</button>`).join('')}
       </div>
-      ${isAdmin ? `<button class="btn btn-primary" onclick="showAddDeviceModal()">+ 添加设备</button>` : ''}
+      ${isAdmin ? `<button class="btn btn-primary" onclick="showAddDeviceModal()">+ ${t('devices.addDevice')}</button>` : ''}
     </div>
     ${devices.length === 0 ? `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('devices.noDevices')}</h3><p>${t('devices.noDevicesSub')}</p></div>` :
     `<div class="device-cards" id="device-cards-container">${devices.map(d => renderDeviceCardWithActions(d, isOperator)).join('')}</div>`}`;
@@ -289,24 +294,24 @@ function renderDeviceCardWithActions(d, canControl) {
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
       <div class="device-card-grid">
-        <div class="device-card-metric"><div class="device-card-metric-label">状态</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">报警</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">运行时长</div><div class="device-card-metric-value">${formatTime(d.run_time_s)}</div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">运行次数</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runTime')}</div><div class="device-card-metric-value">${formatTime(d.run_time_s)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
       </div>
       <div style="margin-top:8px;">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">左高度: ${d.height_left_mm || 0}mm</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${t('devices.heightLeft')}: ${d.height_left_mm || 0}mm</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
-        <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">右高度: ${d.height_right_mm || 0}mm</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">${t('devices.heightRight')}: ${d.height_right_mm || 0}mm</div>
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
       </div>
       <div class="device-card-actions">
-        <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">详情</button>
+        <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>
         ${canControl ? `${d.locked
-          ? `<button class="btn btn-sm btn-success" onclick="unlockDevice('${d.device_id}')">解锁</button>`
-          : `<button class="btn btn-sm btn-danger" onclick="lockDevice('${d.device_id}')">锁机</button>`
+          ? `<button class="btn btn-sm btn-success" onclick="unlockDevice('${d.device_id}')">${t('devices.unlock')}</button>`
+          : `<button class="btn btn-sm btn-danger" onclick="lockDevice('${d.device_id}')">${t('devices.lock')}</button>`
         }` : ''}
-        ${canControl ? `<button class="btn btn-sm btn-outline" onclick="queryDevice('${d.device_id}')">查询</button>` : ''}
+        ${canControl ? `<button class="btn btn-sm btn-outline" onclick="queryDevice('${d.device_id}')">${t('devices.query')}</button>` : ''}
       </div>
     </div>`;
 }
@@ -347,11 +352,11 @@ function showDeviceDetail(deviceId) {
       <div>
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('common.heightData')}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">${t('devices.leftHeight')}: ${d.height_left_mm || 0}mm</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">${t('devices.heightLeft')}: ${d.height_left_mm || 0}mm</div>
           <div class="height-bar" style="height:10px;"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div>
-          <div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">${t('devices.rightHeight')}: ${d.height_right_mm || 0}mm</div>
+          <div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">${t('devices.heightRight')}: ${d.height_right_mm || 0}mm</div>
           <div class="height-bar" style="height:10px;"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">${t('devices.diff')}: <b>${d.height_diff_mm || 0}mm</b></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">${t('devices.heightDiff')}: <b>${d.height_diff_mm || 0}mm</b></div>
         </div>
         <div class="detail-row"><div class="detail-label">${t('devices.runTime')}</div><div class="detail-value">${formatTime(d.run_time_s)}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
@@ -372,11 +377,11 @@ async function showAddDeviceModal() {
   document.getElementById('maintenance-modal-title').textContent = t('devices.addDevice');
   document.getElementById('maintenance-modal-body').innerHTML = `
     <form onsubmit="return addDevice(event)">
-      <div class="form-group"><label>设备ID</label><input type="text" id="add-device-id" placeholder="如: lift_004" required></div>
-      <div class="form-group"><label>设备名称</label><input type="text" id="add-device-name" placeholder="如: 举升机4号" required></div>
-      <div class="form-group"><label>设备型号</label><input type="text" id="add-device-model" value="TL-5000"></div>
-      <div class="form-group"><label>所属区域</label><input type="text" id="add-device-group" value="默认分组"></div>
-      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">添加</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">取消</button></div>
+      <div class="form-group"><label>${t('devices.deviceId')}</label><input type="text" id="add-device-id" placeholder="${t('devices.idPlaceholder')}" required></div>
+      <div class="form-group"><label>${t('devices.deviceName')}</label><input type="text" id="add-device-name" placeholder="${t('devices.namePlaceholder')}" required></div>
+      <div class="form-group"><label>${t('devices.model')}</label><input type="text" id="add-device-model" value="TL-5000"></div>
+      <div class="form-group"><label>${t('devices.group')}</label><input type="text" id="add-device-group" value="${t('devices.defaultGroup')}"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">${t('common.add')}</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button></div>
     </form>`;
   document.getElementById('maintenance-modal').classList.add('active');
 }
@@ -446,13 +451,13 @@ function renderAlarms() {
       <div class="form-group" style="margin-bottom:0">
         <select id="alarm-filter-ack" onchange="loadAlarms()">
           <option value="">${t('alarms.all')}</option>
-          <option value="unack">未确认报警</option>
+          <option value="unack">${t('alarms.unack')}</option>
           <option value="ack">${t('alarms.acked')}</option>
         </select>
       </div>
-      <button class="btn btn-outline" onclick="loadAlarms()">刷新</button>
+      <button class="btn btn-outline" onclick="loadAlarms()">${t('common.refresh')}</button>
     </div>
-    <div id="alarms-list"><div class="loading">加载中...</div></div>`;
+    <div id="alarms-list"><div class="loading">${t('common.loading')}</div></div>`;
 }
 
 async function loadAlarms() {
@@ -480,8 +485,8 @@ async function loadAlarms() {
           <div class="alarm-time">${formatTs(a.created_at)}</div>
         </div>
         <div class="alarm-actions">
-          ${!a.acknowledged ? `<button class="btn btn-sm btn-outline" onclick="ackAlarm(${a.id})">确认</button>` : ''}
-          ${!a.resolved_at ? `<button class="btn btn-sm btn-success" onclick="resolveAlarm(${a.id})">解除</button>` : '<span style="font-size:12px;color:var(--success);">已解除</span>'}
+          ${!a.acknowledged ? `<button class="btn btn-sm btn-outline" onclick="ackAlarm(${a.id})">${t('alarms.acknowledge')}</button>` : ''}
+          ${!a.resolved_at ? `<button class="btn btn-sm btn-success" onclick="resolveAlarm(${a.id})">${t('alarms.resolve')}</button>` : `<span style="font-size:12px;color:var(--success);">${t('alarms.resolved')}</span>`}
         </div>
       </div>`).join('');
   } catch (err) { showToast(err.message, 'error'); }
@@ -500,12 +505,12 @@ function renderMaintenance() {
   return `
     <div class="filter-bar">
       <div class="form-group" style="margin-bottom:0"><select id="mt-device-filter"><option value="">${t('common.allDevices')}</option>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
-      <div class="form-group" style="margin-bottom:0"><select id="mt-type-filter"><option value="">${t('common.allTypes')}</option><option value="保养">保养</option><option value="维修">维修</option></select></div>
-      <button class="btn btn-primary" onclick="loadMaintenance()">查询</button>
-      <button class="btn btn-outline" onclick="showAddMaintenanceModal()">+ 添加记录</button>
-      <button class="btn btn-outline" onclick="exportMaintenance()">导出CSV</button>
+      <div class="form-group" style="margin-bottom:0"><select id="mt-type-filter"><option value="">${t('common.allTypes')}</option><option value="保养">${t('maintenance.serviceType')}</option><option value="维修">${t('maintenance.repairType')}</option></select></div>
+      <button class="btn btn-primary" onclick="loadMaintenance()">${t('common.query')}</button>
+      <button class="btn btn-outline" onclick="showAddMaintenanceModal()">+ ${t('maintenance.add')}</button>
+      <button class="btn btn-outline" onclick="exportMaintenance()">${t('common.export')} CSV</button>
     </div>
-    <div id="maintenance-list"><div class="loading">加载中...</div></div>`;
+    <div id="maintenance-list"><div class="loading">${t('common.loading')}</div></div>`;
 }
 
 async function loadMaintenance() {
@@ -519,7 +524,7 @@ async function loadMaintenance() {
     const list = document.getElementById('maintenance-list');
     if (!list) return;
     if (records.length === 0) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><h3>${t('maintenance.noRecords')}}</h3></div>`; return; }
-    list.innerHTML = `<div class="device-table"><div class="table-header"><span>${t('maintenance.records')} (${records.length}条)</span></div><table><thead><tr><th>设备</th><th>类型</th><th>描述</th><th>处理人</th><th>结果</th><th>下次保养</th><th>费用</th><th>记录时间</th><th>操作</th></tr></thead><tbody>${records.map(r => `<tr>
+    list.innerHTML = `<div class="device-table"><div class="table-header"><span>${t('maintenance.records')} (${records.length}${t('unit.record')})</span></div><table><thead><tr><th>${t('logs.device')}</th><th>${t('maintenance.type')}</th><th>${t('maintenance.description')}</th><th>${t('maintenance.handler')}</th><th>${t('maintenance.result')}</th><th>${t('maintenance.nextDate')}</th><th>${t('maintenance.cost')}</th><th>${t('logs.time')}</th><th>${t('logs.action')}</th></tr></thead><tbody>${records.map(r => `<tr>
       <td>${r.device_name || r.device_id}</td>
       <td><span class="status-tag ${r.type === '保养' ? 'status-maintenance' : 'status-fault'}">${r.type === '保养' ? t('maintenance.serviceType') : t('maintenance.repairType')}</span></td>
       <td>${r.description || '-'}</td>
@@ -528,7 +533,7 @@ async function loadMaintenance() {
       <td>${r.next_date || '-'}</td>
       <td>${r.cost || '-'}</td>
       <td>${formatTs(r.created_at)}</td>
-      <td>${currentUser && currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteMaintenance(${r.id})">删除</button>` : ''}</td>
+      <td>${currentUser && currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteMaintenance(${r.id})">${t('common.delete')}</button>` : ''}</td>
     </tr>`).join('')}</tbody></table></div>`;
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -537,14 +542,14 @@ function showAddMaintenanceModal() {
   document.getElementById('maintenance-modal-title').textContent = t('maintenance.add');
   document.getElementById('maintenance-modal-body').innerHTML = `
     <form onsubmit="return submitMaintenance(event)">
-      <div class="form-group"><label>设备</label><select id="mt-device" required>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
-      <div class="form-group"><label>类型</label><select id="mt-type"><option value="保养">保养</option><option value="维修">维修</option></select></div>
-      <div class="form-group"><label>描述</label><textarea id="mt-desc" rows="2" placeholder="${t('maintenance.descPh')}"></textarea></div>
-      <div class="form-group"><label>处理人</label><input type="text" id="mt-handler" placeholder="${t('maintenance.handlerPh')}"></div>
-      <div class="form-group"><label>处理结果</label><input type="text" id="mt-result" value="${t('maintenance.inProgress')}"></div>
+      <div class="form-group"><label>${t('logs.device')}</label><select id="mt-device" required>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
+      <div class="form-group"><label>${t('maintenance.type')}</label><select id="mt-type"><option value="保养">${t('maintenance.serviceType')}</option><option value="维修">${t('maintenance.repairType')}</option></select></div>
+      <div class="form-group"><label>${t('maintenance.description')}</label><textarea id="mt-desc" rows="2" placeholder="${t('maintenance.descPh')}"></textarea></div>
+      <div class="form-group"><label>${t('maintenance.handler')}</label><input type="text" id="mt-handler" placeholder="${t('maintenance.handlerPh')}"></div>
+      <div class="form-group"><label>${t('maintenance.result')}</label><input type="text" id="mt-result" value="${t('maintenance.inProgress')}"></div>
       <div class="form-group"><label>${t('maintenance.nextDate')}</label><input type="date" id="mt-next-date"></div>
-      <div class="form-group"><label>费用(元)</label><input type="number" id="mt-cost" step="0.01" value="0"></div>
-      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">提交</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">取消</button></div>
+      <div class="form-group"><label>${t('maintenance.cost')}(${t('unit.currency')})</label><input type="number" id="mt-cost" step="0.01" value="0"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">${t('common.submit')}</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button></div>
     </form>`;
   document.getElementById('maintenance-modal').classList.add('active');
 }
@@ -597,14 +602,14 @@ function renderStatistics() {
 
   return `
     <div class="stats-grid">
-      <div class="stat-card"><h4>累计运行时长</h4><div><span class="value">${formatTime(totalRunTime)}</span></div></div>
-      <div class="stat-card"><h4>累计运行次数</h4><div><span class="value">${totalRunCount.toLocaleString()}</span><span class="unit">次</span></div></div>
-      <div class="stat-card"><h4>平均运行时长</h4><div><span class="value">${formatTime(avgTime)}</span><span class="unit">/台</span></div></div>
-      <div class="stat-card"><h4>平均运行次数</h4><div><span class="value">${avgCount}</span><span class="unit">次/台</span></div></div>
+      <div class="stat-card"><h4>${t('statistics.totalRunTime')}</h4><div><span class="value">${formatTime(totalRunTime)}</span></div></div>
+      <div class="stat-card"><h4>${t('statistics.totalRunCount')}</h4><div><span class="value">${totalRunCount.toLocaleString()}</span><span class="unit">${t('unit.times')}</span></div></div>
+      <div class="stat-card"><h4>${t('statistics.avgRunTime')}</h4><div><span class="value">${formatTime(avgTime)}</span><span class="unit">/${t('unit.device')}</span></div></div>
+      <div class="stat-card"><h4>${t('statistics.avgRunCount')}</h4><div><span class="value">${avgCount}</span><span class="unit">${t('unit.times')}/${t('unit.device')}</span></div></div>
     </div>
     <div class="device-table" style="margin-top:20px;">
       <div class="table-header"><span>${t('statistics.deviceDetail')}</span></div>
-      <table><thead><tr><th>设备名称</th><th>型号</th><th>状态</th><th>运行时长</th><th>运行次数</th><th>左高度(mm)</th><th>右高度(mm)</th><th>偏差(mm)</th><th>平均单次(min)</th></tr></thead>
+      <table><thead><tr><th>${t('devices.deviceName')}</th><th>${t('devices.model')}</th><th>${t('devices.status')}</th><th>${t('devices.runTime')}</th><th>${t('devices.runCount')}</th><th>${t('devices.heightLeft')}(mm)</th><th>${t('devices.heightRight')}(mm)</th><th>${t('devices.heightDiff')}(mm)</th><th>${t('statistics.avgSingle')}(min)</th></tr></thead>
       <tbody>${devices.map(d => {
         const avgSingle = d.run_count > 0 ? ((d.run_time_s || 0) / 60 / d.run_count).toFixed(1) : 0;
         return `<tr>
@@ -628,9 +633,9 @@ function renderLogs() {
       <div class="form-group" style="margin-bottom:0"><select id="log-device-filter"><option value="">${t('common.allDevices')}</option>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
       <div class="form-group" style="margin-bottom:0"><input type="date" id="log-start-date"></div>
       <div class="form-group" style="margin-bottom:0"><input type="date" id="log-end-date"></div>
-      <button class="btn btn-primary" onclick="loadLogs()">查询</button>
+      <button class="btn btn-primary" onclick="loadLogs()">${t('common.query')}</button>
     </div>
-    <div id="logs-list"><div class="loading">加载中...</div></div>`;
+    <div id="logs-list"><div class="loading">${t('common.loading')}</div></div>`;
 }
 
 async function loadLogs() {
@@ -646,7 +651,7 @@ async function loadLogs() {
     const list = document.getElementById('logs-list');
     if (!list) return;
     if (data.logs.length === 0) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>${t('logs.noLogs')}}</h3></div>`; return; }
-    list.innerHTML = `<div class="device-table"><div class="table-header"><span>操作日志 (${data.total}条)</span></div><table><thead><tr><th>操作人</th><th>操作</th><th>设备</th><th>详情</th><th>结果</th><th>时间</th></tr></thead><tbody>${data.logs.map(l => `<tr>
+    list.innerHTML = `<div class="device-table"><div class="table-header"><span>${t('logs.title')} (${data.total}${t('unit.record')})</span></div><table><thead><tr><th>${t('logs.operator')}</th><th>${t('logs.action')}</th><th>${t('logs.device')}</th><th>${t('logs.detail')}</th><th>${t('logs.result')}</th><th>${t('logs.time')}</th></tr></thead><tbody>${data.logs.map(l => `<tr>
       <td>${l.real_name || l.username || '-'}</td>
       <td>${l.action}</td>
       <td>${l.device_id || '-'}</td>
@@ -659,24 +664,24 @@ async function loadLogs() {
 /* ===== Settings ===== */
 function showUserSettings() {
   document.getElementById('settings-modal-body').innerHTML = `
-    <h4 style="margin-bottom:14px;">修改密码</h4>
+    <h4 style="margin-bottom:14px;">${t('settings.changePassword')}</h4>
     <form onsubmit="return changePassword(event)">
-      <div class="form-group"><label>旧密码</label><input type="password" id="old-password" required></div>
-      <div class="form-group"><label>新密码</label><input type="password" id="new-password" required minlength="6"></div>
-      <div class="form-group"><label>确认新密码</label><input type="password" id="confirm-password" required minlength="6"></div>
-      <button type="submit" class="btn btn-primary">修改密码</button>
+      <div class="form-group"><label>${t('settings.oldPassword')}</label><input type="password" id="old-password" required></div>
+      <div class="form-group"><label>${t('settings.newPassword')}</label><input type="password" id="new-password" required minlength="6"></div>
+      <div class="form-group"><label>${t('settings.confirmPassword')}</label><input type="password" id="confirm-password" required minlength="6"></div>
+      <button type="submit" class="btn btn-primary">${t('settings.changePassword')}</button>
     </form>
     ${currentUser && currentUser.role === 'admin' ? `
       <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
-      <h4 style="margin-bottom:14px;">用户管理</h4>
-      <div id="user-list"><div class="loading">加载中...</div></div>
-      <button class="btn btn-primary" style="margin-top:14px;" onclick="showAddUserForm()">添加用户</button>
+      <h4 style="margin-bottom:14px;">${t('settings.userManagement')}</h4>
+      <div id="user-list"><div class="loading">${t('common.loading')}</div></div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="showAddUserForm()">${t('settings.addUser')}</button>
       <div id="add-user-form" style="display:none;margin-top:14px;">
-        <div class="form-group"><label>用户名</label><input type="text" id="new-username" required></div>
-        <div class="form-group"><label>密码</label><input type="password" id="new-user-pass" required minlength="6"></div>
-        <div class="form-group"><label>角色</label><select id="new-user-role"><option value="operator">操作员</option><option value="viewer">观察员</option><option value="admin">管理员</option></select></div>
-        <div class="form-group"><label>姓名</label><input type="text" id="new-user-realname"></div>
-        <div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="addUser()">创建</button><button class="btn btn-outline" onclick="document.getElementById('add-user-form').style.display='none'">取消</button></div>
+        <div class="form-group"><label>${t('settings.username')}</label><input type="text" id="new-username" required></div>
+        <div class="form-group"><label>${t('settings.password')}</label><input type="password" id="new-user-pass" required minlength="6"></div>
+        <div class="form-group"><label>${t('settings.role')}</label><select id="new-user-role"><option value="operator">${t('settings.roleOperator')}</option><option value="viewer">${t('settings.roleViewer')}</option><option value="admin">${t('settings.roleAdmin')}</option></select></div>
+        <div class="form-group"><label>${t('settings.realname')}</label><input type="text" id="new-user-realname"></div>
+        <div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="addUser()">${t('settings.createUser')}</button><button class="btn btn-outline" onclick="document.getElementById('add-user-form').style.display='none'">${t('common.cancel')}</button></div>
       </div>` : ''}`;
   document.getElementById('settings-modal').classList.add('active');
   if (currentUser && currentUser.role === 'admin') loadUserList();
@@ -701,15 +706,15 @@ async function loadUserList() {
     const users = await api('/auth/users');
     const list = document.getElementById('user-list');
     if (!list) return;
-    list.innerHTML = `<table style="width:100%"><thead><tr><th>用户名</th><th>角色</th><th>姓名</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead><tbody>${users.map(u => `<tr>
+    list.innerHTML = `<table style="width:100%"><thead><tr><th>${t('settings.username')}</th><th>${t('settings.role')}</th><th>${t('settings.realname')}</th><th>${t('devices.status')}</th><th>${t('settings.lastLogin')}</th><th>${t('logs.action')}</th></tr></thead><tbody>${users.map(u => `<tr>
       <td>${u.username}</td>
       <td>${u.role === 'admin' ? t('settings.roleAdmin') : u.role === 'operator' ? t('settings.roleOperator') : t('settings.roleViewer')}</td>
       <td>${u.real_name || '-'}</td>
-      <td>${u.enabled ? '<span class="status-tag status-normal">启用</span>' : '<span class="status-tag status-offline">禁用</span>'}</td>
+      <td>${u.enabled ? `<span class="status-tag status-normal">${t('settings.enabled')}</span>` : `<span class="status-tag status-offline">${t('settings.disabled')}</span>`}</td>
       <td>${formatTs(u.last_login)}</td>
       <td>${u.id !== currentUser.id ? `
         <button class="btn btn-sm btn-outline" onclick="toggleUser(${u.id})">${u.enabled ? t('settings.disable') : t('settings.enable')}</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">删除</button>` : '<span style="font-size:12px;color:var(--text-muted)">当前用户</span>'}</td>
+        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">${t('settings.deleteUser')}</button>` : `<span style="font-size:12px;color:var(--text-muted)">${t('settings.currentUser')}</span>`}</td>
     </tr>`).join('')}</tbody></table>`;
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -784,7 +789,7 @@ loadPage = function(page) {
   const titles = { overview: t('overview.title'), devices: t('devices.title'), alarms: t('alarms.title'), maintenance: t('maintenance.title'), statistics: t('statistics.title'), logs: t('logs.title') };
   const breadcrumbs = { overview: t('nav.overview'), devices: t('nav.devices'), alarms: t('nav.alarms'), maintenance: t('nav.maintenance'), statistics: t('nav.statistics'), logs: t('nav.logs') };
   document.getElementById('page-title').textContent = titles[page] || '';
-  document.getElementById('breadcrumb').textContent = breadcrumbs[page] || '';
+  document.getElementById('breadcrumb').textContent = `${t('common.home')} / ${breadcrumbs[page] || ''}`;
 
   if (page === 'alarms') { renderCurrentPage(); loadAlarms(); }
   else if (page === 'maintenance') { renderCurrentPage(); loadMaintenance(); }
@@ -866,7 +871,8 @@ async function sendAIMessage() {
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-        messages: requestMessages
+        messages: requestMessages,
+        lang: currentLang
       })
     });
 
@@ -874,7 +880,7 @@ async function sendAIMessage() {
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `API错误 ${response.status}`);
+      throw new Error(errData.error || `${t('common.apiError')} ${response.status}`);
     }
 
     const data = await response.json();

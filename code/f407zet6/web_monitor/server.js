@@ -12,6 +12,7 @@ const commandsRouter = require('./commands');
 const logsRouter = require('./logs');
 const alarmsRouter = require('./alarms');
 const maintenanceRouter = require('./maintenance');
+const { getPlatformSnapshot, buildAiContextText } = require('./ai-context');
 
 const app = express();
 const server = http.createServer(app);
@@ -49,10 +50,14 @@ app.get('/api/stats/runtime', (req, res) => {
   res.json(last24h);
 });
 
+app.get('/api/ai/context', authMiddleware, (req, res) => {
+  res.json(getPlatformSnapshot());
+});
+
 // AI Chat proxy to MiMo API (avoids CORS issues from browser)
 app.post('/api/ai/chat', authMiddleware, async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, lang } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'messages required' });
     }
@@ -60,10 +65,21 @@ app.post('/api/ai/chat', authMiddleware, async (req, res) => {
       return res.status(503).json({ error: 'AI服务未配置 MIMO_API_KEY' });
     }
 
-    const systemPrompt = '你是高昌举升机（GaoChang Lift）的专业AI助手。你精通：1.举升机的操作规程和安全标准 2.常见故障码和故障排查方法 3.维修保养流程和周期 4.IoT物联网平台的设备管理 5.举升机的锁机/解锁/远程控制。回答应当专业、简洁、实用。';
+    const answerLang = typeof lang === 'string' && lang.trim() ? lang.trim() : 'zh';
+    const systemPrompt = [
+      '你是高昌举升机（GaoChang Lift）的 IoT 数据分析助手。',
+      '你精通举升机安全标准、故障排查、维修保养、MQTT 物联网平台和设备运行数据分析。',
+      '你能读取本系统注入的实时平台数据快照，并据此分析在线状态、报警、锁机、左右高度偏差、运行次数、运行时长、最近命令、保养记录和操作日志。',
+      '回答要专业、简洁、可执行。涉及安全风险时优先提示停机检查和现场确认。',
+      `请使用用户界面当前语言回答，语言代码：${answerLang}。`
+    ].join('\n');
+    const platformContext = buildAiContextText();
 
     // 只允许 MiMo/OpenAI 兼容接口支持的角色，避免前端 UI 角色污染请求。
-    const cleanMessages = [{ role: 'system', content: systemPrompt }];
+    const cleanMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'system', content: platformContext }
+    ];
     for (const m of messages) {
       if (m && m.role && m.content && typeof m.content === 'string' && m.content.trim()) {
         const role = m.role === 'bot' ? 'assistant' : m.role;

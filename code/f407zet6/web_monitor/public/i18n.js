@@ -592,6 +592,70 @@ const I18N = {
   }
 };
 
+const I18N_PATCHES = {
+  zh: {
+    'unit.hour': '小时', 'unit.minute': '分钟', 'unit.device': '台', 'unit.times': '次', 'unit.record': '条', 'unit.currency': '元',
+    'common.home': '首页', 'common.apiError': 'API错误', 'login.logout': '退出登录', 'devices.idPlaceholder': '如: lift_004', 'devices.namePlaceholder': '如: 举升机4号',
+    'devices.detailTitle': '设备详情', 'alarms.detailTitle': '报警详情', 'statistics.avgSingle': '平均单次',
+    'logs.operator': '操作人', 'logs.device': '设备', 'settings.lastLogin': '最后登录'
+  },
+  en: {
+    'unit.hour': 'h', 'unit.minute': 'm', 'unit.device': ' units', 'unit.times': ' times', 'unit.record': ' records', 'unit.currency': 'CNY',
+    'common.home': 'Home', 'common.apiError': 'API error', 'login.logout': 'Logout', 'devices.idPlaceholder': 'e.g. lift_004', 'devices.namePlaceholder': 'e.g. Lift No. 4',
+    'devices.detailTitle': 'Device Details', 'alarms.detailTitle': 'Alarm Details', 'statistics.avgSingle': 'Avg per Run',
+    'logs.operator': 'Operator', 'logs.device': 'Device', 'settings.lastLogin': 'Last Login'
+  },
+  ja: {
+    'app.name': '高昌リフトIoT管理プラットフォーム', 'app.name_short': '高昌リフト', 'app.subtitle': 'IoT管理システム', 'app.iot': 'IoTプラットフォーム',
+    'login.username': 'ユーザー名', 'login.password': 'パスワード', 'login.username_ph': 'ユーザー名を入力', 'login.password_ph': 'パスワードを入力', 'login.submit': 'ログイン', 'login.default': '初期アカウント: admin / admin123',
+    'nav.overview': '概要', 'nav.devices': 'デバイス', 'nav.alarms': 'アラーム', 'nav.maintenance': '保守', 'nav.statistics': '統計', 'nav.logs': 'ログ', 'nav.settings': '設定',
+    'common.loading': '読み込み中...', 'common.offline': '未接続', 'common.connected': '接続済み', 'common.disconnected': '切断済み', 'common.all': 'すべて', 'common.query': '照会', 'common.export': 'エクスポート', 'common.add': '追加', 'common.delete': '削除', 'common.cancel': 'キャンセル', 'common.submit': '送信', 'common.close': '閉じる', 'common.confirm': '確認', 'common.success': '成功', 'common.error': 'エラー', 'common.apiError': 'APIエラー', 'common.refresh': '更新', 'common.allDevices': 'すべてのデバイス', 'common.allTypes': 'すべての種類', 'common.lastUpdate': '最終更新', 'common.heightData': '高さデータ', 'common.runInfo': '運転情報', 'common.alarmInfo': 'アラーム情報', 'common.lockInfo': 'ロック状態', 'common.home': 'ホーム', 'login.logout': 'ログアウト',
+    'status.normal': '正常', 'status.offline': 'オフライン', 'status.fault': '故障', 'status.locked': 'ロック中', 'status.maintenance': '保守待ち', 'status.idle': '待機', 'status.up': '上昇中', 'status.down': '下降中',
+    'state.idle': '待機', 'state.up': '上昇中', 'state.down': '下降中', 'state.stop': '停止',
+    'alarm.none': 'アラームなし', 'alarm.collision': '衝突アラーム', 'alarm.stall': '失速アラーム', 'alarm.balance_timeout': 'バランス時間切れ', 'alarm.safety_bar': '安全バー作動', 'alarm.overheight': '過高アラーム', 'alarm.Emergency': '非常停止',
+    'overview.online': 'オンライン', 'overview.offline': 'オフライン', 'overview.fault': '故障', 'overview.locked': 'ロック中', 'overview.totalRuns': '総運転回数', 'overview.totalTime': '総運転時間', 'overview.title': 'システム概要', 'overview.waiting': 'デバイス待機中', 'overview.waitingSub': 'MQTT接続済み、デバイスデータ待機中',
+    'devices.title': 'デバイス管理', 'devices.lock': 'ロック', 'devices.unlock': '解除', 'devices.query': '照会', 'devices.addDevice': 'デバイス追加', 'devices.deviceId': 'デバイスID', 'devices.deviceName': 'デバイス名', 'devices.model': 'モデル', 'devices.group': 'グループ', 'devices.heightLeft': '左高さ', 'devices.heightRight': '右高さ', 'devices.heightDiff': '偏差', 'devices.runCount': '運転回数', 'devices.runTime': '運転時間', 'devices.status': '状態', 'devices.alarm': 'アラーム', 'devices.detail': '詳細', 'devices.defaultGroup': '標準グループ', 'devices.noDevices': 'デバイスなし', 'devices.noDevicesSub': 'MQTTデータ待機中', 'devices.lockSent': 'ロック命令を送信しました', 'devices.unlockSent': '解除命令を送信しました', 'devices.addSuccess': 'デバイスを追加しました', 'devices.lockStatusYN': 'ロック中', 'devices.lockStatusNormal': '正常', 'devices.idPlaceholder': '例: lift_004', 'devices.namePlaceholder': '例: リフト4号', 'devices.detailTitle': 'デバイス詳細',
+    'devices.rename': '名前変更', 'devices.renameTitle': 'デバイス名変更', 'devices.renameSuccess': '名前変更コマンドを送信しました。デバイス応答待ちです...',
+    'alarms.title': 'アラーム管理', 'alarms.acknowledge': '確認', 'alarms.resolve': '解除', 'alarms.unack': '未確認', 'alarms.all': 'すべてのアラーム', 'alarms.acked': '確認済み', 'alarms.resolved': '解除済み', 'alarms.noAlarms': 'アラーム記録なし', 'alarms.allNormal': '全デバイス正常', 'alarms.ackSuccess': 'アラーム確認済み', 'alarms.resolveSuccess': 'アラーム解除済み', 'alarms.detailTitle': 'アラーム詳細',
+    'maintenance.title': '保守', 'maintenance.add': '記録追加', 'maintenance.type': '種類', 'maintenance.handler': '担当者', 'maintenance.result': '結果', 'maintenance.nextDate': '次回保守', 'maintenance.cost': '費用', 'maintenance.description': '説明', 'maintenance.noRecords': '保守記録なし', 'maintenance.serviceType': '保守', 'maintenance.repairType': '修理', 'maintenance.records': '保守記録', 'maintenance.descPh': '保守内容', 'maintenance.handlerPh': '担当者名', 'maintenance.inProgress': '処理中',
+    'statistics.title': '運転統計', 'statistics.totalRunTime': '累計運転時間', 'statistics.totalRunCount': '累計運転回数', 'statistics.avgRunTime': '平均運転時間', 'statistics.avgRunCount': '平均運転回数', 'statistics.noData': '統計データなし', 'statistics.waitingData': 'デバイスデータ待機中', 'statistics.deviceDetail': 'デバイス運転明細', 'statistics.avgSingle': '1回平均',
+    'logs.title': '操作ログ', 'logs.action': '操作', 'logs.detail': '詳細', 'logs.result': '結果', 'logs.time': '時間', 'logs.noLogs': '操作ログなし', 'logs.operator': '操作者', 'logs.device': 'デバイス',
+    'settings.title': '個人設定', 'settings.changePassword': 'パスワード変更', 'settings.oldPassword': '旧パスワード', 'settings.newPassword': '新パスワード', 'settings.confirmPassword': '新パスワード確認', 'settings.userManagement': 'ユーザー管理', 'settings.addUser': 'ユーザー追加', 'settings.roleAdmin': '管理者', 'settings.roleOperator': 'オペレーター', 'settings.roleViewer': '閲覧者', 'settings.enabled': '有効', 'settings.disabled': '無効', 'settings.currentUser': '現在のユーザー', 'settings.deleteUser': '削除', 'settings.createUser': '作成', 'settings.username': 'ユーザー名', 'settings.password': 'パスワード', 'settings.role': '権限', 'settings.realname': '氏名', 'settings.lastLogin': '最終ログイン', 'settings.pwdMismatch': 'パスワードが一致しません', 'settings.pwdSuccess': 'パスワードを変更しました', 'settings.userCreated': 'ユーザーを作成しました',
+    'settings.enable': '有効化', 'settings.disable': '無効化',
+    'auth.expired': 'ログイン期限切れ', 'command.timeout': 'コマンドタイムアウト', 'common.confirmDelete': 'この記録を削除しますか?', 'common.confirmDeleteUser': 'このユーザーを削除しますか?', 'common.deleted': '削除しました', 'common.recordAdded': '記録を追加しました', 'common.requestFailed': 'リクエスト失敗',
+    'unit.hour': '時間', 'unit.minute': '分', 'unit.device': '台', 'unit.times': '回', 'unit.record': '件', 'unit.currency': '円'
+  },
+  ko: {
+    'app.name': '가오창 리프트 IoT 관리 플랫폼', 'app.name_short': '가오창 리프트', 'app.subtitle': 'IoT 관리 시스템', 'app.iot': 'IoT 플랫폼',
+    'login.username': '사용자 이름', 'login.password': '비밀번호', 'login.username_ph': '사용자 이름 입력', 'login.password_ph': '비밀번호 입력', 'login.submit': '로그인', 'login.default': '기본 계정: admin / admin123',
+    'nav.overview': '개요', 'nav.devices': '장치', 'nav.alarms': '알람', 'nav.maintenance': '유지보수', 'nav.statistics': '통계', 'nav.logs': '로그', 'nav.settings': '설정',
+    'common.loading': '로딩 중...', 'common.offline': '연결 안 됨', 'common.connected': '연결됨', 'common.disconnected': '연결 끊김', 'common.all': '전체', 'common.query': '조회', 'common.export': '내보내기', 'common.add': '추가', 'common.delete': '삭제', 'common.cancel': '취소', 'common.submit': '제출', 'common.close': '닫기', 'common.confirm': '확인', 'common.success': '성공', 'common.error': '오류', 'common.apiError': 'API 오류', 'common.refresh': '새로고침', 'common.allDevices': '모든 장치', 'common.allTypes': '모든 유형', 'common.lastUpdate': '마지막 업데이트', 'common.heightData': '높이 데이터', 'common.runInfo': '운전 정보', 'common.alarmInfo': '알람 정보', 'common.lockInfo': '잠금 상태', 'common.home': '홈', 'login.logout': '로그아웃',
+    'status.normal': '정상', 'status.offline': '오프라인', 'status.fault': '고장', 'status.locked': '잠김', 'status.maintenance': '유지보수 대기', 'status.idle': '대기', 'status.up': '상승 중', 'status.down': '하강 중',
+    'state.idle': '대기', 'state.up': '상승 중', 'state.down': '하강 중', 'state.stop': '정지',
+    'alarm.none': '알람 없음', 'alarm.collision': '충돌 알람', 'alarm.stall': '실속 알람', 'alarm.balance_timeout': '밸런스 시간 초과', 'alarm.safety_bar': '안전바 작동', 'alarm.overheight': '과높이 알람', 'alarm.Emergency': '비상 정지',
+    'overview.online': '온라인', 'overview.offline': '오프라인', 'overview.fault': '고장', 'overview.locked': '잠김', 'overview.totalRuns': '총 운전 횟수', 'overview.totalTime': '총 운전 시간', 'overview.title': '시스템 개요', 'overview.waiting': '장치 대기 중', 'overview.waitingSub': 'MQTT 연결됨, 장치 데이터 대기 중',
+    'devices.title': '장치 관리', 'devices.lock': '잠금', 'devices.unlock': '해제', 'devices.query': '조회', 'devices.addDevice': '장치 추가', 'devices.deviceId': '장치 ID', 'devices.deviceName': '장치명', 'devices.model': '모델', 'devices.group': '그룹', 'devices.heightLeft': '왼쪽 높이', 'devices.heightRight': '오른쪽 높이', 'devices.heightDiff': '편차', 'devices.runCount': '운전 횟수', 'devices.runTime': '운전 시간', 'devices.status': '상태', 'devices.alarm': '알람', 'devices.detail': '상세', 'devices.defaultGroup': '기본 그룹', 'devices.noDevices': '장치 없음', 'devices.noDevicesSub': 'MQTT 데이터 대기 중', 'devices.lockSent': '잠금 명령 전송됨', 'devices.unlockSent': '해제 명령 전송됨', 'devices.addSuccess': '장치 추가됨', 'devices.lockStatusYN': '잠김', 'devices.lockStatusNormal': '정상', 'devices.idPlaceholder': '예: lift_004', 'devices.namePlaceholder': '예: 리프트 4호', 'devices.detailTitle': '장치 상세',
+    'devices.rename': '이름 변경', 'devices.renameTitle': '장치 이름 변경', 'devices.renameSuccess': '이름 변경 명령 전송됨, 장치 응답 대기 중...',
+    'alarms.title': '알람 관리', 'alarms.acknowledge': '확인', 'alarms.resolve': '해제', 'alarms.unack': '미확인', 'alarms.all': '모든 알람', 'alarms.acked': '확인됨', 'alarms.resolved': '해제됨', 'alarms.noAlarms': '알람 기록 없음', 'alarms.allNormal': '모든 장치 정상', 'alarms.ackSuccess': '알람 확인됨', 'alarms.resolveSuccess': '알람 해제됨', 'alarms.detailTitle': '알람 상세',
+    'maintenance.title': '유지보수', 'maintenance.add': '기록 추가', 'maintenance.type': '유형', 'maintenance.handler': '담당자', 'maintenance.result': '결과', 'maintenance.nextDate': '다음 유지보수', 'maintenance.cost': '비용', 'maintenance.description': '설명', 'maintenance.noRecords': '유지보수 기록 없음', 'maintenance.serviceType': '유지보수', 'maintenance.repairType': '수리', 'maintenance.records': '유지보수 기록', 'maintenance.descPh': '유지보수 설명', 'maintenance.handlerPh': '담당자명', 'maintenance.inProgress': '진행 중',
+    'statistics.title': '운전 통계', 'statistics.totalRunTime': '누적 운전 시간', 'statistics.totalRunCount': '누적 운전 횟수', 'statistics.avgRunTime': '평균 운전 시간', 'statistics.avgRunCount': '평균 운전 횟수', 'statistics.noData': '통계 데이터 없음', 'statistics.waitingData': '장치 데이터 대기 중', 'statistics.deviceDetail': '장치 운전 상세', 'statistics.avgSingle': '1회 평균',
+    'logs.title': '작업 로그', 'logs.action': '작업', 'logs.detail': '상세', 'logs.result': '결과', 'logs.time': '시간', 'logs.noLogs': '작업 로그 없음', 'logs.operator': '작업자', 'logs.device': '장치',
+    'settings.title': '개인 설정', 'settings.changePassword': '비밀번호 변경', 'settings.oldPassword': '기존 비밀번호', 'settings.newPassword': '새 비밀번호', 'settings.confirmPassword': '새 비밀번호 확인', 'settings.userManagement': '사용자 관리', 'settings.addUser': '사용자 추가', 'settings.roleAdmin': '관리자', 'settings.roleOperator': '운영자', 'settings.roleViewer': '조회자', 'settings.enabled': '활성', 'settings.disabled': '비활성', 'settings.currentUser': '현재 사용자', 'settings.deleteUser': '삭제', 'settings.createUser': '생성', 'settings.username': '사용자 이름', 'settings.password': '비밀번호', 'settings.role': '역할', 'settings.realname': '이름', 'settings.lastLogin': '마지막 로그인', 'settings.pwdMismatch': '비밀번호가 일치하지 않습니다', 'settings.pwdSuccess': '비밀번호 변경됨', 'settings.userCreated': '사용자 생성됨',
+    'settings.enable': '활성화', 'settings.disable': '비활성화',
+    'auth.expired': '로그인 만료', 'command.timeout': '명령 시간 초과', 'common.confirmDelete': '이 기록을 삭제하시겠습니까?', 'common.confirmDeleteUser': '이 사용자를 삭제하시겠습니까?', 'common.deleted': '삭제됨', 'common.recordAdded': '기록 추가됨', 'common.requestFailed': '요청 실패',
+    'ai.title': '가오창 AI 어시스턴트', 'ai.welcome': '안녕하세요! 가오창 리프트 AI 어시스턴트입니다. 장치 운영, 데이터 분석, 문제 해결 및 유지보수를 도와드립니다.', 'ai.placeholder': '질문을 입력하세요...', 'ai.thinking': '생각 중...',
+    'unit.hour': '시간', 'unit.minute': '분', 'unit.device': '대', 'unit.times': '회', 'unit.record': '건', 'unit.currency': '원'
+  }
+};
+
+Object.entries(I18N_PATCHES).forEach(([lang, patch]) => {
+  I18N[lang] = { ...(I18N[lang] || {}), ...patch };
+});
+
+['fr', 'de', 'es', 'pt', 'ru', 'ar'].forEach((lang) => {
+  I18N[lang] = { ...I18N.en, ...(I18N[lang] || {}) };
+});
+
 let currentLang = localStorage.getItem('lift_lang') || 'zh';
 
 function t(key) {
@@ -631,6 +695,11 @@ function applyLang() {
     const key = el.getAttribute('data-i18n-placeholder');
     const text = t(key);
     if (text && text !== key) el.placeholder = text;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    const text = t(key);
+    if (text && text !== key) el.title = text;
   });
 
   // Update lang labels

@@ -196,6 +196,8 @@ function normalizeTelemetry(data) {
   const totalRunMs = Number(runtime.total_ms || 0);
   const currentRunMs = Number(runtime.current_ms || 0);
   const effectiveRunTimeS = Math.floor((totalRunMs + currentRunMs) / 1000);
+  const uptimeMs = Number(data.uptime_ms ?? data.tick ?? 0);
+  const uptimeS = data.uptime_s ?? Math.floor(Math.max(uptimeMs, 0) / 1000);
 
   return {
     ...data,
@@ -211,6 +213,7 @@ function normalizeTelemetry(data) {
     height_diff_mm: data.height_diff_mm ?? height.diff_mm ?? 0,
     run_count: data.run_count ?? runtime.run_count ?? 0,
     run_time_s: data.run_time_s ?? effectiveRunTimeS,
+    uptime_s: uptimeS,
     ts_ms: data.ts_ms ?? data.tick ?? Date.now(),
     dtu_state: dtu.state,
     csq: dtu.csq
@@ -236,13 +239,13 @@ function handleStatusUpdate(deviceId, data) {
 
   db.prepare(`
     INSERT INTO device_status (device_id, online, locked, state, alarm,
-      height_left_mm, height_right_mm, height_diff_mm, run_count, run_time_s, ts_ms, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      height_left_mm, height_right_mm, height_diff_mm, run_count, run_time_s, uptime_s, ts_ms, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(device_id) DO UPDATE SET
       online=excluded.online, locked=excluded.locked, state=excluded.state, alarm=excluded.alarm,
       height_left_mm=excluded.height_left_mm, height_right_mm=excluded.height_right_mm,
       height_diff_mm=excluded.height_diff_mm, run_count=excluded.run_count,
-      run_time_s=excluded.run_time_s, ts_ms=excluded.ts_ms,
+      run_time_s=excluded.run_time_s, uptime_s=excluded.uptime_s, ts_ms=excluded.ts_ms,
       updated_at=excluded.updated_at
   `).run(
     deviceId,
@@ -255,6 +258,7 @@ function handleStatusUpdate(deviceId, data) {
     data.height_diff_mm || 0,
     data.run_count || 0,
     data.run_time_s || 0,
+    data.uptime_s || 0,
     data.ts_ms || Date.now(),
     nowISO()
   );

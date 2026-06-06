@@ -8,7 +8,7 @@ function getPlatformSnapshot() {
     SELECT d.device_id, d.name, d.model, d.group_name AS "group", d.location,
            s.online, s.locked, s.state, s.alarm, s.height_left_mm,
            s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s,
-           s.ts_ms, s.updated_at
+           s.uptime_s, s.ts_ms, s.updated_at
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
     ORDER BY d.device_id
@@ -22,7 +22,8 @@ function getPlatformSnapshot() {
     height_right_mm: d.height_right_mm || 0,
     height_diff_mm: d.height_diff_mm || 0,
     run_count: d.run_count || 0,
-    run_time_s: d.run_time_s || 0
+    run_time_s: d.run_time_s || 0,
+    uptime_s: d.uptime_s || 0
   }));
 
   const alarms = db.prepare(`
@@ -66,7 +67,6 @@ function getPlatformSnapshot() {
     locked_devices: devices.filter((d) => d.locked).length,
     fault_devices: devices.filter((d) => d.alarm && d.alarm !== 'none').length,
     total_run_count: devices.reduce((sum, d) => sum + (d.run_count || 0), 0),
-    total_run_time_s: devices.reduce((sum, d) => sum + (d.run_time_s || 0), 0),
     max_height_diff_mm: devices.reduce((max, d) => Math.max(max, Math.abs(d.height_diff_mm || 0)), 0),
     unacknowledged_alarms: alarms.filter((a) => !a.acknowledged).length,
     pending_commands: commands.filter((c) => c.status === 'pending' || c.status === 'sent').length

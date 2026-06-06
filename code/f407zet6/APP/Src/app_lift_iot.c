@@ -257,6 +257,7 @@ lift_iot_result_t App_LiftIot_BuildTelemetryJson(char *buf,
     int32_t right_pulse;
     int32_t left_mm;
     int32_t right_mm;
+    uint32_t now;
     int len;
 
     if ((buf == NULL) || (type == NULL) || (dtu_state == NULL))
@@ -268,11 +269,12 @@ lift_iot_result_t App_LiftIot_BuildTelemetryJson(char *buf,
     right_pulse = Encoder_Get_Count(1U);
     left_mm = HEIGHT_MM(left_pulse);
     right_mm = HEIGHT_MM(right_pulse);
+    now = HAL_GetTick();
 
     len = snprintf(buf,
                    size,
                    "{\"type\":\"%s\",\"device\":\"%s\",\"name\":\"%s\",\"model\":\"%s\",\"group\":\"%s\","
-                   "\"seq\":%lu,\"tick\":%lu,\"state\":\"%s\",\"locked\":%u,"
+                   "\"seq\":%lu,\"tick\":%lu,\"uptime_ms\":%lu,\"state\":\"%s\",\"locked\":%u,"
                    "\"maintenance_due\":%u,\"admin_mode\":%u,"
                    "\"runtime\":{\"total_ms\":%lu,\"current_ms\":%lu,\"run_count\":%lu,\"avg_ms\":%lu},"
                    "\"direction\":\"%s\","
@@ -287,7 +289,8 @@ lift_iot_result_t App_LiftIot_BuildTelemetryJson(char *buf,
                    LIFT_IOT_DEVICE_MODEL,
                    LIFT_IOT_DEVICE_GROUP,
                    (unsigned long)seq,
-                   (unsigned long)HAL_GetTick(),
+                   (unsigned long)now,
+                   (unsigned long)now,
                    App_LiftIot_StateName(),
                    (unsigned int)g_lift_iot_status.locked,
                    (unsigned int)g_lift_iot_status.maintenance_due,
@@ -327,6 +330,7 @@ lift_iot_result_t App_LiftIot_BuildStatusJson(char *buf,
                                               const char *dtu_state,
                                               int16_t csq)
 {
+    uint32_t now;
     int len;
 
     if ((buf == NULL) || (event == NULL) || (dtu_state == NULL))
@@ -334,10 +338,12 @@ lift_iot_result_t App_LiftIot_BuildStatusJson(char *buf,
         return LIFT_IOT_PARAM_ERROR;
     }
 
+    now = HAL_GetTick();
+
     len = snprintf(buf,
                    size,
                    "{\"type\":\"status\",\"device\":\"%s\",\"name\":\"%s\",\"model\":\"%s\",\"group\":\"%s\","
-                   "\"seq\":%lu,\"tick\":%lu,\"event\":\"%s\",\"state\":\"%s\","
+                   "\"seq\":%lu,\"tick\":%lu,\"uptime_ms\":%lu,\"event\":\"%s\",\"state\":\"%s\","
                    "\"locked\":%u,\"maintenance_due\":%u,\"admin_mode\":%u,"
                    "\"runtime\":{\"total_ms\":%lu,\"current_ms\":%lu,\"run_count\":%lu,\"avg_ms\":%lu},"
                    "\"safety\":{\"alarm\":\"%s\",\"alarm_code\":%d},"
@@ -347,7 +353,8 @@ lift_iot_result_t App_LiftIot_BuildStatusJson(char *buf,
                    LIFT_IOT_DEVICE_MODEL,
                    LIFT_IOT_DEVICE_GROUP,
                    (unsigned long)seq,
-                   (unsigned long)HAL_GetTick(),
+                   (unsigned long)now,
+                   (unsigned long)now,
                    event,
                    App_LiftIot_StateName(),
                    (unsigned int)g_lift_iot_status.locked,
@@ -380,6 +387,7 @@ lift_iot_result_t App_LiftIot_BuildCommandStatusJson(char *buf,
                                                      const char *dtu_state,
                                                      int16_t csq)
 {
+    uint32_t now;
     int len;
 
     if ((buf == NULL) || (event == NULL) || (cmd == NULL) ||
@@ -389,10 +397,12 @@ lift_iot_result_t App_LiftIot_BuildCommandStatusJson(char *buf,
     }
 
     /* 命令回执必须带 cmd/msg_id/result，Web 端才能把 command_queue 闭环。 */
+    now = HAL_GetTick();
+
     len = snprintf(buf,
                    size,
                    "{\"type\":\"status\",\"device\":\"%s\",\"name\":\"%s\",\"model\":\"%s\",\"group\":\"%s\","
-                   "\"seq\":%lu,\"tick\":%lu,\"event\":\"%s\",\"cmd\":\"%s\",\"msg_id\":\"%s\",\"result\":\"%s\","
+                   "\"seq\":%lu,\"tick\":%lu,\"uptime_ms\":%lu,\"event\":\"%s\",\"cmd\":\"%s\",\"msg_id\":\"%s\",\"result\":\"%s\","
                    "\"state\":\"%s\",\"locked\":%u,\"maintenance_due\":%u,\"admin_mode\":%u,"
                    "\"runtime\":{\"total_ms\":%lu,\"current_ms\":%lu,\"run_count\":%lu,\"avg_ms\":%lu},"
                    "\"safety\":{\"alarm\":\"%s\",\"alarm_code\":%d},"
@@ -402,7 +412,8 @@ lift_iot_result_t App_LiftIot_BuildCommandStatusJson(char *buf,
                    LIFT_IOT_DEVICE_MODEL,
                    LIFT_IOT_DEVICE_GROUP,
                    (unsigned long)seq,
-                   (unsigned long)HAL_GetTick(),
+                   (unsigned long)now,
+                   (unsigned long)now,
                    event,
                    cmd,
                    msg_id,

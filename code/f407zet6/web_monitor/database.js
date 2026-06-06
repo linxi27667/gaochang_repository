@@ -48,6 +48,7 @@ function init() {
       height_diff_mm INTEGER DEFAULT 0,
       run_count INTEGER DEFAULT 0,
       run_time_s INTEGER DEFAULT 0,
+      uptime_s INTEGER DEFAULT 0,
       ts_ms INTEGER DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
@@ -101,6 +102,8 @@ function init() {
     );
   `);
 
+  ensureColumn(db, 'device_status', 'uptime_s', 'INTEGER DEFAULT 0');
+
   const userCount = db.prepare('SELECT COUNT(*) AS cnt FROM users').get();
   if (userCount.cnt === 0) {
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -117,6 +120,13 @@ function init() {
       insDev.run(id, name, model, grp, now);
       insStatus.run(id, now);
     }
+  }
+}
+
+function ensureColumn(database, table, column, definition) {
+  const cols = database.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 

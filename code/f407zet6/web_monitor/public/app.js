@@ -223,7 +223,6 @@ function renderOverview() {
   const fault = devices.filter(d => d.alarm && d.alarm !== 'none').length;
   const locked = devices.filter(d => d.locked).length;
   const totalRuns = devices.reduce((s, d) => s + (d.run_count || 0), 0);
-  const totalRunTime = devices.reduce((s, d) => s + (d.run_time_s || 0), 0);
 
   return `
     <div class="cards-grid">
@@ -232,7 +231,6 @@ function renderOverview() {
       <div class="card fault"><div class="card-title">${t('overview.fault')}</div><div class="card-value">${fault}</div></div>
       <div class="card locked"><div class="card-title">${t('overview.locked')}</div><div class="card-value">${locked}</div></div>
       <div class="card"><div class="card-title">${t('overview.totalRuns')}</div><div class="card-value">${totalRuns.toLocaleString()}</div></div>
-      <div class="card"><div class="card-title">${t('overview.totalTime')}</div><div class="card-value">${formatTime(totalRunTime)}</div></div>
     </div>
     <div class="device-cards">${devices.slice(0, 8).map(d => renderDeviceCard(d)).join('')}</div>`;
 }
@@ -296,7 +294,7 @@ function renderDeviceCardWithActions(d, canControl) {
       <div class="device-card-grid">
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runTime')}</div><div class="device-card-metric-value">${formatTime(d.run_time_s)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.onlineDuration')}</div><div class="device-card-metric-value">${formatTime(d.uptime_s)}</div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
       </div>
       <div style="margin-top:8px;">
@@ -359,6 +357,7 @@ function showDeviceDetail(deviceId) {
           <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">${t('devices.heightDiff')}: <b>${d.height_diff_mm || 0}mm</b></div>
         </div>
         <div class="detail-row"><div class="detail-label">${t('devices.runTime')}</div><div class="detail-value">${formatTime(d.run_time_s)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value">${formatTime(d.uptime_s)}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
         <div class="detail-row"><div class="detail-label">${t('common.lastUpdate')}</div><div class="detail-value">${formatTs(d.updated_at)}</div></div>
       </div>
@@ -595,17 +594,15 @@ async function exportMaintenance() {
 /* ===== Statistics Page ===== */
 function renderStatistics() {
   if (devices.length === 0) return `<div class="empty-state"><div class="empty-icon">📊</div><h3>${t('statistics.noData')}</h3><p>${t('statistics.waitingData')}</p></div>`;
-  const totalRunTime = devices.reduce((s, d) => s + (d.run_time_s || 0), 0);
   const totalRunCount = devices.reduce((s, d) => s + (d.run_count || 0), 0);
-  const avgTime = devices.length > 0 ? (totalRunTime / devices.length) : 0;
   const avgCount = devices.length > 0 ? Math.round(totalRunCount / devices.length) : 0;
+  const onlineCount = devices.filter(d => d.online).length;
 
   return `
     <div class="stats-grid">
-      <div class="stat-card"><h4>${t('statistics.totalRunTime')}</h4><div><span class="value">${formatTime(totalRunTime)}</span></div></div>
       <div class="stat-card"><h4>${t('statistics.totalRunCount')}</h4><div><span class="value">${totalRunCount.toLocaleString()}</span><span class="unit">${t('unit.times')}</span></div></div>
-      <div class="stat-card"><h4>${t('statistics.avgRunTime')}</h4><div><span class="value">${formatTime(avgTime)}</span><span class="unit">/${t('unit.device')}</span></div></div>
       <div class="stat-card"><h4>${t('statistics.avgRunCount')}</h4><div><span class="value">${avgCount}</span><span class="unit">${t('unit.times')}/${t('unit.device')}</span></div></div>
+      <div class="stat-card"><h4>${t('overview.online')}</h4><div><span class="value">${onlineCount}</span><span class="unit">/${devices.length}${t('unit.device')}</span></div></div>
     </div>
     <div class="device-table" style="margin-top:20px;">
       <div class="table-header"><span>${t('statistics.deviceDetail')}</span></div>

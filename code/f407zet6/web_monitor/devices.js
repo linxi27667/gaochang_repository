@@ -10,7 +10,7 @@ router.get('/', authMiddleware, (req, res) => {
   const devices = db.prepare(`
     SELECT d.device_id, d.name, d.model, d.group_name, d.location, d.created_at,
            s.online, s.locked, s.state, s.alarm, s.height_left_mm,
-           s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s,
+           s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s, s.uptime_s,
            s.ts_ms, s.updated_at
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
@@ -33,6 +33,7 @@ router.get('/', authMiddleware, (req, res) => {
     height_diff_mm: d.height_diff_mm || 0,
     run_count: d.run_count || 0,
     run_time_s: d.run_time_s || 0,
+    uptime_s: d.uptime_s || 0,
     ts_ms: d.ts_ms || 0,
     updated_at: d.updated_at
   })));
@@ -43,7 +44,7 @@ router.get('/:id', authMiddleware, (req, res) => {
   const d = db.prepare(`
     SELECT d.device_id, d.name, d.model, d.group_name, d.location, d.created_at,
            s.online, s.locked, s.state, s.alarm, s.height_left_mm,
-           s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s,
+           s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s, s.uptime_s,
            s.ts_ms, s.updated_at
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
@@ -68,6 +69,7 @@ router.get('/:id', authMiddleware, (req, res) => {
     height_diff_mm: d.height_diff_mm || 0,
     run_count: d.run_count || 0,
     run_time_s: d.run_time_s || 0,
+    uptime_s: d.uptime_s || 0,
     ts_ms: d.ts_ms || 0,
     updated_at: d.updated_at
   });
@@ -116,8 +118,7 @@ router.get('/overview/summary', authMiddleware, (req, res) => {
       SUM(CASE WHEN s.online = 0 OR s.online IS NULL THEN 1 ELSE 0 END) AS offline_count,
       SUM(CASE WHEN s.alarm != 'none' AND s.alarm IS NOT NULL THEN 1 ELSE 0 END) AS fault_count,
       SUM(CASE WHEN s.locked = 1 THEN 1 ELSE 0 END) AS locked_count,
-      SUM(s.run_count) AS total_run_count,
-      SUM(s.run_time_s) AS total_run_time_s
+      SUM(s.run_count) AS total_run_count
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
   `).get();
@@ -128,8 +129,7 @@ router.get('/overview/summary', authMiddleware, (req, res) => {
     offline: stats.offline_count || 0,
     fault: stats.fault_count || 0,
     locked: stats.locked_count || 0,
-    total_run_count: stats.total_run_count || 0,
-    total_run_time_s: stats.total_run_time_s || 0
+    total_run_count: stats.total_run_count || 0
   });
 });
 

@@ -590,13 +590,13 @@ const I18N = {
 
 const I18N_PATCHES = {
   zh: {
-    'unit.hour': '小时', 'unit.minute': '分钟', 'unit.device': '台', 'unit.times': '次', 'unit.record': '条', 'unit.currency': '元',
+    'unit.hour': '小时', 'unit.minute': '分钟', 'unit.second': '秒', 'unit.device': '台', 'unit.times': '次', 'unit.record': '条', 'unit.currency': '元',
     'common.home': '首页', 'common.apiError': 'API错误', 'login.logout': '退出登录', 'devices.idPlaceholder': '如: lift_004', 'devices.namePlaceholder': '如: 举升机4号',
     'devices.detailTitle': '设备详情', 'alarms.detailTitle': '报警详情', 'statistics.avgSingle': '平均单次',
     'logs.operator': '操作人', 'logs.device': '设备', 'settings.lastLogin': '最后登录'
   },
   en: {
-    'unit.hour': 'h', 'unit.minute': 'm', 'unit.device': ' units', 'unit.times': ' times', 'unit.record': ' records', 'unit.currency': 'CNY',
+    'unit.hour': 'h', 'unit.minute': 'm', 'unit.second': 's', 'unit.device': ' units', 'unit.times': ' times', 'unit.record': ' records', 'unit.currency': 'CNY',
     'common.home': 'Home', 'common.apiError': 'API error', 'login.logout': 'Logout', 'devices.idPlaceholder': 'e.g. lift_004', 'devices.namePlaceholder': 'e.g. Lift No. 4',
     'devices.detailTitle': 'Device Details', 'alarms.detailTitle': 'Alarm Details', 'statistics.avgSingle': 'Avg per Run',
     'logs.operator': 'Operator', 'logs.device': 'Device', 'settings.lastLogin': 'Last Login'
@@ -619,7 +619,7 @@ const I18N_PATCHES = {
     'settings.title': '個人設定', 'settings.changePassword': 'パスワード変更', 'settings.oldPassword': '旧パスワード', 'settings.newPassword': '新パスワード', 'settings.confirmPassword': '新パスワード確認', 'settings.userManagement': 'ユーザー管理', 'settings.addUser': 'ユーザー追加', 'settings.roleAdmin': '管理者', 'settings.roleOperator': 'オペレーター', 'settings.roleViewer': '閲覧者', 'settings.enabled': '有効', 'settings.disabled': '無効', 'settings.currentUser': '現在のユーザー', 'settings.deleteUser': '削除', 'settings.createUser': '作成', 'settings.username': 'ユーザー名', 'settings.password': 'パスワード', 'settings.role': '権限', 'settings.realname': '氏名', 'settings.lastLogin': '最終ログイン', 'settings.pwdMismatch': 'パスワードが一致しません', 'settings.pwdSuccess': 'パスワードを変更しました', 'settings.userCreated': 'ユーザーを作成しました',
     'settings.enable': '有効化', 'settings.disable': '無効化',
     'auth.expired': 'ログイン期限切れ', 'command.timeout': 'コマンドタイムアウト', 'common.confirmDelete': 'この記録を削除しますか?', 'common.confirmDeleteUser': 'このユーザーを削除しますか?', 'common.deleted': '削除しました', 'common.recordAdded': '記録を追加しました', 'common.requestFailed': 'リクエスト失敗',
-    'unit.hour': '時間', 'unit.minute': '分', 'unit.device': '台', 'unit.times': '回', 'unit.record': '件', 'unit.currency': '円'
+    'unit.hour': '時間', 'unit.minute': '分', 'unit.second': '秒', 'unit.device': '台', 'unit.times': '回', 'unit.record': '件', 'unit.currency': '円'
   },
   ko: {
     'app.name': '가오창 리프트 IoT 관리 플랫폼', 'app.name_short': '가오창 리프트', 'app.subtitle': 'IoT 관리 시스템', 'app.iot': 'IoT 플랫폼',
@@ -640,7 +640,7 @@ const I18N_PATCHES = {
     'settings.enable': '활성화', 'settings.disable': '비활성화',
     'auth.expired': '로그인 만료', 'command.timeout': '명령 시간 초과', 'common.confirmDelete': '이 기록을 삭제하시겠습니까?', 'common.confirmDeleteUser': '이 사용자를 삭제하시겠습니까?', 'common.deleted': '삭제됨', 'common.recordAdded': '기록 추가됨', 'common.requestFailed': '요청 실패',
     'ai.title': '가오창 AI 어시스턴트', 'ai.welcome': '안녕하세요! 가오창 리프트 AI 어시스턴트입니다. 장치 운영, 데이터 분석, 문제 해결 및 유지보수를 도와드립니다.', 'ai.placeholder': '질문을 입력하세요...', 'ai.thinking': '생각 중...',
-    'unit.hour': '시간', 'unit.minute': '분', 'unit.device': '대', 'unit.times': '회', 'unit.record': '건', 'unit.currency': '원'
+    'unit.hour': '시간', 'unit.minute': '분', 'unit.second': '초', 'unit.device': '대', 'unit.times': '회', 'unit.record': '건', 'unit.currency': '원'
   }
 };
 

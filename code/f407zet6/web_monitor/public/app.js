@@ -213,6 +213,34 @@ function formatTime(s) {
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}${t('unit.hour')}${m}${t('unit.minute')}` : `${m}${t('unit.minute')}`;
 }
+function getLiveUptimeSeconds(d) {
+  const base = Number(d.uptime_s || 0);
+  if (!d.online || !d.updated_at) return base;
+  const elapsed = Math.max(0, Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 1000));
+  return base + elapsed;
+}
+function formatLiveTime(s) {
+  const total = Math.max(0, Math.floor(Number(s) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  if (h > 0) return `${h}${t('unit.hour')}${m}${t('unit.minute')}${sec}${t('unit.second')}`;
+  if (m > 0) return `${m}${t('unit.minute')}${sec}${t('unit.second')}`;
+  return `${sec}${t('unit.second')}`;
+}
+function renderUptimeBlock(d) {
+  return `
+    <div class="device-card-uptime">
+      <span>${t('devices.onlineDuration')}</span>
+      <strong data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</strong>
+    </div>`;
+}
+function refreshLiveUptimeDisplays() {
+  document.querySelectorAll('[data-uptime-device]').forEach(el => {
+    const d = devices.find(x => x.device_id === el.dataset.uptimeDevice);
+    if (d) el.textContent = formatLiveTime(getLiveUptimeSeconds(d));
+  });
+}
 function formatTs(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString(currentLang === 'zh' ? 'zh-CN' : currentLang); } catch { return iso; } }
 
 /* ===== Overview Page ===== */
@@ -246,6 +274,7 @@ function renderDeviceCard(d) {
         <div><div class="device-card-name">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
+      ${renderUptimeBlock(d)}
       <div class="device-card-grid">
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightLeft')}</div><div class="device-card-metric-value">${d.height_left_mm || 0}<small>mm</small></div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.heightRight')}</div><div class="device-card-metric-value">${d.height_right_mm || 0}<small>mm</small></div></div>
@@ -291,10 +320,11 @@ function renderDeviceCardWithActions(d, canControl) {
         <div><div class="device-card-name" style="cursor:pointer" onclick="showDeviceDetail('${d.device_id}')">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
+      ${renderUptimeBlock(d)}
       <div class="device-card-grid">
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
-        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.onlineDuration')}</div><div class="device-card-metric-value">${formatTime(d.uptime_s)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runTime')}</div><div class="device-card-metric-value">${formatTime(d.run_time_s)}</div></div>
         <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
       </div>
       <div style="margin-top:8px;">
@@ -357,7 +387,7 @@ function showDeviceDetail(deviceId) {
           <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">${t('devices.heightDiff')}: <b>${d.height_diff_mm || 0}mm</b></div>
         </div>
         <div class="detail-row"><div class="detail-label">${t('devices.runTime')}</div><div class="detail-value">${formatTime(d.run_time_s)}</div></div>
-        <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value">${formatTime(d.uptime_s)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value"><span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
         <div class="detail-row"><div class="detail-label">${t('common.lastUpdate')}</div><div class="detail-value">${formatTs(d.updated_at)}</div></div>
       </div>
@@ -797,6 +827,7 @@ loadPage = function(page) {
 // Auto-refresh
 setInterval(() => { if (token) fetchDevices(); }, 10000);
 setInterval(() => { if (token) fetchUnackAlarms(); }, 30000);
+setInterval(() => { if (token) refreshLiveUptimeDisplays(); }, 1000);
 
 /* ===== Avatar Upload ===== */
 function showAvatarUpload() {

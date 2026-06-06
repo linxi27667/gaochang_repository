@@ -3,6 +3,7 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
 const cors = require('cors');
+require('dotenv').config();
 const { init: initDb, getDb } = require('./database');
 const { connect: mqttConnect, addWsClient, getStatus: getMqttStatus } = require('./mqtt-bridge');
 const { router: authRouter, authMiddleware } = require('./auth');
@@ -16,9 +17,10 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-const MIMO_API_URL = process.env.MIMO_API_URL || 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions';
+const MIMO_API_BASE = process.env.MIMO_API_BASE || 'https://token-plan-cn.xiaomimimo.com/v1';
+const MIMO_API_URL = process.env.MIMO_API_URL || `${MIMO_API_BASE.replace(/\/+$/, '')}/chat/completions`;
 const MIMO_API_KEY = process.env.MIMO_API_KEY || '';
-const MIMO_MODEL = process.env.MIMO_MODEL || 'mimo-v2.5';
+const MIMO_MODEL = process.env.MIMO_MODEL || 'mimo-v2.5-pro';
 
 app.use(cors());
 app.use(express.json());
@@ -60,11 +62,14 @@ app.post('/api/ai/chat', authMiddleware, async (req, res) => {
 
     const systemPrompt = '你是高昌举升机（GaoChang Lift）的专业AI助手。你精通：1.举升机的操作规程和安全标准 2.常见故障码和故障排查方法 3.维修保养流程和周期 4.IoT物联网平台的设备管理 5.举升机的锁机/解锁/远程控制。回答应当专业、简洁、实用。';
 
-    // Sanitize messages - ensure all have valid role and content
+    // 只允许 MiMo/OpenAI 兼容接口支持的角色，避免前端 UI 角色污染请求。
     const cleanMessages = [{ role: 'system', content: systemPrompt }];
     for (const m of messages) {
       if (m && m.role && m.content && typeof m.content === 'string' && m.content.trim()) {
-        cleanMessages.push({ role: m.role, content: m.content.trim().slice(0, 2000) });
+        const role = m.role === 'bot' ? 'assistant' : m.role;
+        if (role === 'system' || role === 'user' || role === 'assistant') {
+          cleanMessages.push({ role, content: m.content.trim().slice(0, 2000) });
+        }
       }
     }
 
@@ -85,7 +90,14 @@ app.post('/api/ai/chat', authMiddleware, async (req, res) => {
       body: JSON.stringify(body)
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.error('[AI] Non-JSON response:', rawText.slice(0, 300));
+      return res.status(502).json({ error: 'AI服务返回格式异常' });
+    }
 
     if (!response.ok) {
       console.error('[AI] API error:', response.status, JSON.stringify(data));

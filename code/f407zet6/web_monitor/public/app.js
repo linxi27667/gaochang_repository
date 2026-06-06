@@ -848,6 +848,7 @@ async function sendAIMessage() {
 
   input.value = '';
   input.style.height = 'auto';
+  const requestMessages = [...getAIChatHistory(), { role: 'user', content: text }];
   addAIChatMessage('user', text);
 
   aiChatLoading = true;
@@ -865,7 +866,7 @@ async function sendAIMessage() {
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-        messages: [...getAIChatHistory(), { role: 'user', content: text }]
+        messages: requestMessages
       })
     });
 
@@ -911,7 +912,10 @@ function addAIChatMessage(role, text) {
 }
 
 function getAIChatHistory() {
-  return aiChatHistory.slice(-10).map(m => ({ role: m.role, content: m.content }));
+  return aiChatHistory.slice(-10).map(m => ({
+    role: m.role === 'bot' ? 'assistant' : m.role,
+    content: m.content
+  }));
 }
 
 let aiTypingCounter = 0;

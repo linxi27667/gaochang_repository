@@ -8,6 +8,9 @@ let ws = null;
 let devices = [];
 let unackAlarmCount = 0;
 
+// 举升机型号列表
+const LIFT_MODELS = ['GC-4.0sle', 'GC-4.0sb', 'GC-4.0MSL', 'GC-4.0PRO-DW'];
+
 /* ===== API Helper ===== */
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -59,6 +62,11 @@ function sanitizeDevice(d) {
     collision_up: d.collision_up ? 1 : 0,
     collision_down: d.collision_down ? 1 : 0,
     alarm_code: clampInt(d.alarm_code, 0, 65535, 0),
+    has_encoder: d.has_encoder ? 1 : 0,
+    has_buzzer: d.has_buzzer ? 1 : 0,
+    has_pressure_sensor: d.has_pressure_sensor ? 1 : 0,
+    has_display: d.has_display ? 1 : 0,
+    buzzer_on: !!d.buzzer_on,
     csq: clampInt(d.csq, -1, 31, -1),
     dtu_state: String(d.dtu_state || ''),
     left_pulse: clampInt(d.left_pulse, 0, 2147483647, 0),
@@ -369,6 +377,12 @@ function renderDeviceCard(d) {
         <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
+      <div class="device-accessories">
+        ${d.has_encoder ? '<span class="accessory-tag" title="高度编码器">📏</span>' : ''}
+        ${d.has_buzzer ? '<span class="accessory-tag" title="蜂鸣器">🔔</span>' : ''}
+        ${d.has_pressure_sensor ? '<span class="accessory-tag" title="压力传感器">📊</span>' : ''}
+        ${d.has_display ? '<span class="accessory-tag" title="显示屏">🖥️</span>' : ''}
+      </div>
       ${renderSafetyBadges(d)}
     </div>`;
 }
@@ -393,6 +407,7 @@ function renderDevices() {
 }
 
 function renderDeviceCardWithActions(d, canControl) {
+  const isAdmin = currentUser && currentUser.role === 'admin';
   const sc = getStatusClass(d);
   const maxH = 2000;
   const leftPct = Math.min((d.height_left_mm || 0) / maxH * 100, 100);
@@ -416,6 +431,12 @@ function renderDeviceCardWithActions(d, canControl) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
         <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
+      <div class="device-accessories">
+        ${d.has_encoder ? '<span class="accessory-tag" title="高度编码器">📏</span>' : ''}
+        ${d.has_buzzer ? '<span class="accessory-tag" title="蜂鸣器">🔔</span>' : ''}
+        ${d.has_pressure_sensor ? '<span class="accessory-tag" title="压力传感器">📊</span>' : ''}
+        ${d.has_display ? '<span class="accessory-tag" title="显示屏">🖥️</span>' : ''}
+      </div>
       ${renderSafetyBadges(d)}
       <div class="device-card-actions">
         <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>
@@ -424,6 +445,7 @@ function renderDeviceCardWithActions(d, canControl) {
           : `<button class="btn btn-sm btn-danger" onclick="lockDevice('${d.device_id}')">${t('devices.lock')}</button>`
         }` : ''}
         ${canControl ? `<button class="btn btn-sm btn-outline" onclick="queryDevice('${d.device_id}')">${t('devices.query')}</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">${t('common.delete')}</button>` : ''}
       </div>
     </div>`;
 }
@@ -473,6 +495,7 @@ function showDeviceDetail(deviceId) {
         <div class="detail-row"><div class="detail-label">${t('devices.alarm')}</div><div class="detail-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger);font-weight:600' : ''}">${getAlarmText(d.alarm)}</div></div>
       </div>
       <div>
+        ${d.has_encoder ? `
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('common.heightData')}</div>
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">${t('devices.heightLeft')}: ${d.height_left_mm || 0}mm</div>
@@ -480,7 +503,7 @@ function showDeviceDetail(deviceId) {
           <div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">${t('devices.heightRight')}: ${d.height_right_mm || 0}mm</div>
           <div class="height-bar" style="height:10px;"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">${t('devices.heightDiff')}: <b>${d.height_diff_mm || 0}mm</b></div>
-        </div>
+        </div>` : '<div style="margin-bottom:16px;font-size:12px;color:var(--text-muted);">未安装高度编码器</div>'}
         <div class="detail-row"><div class="detail-label">${t('devices.runTime')}</div><div class="detail-value">${formatTime(d.run_time_s)}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value"><span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
@@ -505,19 +528,35 @@ function showDeviceDetail(deviceId) {
         ${d.locked ? `<button class="btn btn-success" onclick="unlockDevice('${d.device_id}');closeModal('device-modal')">${t('devices.unlock')}}</button>` : `<button class="btn btn-danger" onclick="lockDevice('${d.device_id}');closeModal('device-modal')">${t('devices.lock')}}</button>`}
         <button class="btn btn-outline" onclick="queryDevice('${d.device_id}')">${t('devices.query')}</button>
       ` : ''}
+      ${d.has_buzzer && isOperator ? `
+        ${d.buzzer_on
+          ? `<button class="btn btn-warning" onclick="sendBuzzerCmd('${d.device_id}', 'buzzer_off');closeModal('device-modal')">${t('devices.buzzerOff')}</button>`
+          : `<button class="btn btn-success" onclick="sendBuzzerCmd('${d.device_id}', 'buzzer_on');closeModal('device-modal')">${t('devices.buzzerOn')}</button>`
+        }
+      ` : ''}
       <button class="btn btn-outline" onclick="closeModal('device-modal')">${t('common.close')}</button>
     </div>`;
   document.getElementById('device-modal').classList.add('active');
 }
 
 async function showAddDeviceModal() {
+  const modelOptions = LIFT_MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
   document.getElementById('maintenance-modal-title').textContent = t('devices.addDevice');
   document.getElementById('maintenance-modal-body').innerHTML = `
     <form onsubmit="return addDevice(event)">
       <div class="form-group"><label>${t('devices.deviceId')}</label><input type="text" id="add-device-id" placeholder="${t('devices.idPlaceholder')}" required></div>
       <div class="form-group"><label>${t('devices.deviceName')}</label><input type="text" id="add-device-name" placeholder="${t('devices.namePlaceholder')}" required></div>
-      <div class="form-group"><label>${t('devices.model')}</label><input type="text" id="add-device-model" value="TL-5000"></div>
+      <div class="form-group"><label>${t('devices.model')}</label><select id="add-device-model">${modelOptions}</select></div>
       <div class="form-group"><label>${t('devices.group')}</label><input type="text" id="add-device-group" value="${t('devices.defaultGroup')}"></div>
+      <div class="form-group">
+        <label>${t('devices.accessories')}</label>
+        <div class="accessory-checkboxes">
+          <label class="checkbox-label"><input type="checkbox" id="add-has-encoder"> ${t('devices.encoder')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-buzzer"> ${t('devices.buzzer')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-pressure"> ${t('devices.pressureSensor')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-display"> ${t('devices.display')}</label>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">${t('common.add')}</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button></div>
     </form>`;
   document.getElementById('maintenance-modal').classList.add('active');
@@ -531,8 +570,12 @@ async function addDevice(e) {
       body: JSON.stringify({
         device_id: document.getElementById('add-device-id').value.trim(),
         name: document.getElementById('add-device-name').value.trim(),
-        model: document.getElementById('add-device-model').value.trim(),
-        group_name: document.getElementById('add-device-group').value.trim()
+        model: document.getElementById('add-device-model').value,
+        group_name: document.getElementById('add-device-group').value.trim(),
+        has_encoder: document.getElementById('add-has-encoder').checked ? 1 : 0,
+        has_buzzer: document.getElementById('add-has-buzzer').checked ? 1 : 0,
+        has_pressure_sensor: document.getElementById('add-has-pressure').checked ? 1 : 0,
+        has_display: document.getElementById('add-has-display').checked ? 1 : 0
       })
     });
     showToast(t('devices.addSuccess'), 'success');
@@ -589,6 +632,22 @@ async function renameDevice(deviceId, currentName) {
     const d = devices.find(x => x.device_id === deviceId);
     if (d) d.name = newName.trim();
     renderCurrentPage();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteDevice(deviceId, deviceName) {
+  if (!confirm(t('devices.deleteConfirm').replace('{name}', deviceName))) return;
+  try {
+    await api(`/devices/${deviceId}`, { method: 'DELETE' });
+    showToast(t('devices.deleteSuccess'), 'success');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function sendBuzzerCmd(deviceId, cmd) {
+  try {
+    await api(`/commands/${cmd}/${deviceId}`, { method: 'POST' });
+    showToast(t(cmd === 'buzzer_on' ? 'devices.buzzerOnSent' : 'devices.buzzerOffSent'), 'success');
   } catch (err) { showToast(err.message, 'error'); }
 }
 

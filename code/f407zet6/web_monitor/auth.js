@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getDb } = require('./database');
 const { nowISO } = require('./utils');
+const { rateLimit } = require('./rateLimit');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'lift-monitor-secret-key-2024';
@@ -92,6 +93,44 @@ router.post('/register', authMiddleware, roleMiddleware('admin'), (req, res) => 
     res.json({ id: result.lastInsertRowid, username, role: role || 'operator' });
   } catch (e) {
     res.status(500).json({ error: '创建用户失败' });
+  }
+});
+
+// 公开注册 - 无需登录，带IP限流
+router.post('/register-public', rateLimit({ windowMs: 60000, max: 3 }), (req, res) => {
+  const { username, password, real_name, phone, captcha_answer, captcha_expected } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: '用户名和密码不能为空' });
+  }
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    return res.status(400).json({ error: '用户名只能包含字母、数字、下划线，3-20位' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: '密码至少6位' });
+  }
+  if (Number(captcha_answer) !== Number(captcha_expected)) {
+    return res.status(400).json({ error: '验证码错误' });
+  }
+
+  const db = getDb();
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (existing) {
+    return res.status(409).json({ error: '用户名已存在' });
+  }
+
+  const hash = bcrypt.hashSync(password, 10);
+  try {
+    const result = db.prepare(
+      'INSERT INTO users (username, password_hash, role, real_name, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(username, hash, 'viewer', real_name || '', phone || '', nowISO());
+
+    db.prepare('INSERT INTO operation_logs (user_id, action, detail, result, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run(result.lastInsertRowid, '用户注册', `新用户注册: ${username}`, '成功', nowISO());
+
+    res.json({ message: '注册成功', username });
+  } catch (e) {
+    res.status(500).json({ error: '注册失败' });
   }
 });
 

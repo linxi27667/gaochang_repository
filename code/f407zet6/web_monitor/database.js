@@ -34,6 +34,10 @@ function init() {
       model TEXT DEFAULT 'TL-5000',
       group_name TEXT DEFAULT '默认分组',
       location TEXT DEFAULT '',
+      has_encoder INTEGER DEFAULT 0,
+      has_buzzer INTEGER DEFAULT 0,
+      has_pressure_sensor INTEGER DEFAULT 0,
+      has_display INTEGER DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT ''
     );
 
@@ -51,6 +55,22 @@ function init() {
       uptime_s INTEGER DEFAULT 0,
       ts_ms INTEGER DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT '',
+      direction TEXT DEFAULT 'stop',
+      upper_limit INTEGER DEFAULT 0,
+      lower_limit INTEGER DEFAULT 0,
+      stall INTEGER DEFAULT 0,
+      collision_up INTEGER DEFAULT 0,
+      collision_down INTEGER DEFAULT 0,
+      alarm_code INTEGER DEFAULT 0,
+      csq INTEGER DEFAULT -1,
+      dtu_state TEXT DEFAULT '',
+      left_pulse INTEGER DEFAULT 0,
+      right_pulse INTEGER DEFAULT 0,
+      left_up_collision INTEGER DEFAULT 0,
+      right_up_collision INTEGER DEFAULT 0,
+      left_down_collision INTEGER DEFAULT 0,
+      right_down_collision INTEGER DEFAULT 0,
+      buzzer_on INTEGER DEFAULT 0,
       FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
     );
 
@@ -103,6 +123,28 @@ function init() {
   `);
 
   ensureColumn(db, 'device_status', 'uptime_s', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'direction', "TEXT DEFAULT 'stop'");
+  ensureColumn(db, 'device_status', 'upper_limit', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'lower_limit', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'stall', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'collision_up', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'collision_down', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'alarm_code', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'csq', 'INTEGER DEFAULT -1');
+  ensureColumn(db, 'device_status', 'dtu_state', "TEXT DEFAULT ''");
+  ensureColumn(db, 'device_status', 'left_pulse', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'right_pulse', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'left_up_collision', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'right_up_collision', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'left_down_collision', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'right_down_collision', 'INTEGER DEFAULT 0');
+
+  // 版本迁移：添加新字段（如果不存在）
+  ensureColumn(db, 'devices', 'has_encoder', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'devices', 'has_buzzer', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'devices', 'has_pressure_sensor', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'devices', 'has_display', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'device_status', 'buzzer_on', 'INTEGER DEFAULT 0');
 
   const userCount = db.prepare('SELECT COUNT(*) AS cnt FROM users').get();
   if (userCount.cnt === 0) {

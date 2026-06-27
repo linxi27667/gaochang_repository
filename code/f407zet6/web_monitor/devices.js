@@ -1,5 +1,6 @@
 const express = require('express');
 const { getDb } = require('./database');
+const { nowISO } = require('./utils');
 const { authMiddleware, roleMiddleware } = require('./auth');
 
 const router = express.Router();
@@ -11,7 +12,11 @@ router.get('/', authMiddleware, (req, res) => {
     SELECT d.device_id, d.name, d.model, d.group_name, d.location, d.created_at,
            s.online, s.locked, s.state, s.alarm, s.height_left_mm,
            s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s, s.uptime_s,
-           s.ts_ms, s.updated_at
+           s.ts_ms, s.updated_at,
+           s.direction, s.upper_limit, s.lower_limit, s.stall, s.collision_up,
+           s.collision_down, s.alarm_code, s.csq, s.dtu_state,
+           s.left_pulse, s.right_pulse, s.left_up_collision, s.right_up_collision,
+           s.left_down_collision, s.right_down_collision
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
     ORDER BY d.device_id
@@ -35,7 +40,22 @@ router.get('/', authMiddleware, (req, res) => {
     run_time_s: d.run_time_s || 0,
     uptime_s: d.uptime_s || 0,
     ts_ms: d.ts_ms || 0,
-    updated_at: d.updated_at
+    updated_at: d.updated_at,
+    direction: d.direction || 'stop',
+    upper_limit: d.upper_limit || 0,
+    lower_limit: d.lower_limit || 0,
+    stall: d.stall || 0,
+    collision_up: d.collision_up || 0,
+    collision_down: d.collision_down || 0,
+    alarm_code: d.alarm_code || 0,
+    csq: d.csq ?? -1,
+    dtu_state: d.dtu_state || '',
+    left_pulse: d.left_pulse || 0,
+    right_pulse: d.right_pulse || 0,
+    left_up_collision: d.left_up_collision || 0,
+    right_up_collision: d.right_up_collision || 0,
+    left_down_collision: d.left_down_collision || 0,
+    right_down_collision: d.right_down_collision || 0
   })));
 });
 
@@ -45,7 +65,11 @@ router.get('/:id', authMiddleware, (req, res) => {
     SELECT d.device_id, d.name, d.model, d.group_name, d.location, d.created_at,
            s.online, s.locked, s.state, s.alarm, s.height_left_mm,
            s.height_right_mm, s.height_diff_mm, s.run_count, s.run_time_s, s.uptime_s,
-           s.ts_ms, s.updated_at
+           s.ts_ms, s.updated_at,
+           s.direction, s.upper_limit, s.lower_limit, s.stall, s.collision_up,
+           s.collision_down, s.alarm_code, s.csq, s.dtu_state,
+           s.left_pulse, s.right_pulse, s.left_up_collision, s.right_up_collision,
+           s.left_down_collision, s.right_down_collision
     FROM devices d
     LEFT JOIN device_status s ON d.device_id = s.device_id
     WHERE d.device_id = ?
@@ -71,7 +95,22 @@ router.get('/:id', authMiddleware, (req, res) => {
     run_time_s: d.run_time_s || 0,
     uptime_s: d.uptime_s || 0,
     ts_ms: d.ts_ms || 0,
-    updated_at: d.updated_at
+    updated_at: d.updated_at,
+    direction: d.direction || 'stop',
+    upper_limit: d.upper_limit || 0,
+    lower_limit: d.lower_limit || 0,
+    stall: d.stall || 0,
+    collision_up: d.collision_up || 0,
+    collision_down: d.collision_down || 0,
+    alarm_code: d.alarm_code || 0,
+    csq: d.csq ?? -1,
+    dtu_state: d.dtu_state || '',
+    left_pulse: d.left_pulse || 0,
+    right_pulse: d.right_pulse || 0,
+    left_up_collision: d.left_up_collision || 0,
+    right_up_collision: d.right_up_collision || 0,
+    left_down_collision: d.left_down_collision || 0,
+    right_down_collision: d.right_down_collision || 0
   });
 });
 
@@ -104,9 +143,29 @@ router.put('/:id', authMiddleware, roleMiddleware('admin'), (req, res) => {
 });
 
 router.delete('/:id', authMiddleware, roleMiddleware('admin'), (req, res) => {
+  const deviceId = req.params.id;
   const db = getDb();
-  db.prepare('DELETE FROM devices WHERE device_id = ?').run(req.params.id);
-  res.json({ message: '删除成功' });
+
+  const device = db.prepare('SELECT device_id, name FROM devices WHERE device_id = ?').get(deviceId);
+  if (!device) return res.status(404).json({ error: '设备不存在' });
+
+  const deleteAll = db.transaction(() => {
+    db.prepare('DELETE FROM device_status WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM alarms WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM maintenance_records WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM operation_logs WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM command_queue WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM devices WHERE device_id = ?').run(deviceId);
+  });
+
+  try {
+    deleteAll();
+    db.prepare('INSERT INTO operation_logs (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, '删除设备', deviceId, `删除设备 ${device.name}`, '成功', nowISO());
+    res.json({ message: '设备已删除' });
+  } catch (e) {
+    res.status(500).json({ error: '删除失败' });
+  }
 });
 
 router.get('/overview/summary', authMiddleware, (req, res) => {

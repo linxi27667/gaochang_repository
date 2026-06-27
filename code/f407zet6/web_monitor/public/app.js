@@ -837,36 +837,99 @@ function renderStatistics() {
 function renderLogs() {
   return `
     <div class="filter-bar">
-      <div class="form-group" style="margin-bottom:0"><select id="log-device-filter"><option value="">${t('common.allDevices')}</option>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
-      <div class="form-group" style="margin-bottom:0"><input type="date" id="log-start-date"></div>
-      <div class="form-group" style="margin-bottom:0"><input type="date" id="log-end-date"></div>
-      <button class="btn btn-primary" onclick="loadLogs()">${t('common.query')}</button>
+      <div class="filter-group">
+        <label>${t('logs.filterUser')}</label>
+        <select id="log-filter-user" onchange="loadLogs()">
+          <option value="">${t('logs.allUsers')}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>${t('logs.filterDevice')}</label>
+        <select id="log-filter-device" onchange="loadLogs()">
+          <option value="">${t('logs.allDevices')}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>${t('logs.filterStart')}</label>
+        <input type="date" id="log-filter-start" onchange="loadLogs()">
+      </div>
+      <div class="filter-group">
+        <label>${t('logs.filterEnd')}</label>
+        <input type="date" id="log-filter-end" onchange="loadLogs()">
+      </div>
     </div>
-    <div id="logs-list"><div class="loading">${t('common.loading')}</div></div>`;
+    <div id="logs-list"></div>`;
 }
 
 async function loadLogs() {
   try {
-    const params = [];
-    const dev = document.getElementById('log-device-filter')?.value;
-    const start = document.getElementById('log-start-date')?.value;
-    const end = document.getElementById('log-end-date')?.value;
-    if (dev) params.push('device_id=' + dev);
-    if (start && end && start > end) { showToast(t('common.error'), 'warning'); return; }
-    if (start) params.push('start_date=' + start);
-    if (end) params.push('end_date=' + end);
-    const data = await api('/logs?' + params.join('&'));
+    const userId = document.getElementById('log-filter-user')?.value || '';
+    const deviceId = document.getElementById('log-filter-device')?.value || '';
+    const startDate = document.getElementById('log-filter-start')?.value || '';
+    const endDate = document.getElementById('log-filter-end')?.value || '';
+    const params = new URLSearchParams();
+    if (userId) params.set('user_id', userId);
+    if (deviceId) params.set('device_id', deviceId);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+
+    const data = await api(`/logs?${params.toString()}`);
     const list = document.getElementById('logs-list');
     if (!list) return;
-    if (data.logs.length === 0) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>${t('logs.noLogs')}}</h3></div>`; return; }
-    list.innerHTML = `<div class="device-table"><div class="table-header"><span>${t('logs.title')} (${data.total}${t('unit.record')})</span></div><table><thead><tr><th>${t('logs.operator')}</th><th>${t('logs.action')}</th><th>${t('logs.device')}</th><th>${t('logs.detail')}</th><th>${t('logs.result')}</th><th>${t('logs.time')}</th></tr></thead><tbody>${data.logs.map(l => `<tr>
-      <td>${l.real_name || l.username || '-'}</td>
-      <td>${l.action}</td>
-      <td>${l.device_id || '-'}</td>
-      <td>${l.detail || '-'}</td>
-      <td>${l.result || '-'}</td>
-      <td>${formatTs(l.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
+    if (!data.logs || data.logs.length === 0) {
+      list.innerHTML = `<div class="empty-state">${t('logs.noData')}</div>`;
+      return;
+    }
+    list.innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>${t('logs.time')}</th>
+          <th>${t('logs.user')}</th>
+          <th>${t('logs.action')}</th>
+          <th>${t('logs.device')}</th>
+          <th>${t('logs.detail')}</th>
+          <th>${t('logs.result')}</th>
+        </tr></thead>
+        <tbody>${data.logs.map(l => `
+          <tr>
+            <td>${formatTs(l.created_at)}</td>
+            <td>${l.real_name || l.username || '-'}</td>
+            <td>${l.action}</td>
+            <td>${l.device_id || '-'}</td>
+            <td>${l.detail || '-'}</td>
+            <td>${l.result || '-'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
   } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadLogFilterOptions() {
+  try {
+    const users = await api('/auth/users');
+    const userSelect = document.getElementById('log-filter-user');
+    if (userSelect && Array.isArray(users)) {
+      users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.real_name || u.username;
+        userSelect.appendChild(opt);
+      });
+    }
+  } catch (e) { /* viewer role can't access /users, ignore */ }
+
+  try {
+    const deviceList = await api('/devices');
+    const deviceSelect = document.getElementById('log-filter-device');
+    if (deviceSelect && Array.isArray(deviceList)) {
+      deviceList.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.device_id;
+        opt.textContent = d.name || d.device_id;
+        deviceSelect.appendChild(opt);
+      });
+    }
+  } catch (e) { /* ignore */ }
 }
 
 /* ===== Settings ===== */
@@ -999,7 +1062,7 @@ loadPage = function(page) {
 
   if (page === 'alarms') { renderCurrentPage(); loadAlarms(); }
   else if (page === 'maintenance') { renderCurrentPage(); loadMaintenance(); }
-  else if (page === 'logs') { renderCurrentPage(); loadLogs(); }
+  else if (page === 'logs') { renderCurrentPage(); loadLogs(); loadLogFilterOptions(); }
   else { renderCurrentPage(); }
 };
 

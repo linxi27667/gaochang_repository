@@ -24,6 +24,50 @@ async function api(path, options = {}) {
   }
 }
 
+/* ===== Data Sanitizer ===== */
+function clampInt(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function sanitizeDevice(d) {
+  if (!d || typeof d !== 'object') return null;
+  const leftMm = clampInt(d.height_left_mm, 0, 5000, 0);
+  const rightMm = clampInt(d.height_right_mm, 0, 5000, 0);
+  return {
+    ...d,
+    device_id: String(d.device_id || ''),
+    name: String(d.name || d.device_id || ''),
+    model: String(d.model || 'TL-5000'),
+    group: String(d.group || ''),
+    online: !!d.online,
+    locked: !!d.locked,
+    state: String(d.state || 'idle'),
+    alarm: String(d.alarm || 'none'),
+    direction: ['up', 'down', 'stop'].includes(d.direction) ? d.direction : 'stop',
+    height_left_mm: leftMm,
+    height_right_mm: rightMm,
+    height_diff_mm: clampInt(d.height_diff_mm, -5000, 5000, Math.abs(leftMm - rightMm)),
+    run_count: clampInt(d.run_count, 0, 2147483647, 0),
+    run_time_s: clampInt(d.run_time_s, 0, 2147483647, 0),
+    uptime_s: clampInt(d.uptime_s, 0, 2147483647, 0),
+    ts_ms: clampInt(d.ts_ms, 0, Number.MAX_SAFE_INTEGER, 0),
+    upper_limit: d.upper_limit ? 1 : 0,
+    lower_limit: d.lower_limit ? 1 : 0,
+    stall: d.stall ? 1 : 0,
+    collision_up: d.collision_up ? 1 : 0,
+    collision_down: d.collision_down ? 1 : 0,
+    alarm_code: clampInt(d.alarm_code, 0, 65535, 0),
+    csq: clampInt(d.csq, -1, 31, -1),
+    dtu_state: String(d.dtu_state || ''),
+    left_pulse: clampInt(d.left_pulse, 0, 2147483647, 0),
+    right_pulse: clampInt(d.right_pulse, 0, 2147483647, 0),
+    updated_at: d.updated_at || '',
+    received_at_ms: clampInt(d.received_at_ms, 0, Number.MAX_SAFE_INTEGER, Date.now())
+  };
+}
+
 /* ===== Auth ===== */
 async function handleLogin(e) {
   e.preventDefault();
@@ -47,7 +91,7 @@ async function handleLogin(e) {
     currentUser = data.user;
     localStorage.setItem('lift_token', token);
     localStorage.setItem('lift_user', JSON.stringify(currentUser));
-    showApp();
+    await showApp();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
@@ -67,14 +111,13 @@ function handleLogout() {
   document.getElementById('login-page').style.display = 'flex';
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('login-page').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   try {
     document.getElementById('user-name').textContent = currentUser.real_name || currentUser.username;
     document.getElementById('user-role').textContent = currentUser.role === 'admin' ? t('settings.roleAdmin') : currentUser.role === 'operator' ? t('settings.roleOperator') : t('settings.roleViewer');
 
-    // Avatar: restore saved image or show initial
     const savedAvatar = localStorage.getItem('lift_avatar');
     const avatarEl = document.getElementById('user-avatar');
     if (savedAvatar) {
@@ -84,7 +127,7 @@ function showApp() {
     }
 
     connectWS();
-    fetchDevices();
+    await fetchDevices();
     fetchUnackAlarms();
     loadPage(currentPage);
     applyLang();
@@ -129,11 +172,13 @@ function connectWS() {
 
 function updateDeviceFromWS(deviceId, data) {
   const receivedAt = Date.now();
+  const sanitized = sanitizeDevice({ device_id: deviceId, ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt });
+  if (!sanitized) return;
   const idx = devices.findIndex(d => d.device_id === deviceId);
   if (idx >= 0) {
-    devices[idx] = { ...devices[idx], ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt };
+    devices[idx] = { ...devices[idx], ...sanitized };
   } else {
-    devices.push({ device_id: deviceId, ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt });
+    devices.push(sanitized);
   }
   if (['overview', 'devices'].includes(currentPage)) renderCurrentPage();
 }
@@ -153,10 +198,10 @@ function handleCommandResponse(deviceId, data) {
 async function fetchDevices() {
   try {
     const receivedAt = Date.now();
-    devices = (await api('/devices')).map(d => ({
-      ...d,
-      received_at_ms: receivedAt
-    }));
+    devices = (await api('/devices'))
+      .map(d => sanitizeDevice({ ...d, received_at_ms: receivedAt }))
+      .filter(Boolean);
+    if (['alarms', 'maintenance', 'logs'].includes(currentPage)) return;
     renderCurrentPage();
   } catch (e) { /* handled */ }
 }
@@ -212,6 +257,43 @@ function getStatusText(s) {
 function getStatusClass(d) { if (!d.online) return 'offline'; if (d.locked) return 'locked'; if (d.alarm && d.alarm !== 'none') return 'fault'; return 'normal'; }
 function getStateText(s) { const map = { idle: t('state.idle'), up: t('state.up'), down: t('state.down'), stop: t('state.stop') }; return map[s] || s; }
 function getAlarmText(a) { const map = { none: t('alarm.none'), collision: t('alarm.collision'), stall: t('alarm.stall'), balance_timeout: t('alarm.balance_timeout'), safety_bar: t('alarm.safety_bar'), overheight: t('alarm.overheight'), Emergency: t('alarm.Emergency') }; return map[a] || a; }
+
+/* ===== Safety / Link Helpers (完整透传字段渲染) ===== */
+function getDirectionIcon(d) {
+  const dir = d.direction || 'stop';
+  if (dir === 'up') return '↑';
+  if (dir === 'down') return '↓';
+  return '■';
+}
+function getDirectionText(d) {
+  const dir = d.direction || 'stop';
+  if (dir === 'up') return t('state.up');
+  if (dir === 'down') return t('state.down');
+  return t('state.stop');
+}
+// 卡片角标：仅非正常态显示，正常态返回空字符串保持卡片简洁
+function renderSafetyBadges(d) {
+  if (!d.online) return '';
+  const badges = [];
+  const push = (cond, label, cls) => { if (cond) badges.push(`<span class="safety-badge ${cls}" title="${label}">${label}</span>`); };
+  push(d.upper_limit, t('safety.upperLimit'), 'badge-warn');
+  push(d.lower_limit, t('safety.lowerLimit'), 'badge-warn');
+  push(d.stall, t('safety.stall'), 'badge-danger');
+  push(d.collision_up, t('safety.collisionUp'), 'badge-danger');
+  push(d.collision_down, t('safety.collisionDown'), 'badge-danger');
+  const dir = d.direction || 'stop';
+  if (dir === 'up' || dir === 'down') badges.push(`<span class="safety-badge badge-dir" title="${getDirectionText(d)}">${getDirectionIcon(d)} ${getDirectionText(d)}</span>`);
+  return badges.length ? `<div class="safety-badges">${badges.join('')}</div>` : '';
+}
+// 信号强度等级：CSQ 参考 LTE 模块惯例
+function getCsqLevel(csq) {
+  const v = Number(csq);
+  if (v < 0 || isNaN(v)) return { text: t('link.signalUnknown'), cls: 'signal-unknown', pct: 0 };
+  if (v >= 20) return { text: t('link.signalGood'), cls: 'signal-good', pct: 100 };
+  if (v >= 10) return { text: t('link.signalMedium'), cls: 'signal-medium', pct: 60 };
+  return { text: t('link.signalWeak'), cls: 'signal-weak', pct: 25 };
+}
+function getYesNo(v) { return v ? t('common.yes') : t('common.no'); }
 function formatTime(s) {
   if (!s) return `0${t('unit.minute')}`;
   const h = Math.floor(s / 3600);
@@ -243,7 +325,8 @@ function formatTs(iso) { if (!iso) return '-'; try { return new Date(iso).toLoca
 
 /* ===== Overview Page ===== */
 function renderOverview() {
-  if (devices.length === 0) return `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('overview.waiting')}}</h3><p>${t('overview.waitingSub')}}</p></div>`;
+  const validDevices = devices.filter(d => d && d.device_id);
+  if (validDevices.length === 0) return `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('overview.waiting')}}</h3><p>${t('overview.waitingSub')}}</p></div>`;
   const online = devices.filter(d => d.online && !d.locked && (d.alarm === 'none' || !d.alarm)).length;
   const offline = devices.filter(d => !d.online).length;
   const fault = devices.filter(d => d.alarm && d.alarm !== 'none').length;
@@ -286,11 +369,13 @@ function renderDeviceCard(d) {
         <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
       ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
+      ${renderSafetyBadges(d)}
     </div>`;
 }
 
 /* ===== Devices Page ===== */
 function renderDevices() {
+  const validDevices = devices.filter(d => d && d.device_id);
   const isAdmin = currentUser && currentUser.role === 'admin';
   const isOperator = currentUser && (currentUser.role === 'admin' || currentUser.role === 'operator');
   const groups = [...new Set(devices.map(d => d.group || t('devices.defaultGroup')))];
@@ -331,6 +416,7 @@ function renderDeviceCardWithActions(d, canControl) {
         <div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div>
         <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
       </div>
+      ${renderSafetyBadges(d)}
       <div class="device-card-actions">
         <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>
         ${canControl ? `${d.locked
@@ -363,8 +449,18 @@ function showDeviceDetail(deviceId) {
   const rightPct = Math.min((d.height_right_mm || 0) / maxH * 100, 100);
 
   document.getElementById('device-modal-title').textContent = d.name || d.device_id;
+
+  // 安全状态明细行
+  const safetyRow = (label, v) => {
+    const active = !!v;
+    return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-value" style="${active ? 'color:var(--danger);font-weight:600' : ''}">${getYesNo(v)}</div></div>`;
+  };
+  // CSQ 信号条
+  const csq = getCsqLevel(d.csq);
+  const csqVal = (Number(d.csq) >= 0 && !isNaN(Number(d.csq))) ? d.csq : '--';
+
   document.getElementById('device-modal-body').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
       <div>
         <div class="detail-row"><div class="detail-label">${t('devices.deviceId')}</div><div class="detail-value">${d.device_id}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.deviceName')}}</div><div class="detail-value">${d.name || '-'}${isAdmin ? ` <button class="btn btn-sm btn-outline" style="margin-left:6px;font-size:11px;padding:2px 8px;" onclick="renameDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">✏️</button>` : ''}</div></div>
@@ -372,6 +468,7 @@ function showDeviceDetail(deviceId) {
         <div class="detail-row"><div class="detail-label">${t('devices.group')}</div><div class="detail-value">${d.group || t('devices.defaultGroup')}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.status')}</div><div class="detail-value"><span class="status-tag status-${sc}">${getStatusText(sc)}</span></div></div>
         <div class="detail-row"><div class="detail-label">${t('common.runInfo')}</div><div class="detail-value">${getStateText(d.state)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.direction')}</div><div class="detail-value">${getDirectionIcon(d)} ${getDirectionText(d)}</div></div>
         <div class="detail-row"><div class="detail-label">${t('common.lockInfo')}}</div><div class="detail-value">${d.locked ? `<span class="status-tag status-locked">${t('devices.lockStatusYN')}}</span>` : `<span class="status-tag status-normal">${t('devices.lockStatusNormal')}}</span>`}</div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.alarm')}</div><div class="detail-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger);font-weight:600' : ''}">${getAlarmText(d.alarm)}</div></div>
       </div>
@@ -388,6 +485,19 @@ function showDeviceDetail(deviceId) {
         <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value"><span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div></div>
         <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
         <div class="detail-row"><div class="detail-label">${t('common.lastUpdate')}</div><div class="detail-value">${formatTs(d.updated_at)}</div></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('common.safetyStatus')}</div>
+        ${safetyRow(t('safety.upperLimit'), d.upper_limit)}
+        ${safetyRow(t('safety.lowerLimit'), d.lower_limit)}
+        ${safetyRow(t('safety.stall'), d.stall)}
+        ${safetyRow(t('safety.collisionUp'), d.collision_up)}
+        ${safetyRow(t('safety.collisionDown'), d.collision_down)}
+        <div class="detail-row"><div class="detail-label">${t('safety.alarmCode')}</div><div class="detail-value">${d.alarm_code || 0}</div></div>
+        <div style="font-size:13px;font-weight:600;margin:16px 0 8px;">${t('common.linkDiag')}</div>
+        <div class="detail-row"><div class="detail-label">${t('link.dtuState')}</div><div class="detail-value">${d.dtu_state || '-'}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('link.csq')}</div><div class="detail-value">${csqVal} <span class="csq-tag ${csq.cls}">${csq.text}</span></div></div>
+        <div class="height-bar" style="height:6px;margin-top:4px;"><div class="height-bar-fill" style="width:${csq.pct}%;background:var(--primary);"></div></div>
       </div>
     </div>
     <div style="margin-top:20px;display:flex;gap:8px;">
@@ -433,27 +543,38 @@ async function addDevice(e) {
 }
 
 /* ===== Commands ===== */
+const _pendingCmds = new Set();
+
 async function lockDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
   try {
     await api('/commands/lock/' + id, { method: 'POST' });
     showToast(t('devices.lockSent'), 'success');
     fetchDevices();
   } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
 }
 
 async function unlockDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
   try {
     await api('/commands/unlock/' + id, { method: 'POST' });
     showToast(t('devices.unlockSent'), 'success');
     fetchDevices();
   } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
 }
 
 async function queryDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
   try {
     await api('/commands/query/' + id, { method: 'POST' });
     showToast(t('devices.query') + ' ✓', 'info');
   } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
 }
 
 async function renameDevice(deviceId, currentName) {
@@ -566,6 +687,7 @@ async function loadMaintenance() {
 }
 
 function showAddMaintenanceModal() {
+  if (devices.length === 0) { showToast(t('devices.noDevices'), 'warning'); return; }
   document.getElementById('maintenance-modal-title').textContent = t('maintenance.add');
   document.getElementById('maintenance-modal-body').innerHTML = `
     <form onsubmit="return submitMaintenance(event)">
@@ -621,7 +743,8 @@ async function exportMaintenance() {
 
 /* ===== Statistics Page ===== */
 function renderStatistics() {
-  if (devices.length === 0) return `<div class="empty-state"><div class="empty-icon">📊</div><h3>${t('statistics.noData')}</h3><p>${t('statistics.waitingData')}</p></div>`;
+  const validDevices = devices.filter(d => d && d.device_id);
+  if (validDevices.length === 0) return `<div class="empty-state"><div class="empty-icon">📊</div><h3>${t('statistics.noData')}</h3><p>${t('statistics.waitingData')}</p></div>`;
   const totalRunCount = devices.reduce((s, d) => s + (d.run_count || 0), 0);
   const avgCount = devices.length > 0 ? Math.round(totalRunCount / devices.length) : 0;
   const onlineCount = devices.filter(d => d.online).length;
@@ -670,6 +793,7 @@ async function loadLogs() {
     const start = document.getElementById('log-start-date')?.value;
     const end = document.getElementById('log-end-date')?.value;
     if (dev) params.push('device_id=' + dev);
+    if (start && end && start > end) { showToast(t('common.error'), 'warning'); return; }
     if (start) params.push('start_date=' + start);
     if (end) params.push('end_date=' + end);
     const data = await api('/logs?' + params.join('&'));
@@ -794,12 +918,10 @@ function init() {
   });
 
   if (token && currentUser) {
-    try {
-      showApp();
-    } catch (e) {
+    showApp().catch(e => {
       console.error('[Init] showApp failed:', e);
       document.getElementById('login-page').style.display = 'flex';
-    }
+    });
   } else {
     document.getElementById('login-page').style.display = 'flex';
   }
@@ -994,6 +1116,99 @@ document.addEventListener('input', (e) => {
     e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px';
   }
 });
+
+/* ===== 用户注册 ===== */
+function generateCaptcha() {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  return { a, b, answer: a + b, question: `${a} + ${b} = ?` };
+}
+
+let currentCaptcha = generateCaptcha();
+
+function showRegisterModal() {
+  currentCaptcha = generateCaptcha();
+  document.getElementById('register-modal-body').innerHTML = `
+    <form onsubmit="return handleRegister(event)">
+      <div class="form-group">
+        <label>${t('register.username')}</label>
+        <input type="text" id="reg-username" placeholder="${t('register.usernamePh')}" required pattern="[a-zA-Z0-9_]{3,20}">
+      </div>
+      <div class="form-group">
+        <label>${t('register.password')}</label>
+        <input type="password" id="reg-password" placeholder="${t('register.passwordPh')}" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label>${t('register.confirmPassword')}</label>
+        <input type="password" id="reg-password2" placeholder="${t('register.confirmPasswordPh')}" required>
+      </div>
+      <div class="form-group">
+        <label>${t('register.realName')} (${t('register.optional')})</label>
+        <input type="text" id="reg-realname" placeholder="${t('register.realNamePh')}">
+      </div>
+      <div class="form-group">
+        <label>${t('register.phone')} (${t('register.optional')})</label>
+        <input type="text" id="reg-phone" placeholder="${t('register.phonePh')}">
+      </div>
+      <div class="form-group">
+        <label>${t('register.captcha')}: <b>${currentCaptcha.question}</b></label>
+        <input type="number" id="reg-captcha" placeholder="${t('register.captchaPh')}" required>
+      </div>
+      <div id="register-error" class="error-msg" style="display:none;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button type="submit" class="btn btn-primary" id="reg-btn">${t('register.submit')}</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('register-modal')">${t('common.cancel')}</button>
+      </div>
+    </form>`;
+  document.getElementById('register-modal').classList.add('active');
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('register-error');
+  const btn = document.getElementById('reg-btn');
+  errEl.style.display = 'none';
+
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  if (password !== password2) {
+    errEl.textContent = t('register.passwordMismatch');
+    errEl.style.display = 'block';
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = t('register.submitting');
+
+  try {
+    const res = await fetch(API_BASE + '/auth/register-public', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('reg-username').value.trim(),
+        password: password,
+        real_name: document.getElementById('reg-realname').value.trim(),
+        phone: document.getElementById('reg-phone').value.trim(),
+        captcha_answer: parseInt(document.getElementById('reg-captcha').value),
+        captcha_expected: currentCaptcha.answer
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || t('register.failed'));
+    closeModal('register-modal');
+    showToast(t('register.success'), 'success');
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    currentCaptcha = generateCaptcha();
+    const captchaLabel = document.querySelector('#register-modal-body .form-group:last-of-type label b');
+    if (captchaLabel) captchaLabel.textContent = currentCaptcha.question;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('register.submit');
+  }
+  return false;
+}
 
 window.onerror = function(msg, src, line, col, err) {
   console.error('[GlobalError]', msg, src, line);

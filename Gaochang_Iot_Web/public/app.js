@@ -1,0 +1,1633 @@
+/* ===== 举升机物联网管理平台 - 前端核心 ===== */
+
+const API_BASE = window.location.origin + '/api';
+let token = localStorage.getItem('lift_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('lift_user') || 'null');
+let currentPage = 'overview';
+let ws = null;
+let devices = [];
+let unackAlarmCount = 0;
+
+// 举升机型号列表
+const LIFT_MODELS = ['GC-4.0sle', 'GC-4.0sb', 'GC-4.0MSL', 'GC-4.0PRO-DW'];
+const PRODUCT_CAPABILITIES = {
+  double_post: { refill: false, photoelectric: false, rotary: false, lowerLimit: false },
+  small_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: false },
+  thin_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: true },
+  large_scissor: { refill: true, photoelectric: true, rotary: true, lowerLimit: false }
+};
+const PRODUCT_TYPE_NAMES = {
+  double_post: '两柱举升机',
+  small_scissor: '小剪举升机',
+  thin_scissor: '超薄小剪举升机',
+  large_scissor: '大剪举升机'
+};
+
+/* ===== API Helper ===== */
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  try {
+    const res = await fetch(API_BASE + path, { ...options, headers });
+    if (res.status === 401) { handleLogout(); throw new Error(t('auth.expired')); }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || t('common.requestFailed'));
+    return data;
+  } catch (e) {
+    if (e.message === t('auth.expired')) handleLogout();
+    throw e;
+  }
+}
+
+/* ===== Data Sanitizer ===== */
+function clampInt(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function sanitizeDevice(d) {
+  if (!d || typeof d !== 'object') return null;
+  const leftMm = clampInt(d.height_left_mm, 0, 5000, 0);
+  const rightMm = clampInt(d.height_right_mm, 0, 5000, 0);
+  return {
+    ...d,
+    device_id: String(d.device_id || ''),
+    name: String(d.name || d.device_id || ''),
+    model: String(d.model || 'TL-5000'),
+    gateway_id: String(d.gateway_id || ''),
+    group: String(d.group || ''),
+    // 多产品字段
+    product_type: String(d.product_type || 'double_post'),
+    product_type_name: String(d.product_type_name || '两柱举升机'),
+    lift_role: String(d.lift_role || 'main'),
+    rotary_switch: ['main', 'sub'].includes(d.rotary_switch) ? d.rotary_switch : 'main',
+    online: !!d.online,
+    locked: !!d.locked,
+    state: String(d.state || 'idle'),
+    alarm: String(d.alarm || 'none'),
+    direction: ['up', 'down', 'stop'].includes(d.direction) ? d.direction : 'stop',
+    height_left_mm: leftMm,
+    height_right_mm: rightMm,
+    height_diff_mm: clampInt(d.height_diff_mm, -5000, 5000, Math.abs(leftMm - rightMm)),
+    run_count: clampInt(d.run_count, 0, 2147483647, 0),
+    run_time_s: clampInt(d.run_time_s, 0, 2147483647, 0),
+    uptime_s: clampInt(d.uptime_s, 0, 2147483647, 0),
+    ts_ms: clampInt(d.ts_ms, 0, Number.MAX_SAFE_INTEGER, 0),
+    // 多产品操作计数(工人物理操作)
+    up_count: clampInt(d.up_count, 0, 2147483647, 0),
+    down_count: clampInt(d.down_count, 0, 2147483647, 0),
+    lock_count: clampInt(d.lock_count, 0, 2147483647, 0),
+    refill_count: clampInt(d.refill_count, 0, 2147483647, 0),
+    estop_count: clampInt(d.estop_count, 0, 2147483647, 0),
+    photo_alarm_count: clampInt(d.photo_alarm_count, 0, 2147483647, 0),
+    total_run_ms: clampInt(d.total_run_ms, 0, 2147483647, 0),
+    last_run_at: d.last_run_at || '',
+    upper_limit: d.upper_limit ? 1 : 0,
+    lower_limit: d.lower_limit ? 1 : 0,
+    stall: d.stall ? 1 : 0,
+    collision_up: d.collision_up ? 1 : 0,
+    collision_down: d.collision_down ? 1 : 0,
+    // 碰撞检测明细(多产品细化)
+    left_up_collision: d.left_up_collision ? 1 : 0,
+    right_up_collision: d.right_up_collision ? 1 : 0,
+    left_down_collision: d.left_down_collision ? 1 : 0,
+    right_down_collision: d.right_down_collision ? 1 : 0,
+    alarm_code: clampInt(d.alarm_code, 0, 65535, 0),
+    has_encoder: d.has_encoder ? 1 : 0,
+    has_buzzer: d.has_buzzer ? 1 : 0,
+    has_pressure_sensor: d.has_pressure_sensor ? 1 : 0,
+    has_display: d.has_display ? 1 : 0,
+    buzzer_on: !!d.buzzer_on,
+    csq: clampInt(d.csq, -1, 31, -1),
+    dtu_state: String(d.dtu_state || ''),
+    left_pulse: clampInt(d.left_pulse, 0, 2147483647, 0),
+    right_pulse: clampInt(d.right_pulse, 0, 2147483647, 0),
+    io_input_json: d.io_input_json || '{}',
+    io_output_json: d.io_output_json || '{}',
+    updated_at: d.updated_at || '',
+    received_at_ms: clampInt(d.received_at_ms, 0, Number.MAX_SAFE_INTEGER, Date.now())
+  };
+}
+
+/* ===== Auth ===== */
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  btn.disabled = true;
+  btn.textContent = t('login.submit');
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('login-username').value.trim(),
+        password: document.getElementById('login-password').value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || t('common.error'));
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('lift_token', token);
+    localStorage.setItem('lift_user', JSON.stringify(currentUser));
+    await showApp();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('login.submit');
+  }
+}
+
+function handleLogout() {
+  token = '';
+  currentUser = null;
+  localStorage.removeItem('lift_token');
+  localStorage.removeItem('lift_user');
+  if (ws) { ws.close(); ws = null; }
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+}
+
+async function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  try {
+    document.getElementById('user-name').textContent = currentUser.real_name || currentUser.username;
+    document.getElementById('user-role').textContent = currentUser.role === 'admin' ? '管理员' : '用户';
+
+    const savedAvatar = localStorage.getItem('lift_avatar');
+    const avatarEl = document.getElementById('user-avatar');
+    if (savedAvatar) {
+      applyAvatar(savedAvatar);
+    } else {
+      avatarEl.textContent = (currentUser.real_name || currentUser.username).charAt(0).toUpperCase();
+    }
+
+    connectWS();
+    await fetchDevices();
+    fetchUnackAlarms();
+    loadPage(currentPage);
+    applyLang();
+  } catch (e) {
+    console.error('[showApp] Error during init:', e);
+  }
+}
+
+/* ===== WebSocket ===== */
+let wsHeartbeat = null;
+
+function connectWS() {
+  if (ws) { try { ws.close(); } catch(e) {} }
+  if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
+  try {
+    const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${wsProto}//${location.host}/ws?token=${encodeURIComponent(token)}`);
+    ws.onopen = () => {
+      document.getElementById('mqtt-dot').className = 'indicator-dot connected';
+      document.getElementById('mqtt-status-text').textContent = t('common.connected');
+    };
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (msg.type === 'device_status') updateDeviceFromWS(msg.device_id, msg.data);
+        else if (msg.type === 'command_response') handleCommandResponse(msg.device_id, msg.data);
+        else if (msg.type === 'alarm') { fetchUnackAlarms(); if (['overview','devices','alarms'].includes(currentPage)) loadPage(currentPage); }
+        else if (msg.type === 'device_op_log') handleDeviceOpLog(msg.device_id, msg.data);
+        else if (msg.type === 'device_event') handleDeviceEvent(msg.device_id, msg.data);
+      } catch (e) { /* ignore */ }
+    };
+    ws.onclose = () => {
+      document.getElementById('mqtt-dot').className = 'indicator-dot';
+      document.getElementById('mqtt-status-text').textContent = t('common.disconnected');
+      if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
+      setTimeout(() => { if (token) connectWS(); }, 5000);
+    };
+    ws.onerror = () => {};
+    wsHeartbeat = setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ping' })); }, 30000);
+  } catch (e) {
+    console.error('[WS] Connection failed:', e);
+  }
+}
+
+function updateDeviceFromWS(deviceId, data) {
+  const receivedAt = Date.now();
+  const sanitized = sanitizeDevice({ device_id: deviceId, ...data, updated_at: new Date().toISOString(), received_at_ms: receivedAt });
+  if (!sanitized) return;
+  const idx = devices.findIndex(d => d.device_id === deviceId);
+  if (idx >= 0) {
+    devices[idx] = { ...devices[idx], ...sanitized };
+  } else {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    devices.push(sanitized);
+  }
+  if (['overview', 'devices'].includes(currentPage)) renderCurrentPage();
+}
+
+function handleCommandResponse(deviceId, data) {
+  if (data.result === 'timeout') showToast((data.cmd || '') + ' → ' + t('command.timeout') + ' (' + deviceId + ')', 'error');
+  else if (data.cmd === 'lock' && data.result === 'locked') showToast(t('devices.lock') + ' ✓ - ' + deviceId, 'success');
+  else if (data.cmd === 'unlock' && data.result === 'unlocked') showToast(t('devices.unlock') + ' ✓ - ' + deviceId, 'success');
+  else if (data.cmd === 'buzzer_on' && data.result === 'buzzer_on') showToast(t('devices.buzzerOn') + ' ✓ - ' + deviceId, 'success');
+  else if (data.cmd === 'buzzer_off' && data.result === 'buzzer_off') showToast(t('devices.buzzerOff') + ' ✓ - ' + deviceId, 'success');
+  else if (data.cmd === 'rename' && data.result === 'renamed') {
+    showToast(deviceId + ' ' + t('devices.rename') + ' ✓', 'success');
+  }
+  else showToast(t('devices.query') + ': ' + (data.cmd || '') + ' → ' + (data.result || ''), 'info');
+  fetchDevices();
+}
+
+// 设备端操作日志(工人物理操作:上升/下降/锁定/补油/急停等)
+const OP_TYPE_LABELS = {
+  up: '上升', down: '下降', lock: '锁定', unlock: '解锁',
+  refill: '补油', estop: '急停', photo_alarm: '光电报警',
+  rotary_switch: '旋转开关切换', power_on: '开机', power_off: '关机'
+};
+function handleDeviceOpLog(deviceId, data) {
+  const label = OP_TYPE_LABELS[data.op_type] || data.op_type || '操作';
+  // 本地累加计数(避免每次都拉全量数据)
+  const d = devices.find(x => x.device_id === deviceId);
+  if (d) {
+    if (data.op_type === 'up') d.up_count = (d.up_count || 0) + 1;
+    else if (data.op_type === 'down') d.down_count = (d.down_count || 0) + 1;
+    else if (data.op_type === 'lock') d.lock_count = (d.lock_count || 0) + 1;
+    else if (data.op_type === 'refill') d.refill_count = (d.refill_count || 0) + 1;
+    else if (data.op_type === 'estop') d.estop_count = (d.estop_count || 0) + 1;
+    else if (data.op_type === 'photo_alarm') d.photo_alarm_count = (d.photo_alarm_count || 0) + 1;
+  }
+  if (['overview', 'devices'].includes(currentPage)) renderCurrentPage();
+}
+
+// 设备事件(开机/关机/旋转开关切换等)
+function handleDeviceEvent(deviceId, data) {
+  const eventType = data.event_type || data.event || 'unknown';
+  // 旋转开关切换:本地更新 rotary_switch
+  if (eventType === 'rotary_switch' && data.position) {
+    const d = devices.find(x => x.device_id === deviceId);
+    if (d) d.rotary_switch = data.position;
+  }
+  if (['overview', 'devices'].includes(currentPage)) renderCurrentPage();
+}
+
+/* ===== Data Fetching ===== */
+async function fetchDevices() {
+  try {
+    const receivedAt = Date.now();
+    devices = (await api('/devices'))
+      .map(d => sanitizeDevice({ ...d, received_at_ms: receivedAt }))
+      .filter(Boolean);
+    if (['alarms', 'maintenance', 'logs'].includes(currentPage)) return;
+    renderCurrentPage();
+  } catch (e) { /* handled */ }
+}
+
+async function fetchUnackAlarms() {
+  try {
+    const alarms = await api('/alarms/unacknowledged');
+    unackAlarmCount = alarms.length;
+    const badge = document.getElementById('alarm-badge');
+    if (unackAlarmCount > 0) { badge.textContent = unackAlarmCount > 99 ? '99+' : unackAlarmCount; badge.style.display = ''; }
+    else badge.style.display = 'none';
+  } catch (e) { /* handled */ }
+}
+
+/* ===== Toast ===== */
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+/* ===== Page Navigation ===== */
+function loadPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.menu-item').forEach(i => i.classList.toggle('active', i.dataset.page === page));
+  const titles = { overview: t('overview.title'), devices: t('devices.title'), alarms: t('alarms.title'), maintenance: t('maintenance.title'), statistics: t('statistics.title'), logs: t('logs.title') };
+  const breadcrumbs = { overview: t('nav.overview'), devices: t('nav.devices'), alarms: t('nav.alarms'), maintenance: t('nav.maintenance'), statistics: t('nav.statistics'), logs: t('nav.logs') };
+  document.getElementById('page-title').textContent = titles[page] || '';
+  document.getElementById('breadcrumb').textContent = `${t('common.home')} / ${breadcrumbs[page] || ''}`;
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
+  const content = document.getElementById('page-content');
+  switch (currentPage) {
+    case 'overview': content.innerHTML = renderOverview(); break;
+    case 'devices': content.innerHTML = renderDevices(); break;
+    case 'alarms': content.innerHTML = renderAlarms(); break;
+    case 'maintenance': content.innerHTML = renderMaintenance(); break;
+    case 'statistics': content.innerHTML = renderStatistics(); break;
+    case 'logs': content.innerHTML = renderLogs(); break;
+  }
+}
+
+/* ===== Status Helpers ===== */
+function getStatusText(s) {
+  const map = { normal: t('status.normal'), offline: t('status.offline'), fault: t('status.fault'), locked: t('status.locked'), maintenance: t('status.maintenance'), idle: t('status.idle'), up: t('status.up'), down: t('status.down'), rising: '上升中', dropping: '下降中', refilling: '补油中', estop: '急停', photo_alarm: '光电报警' };
+  return map[s] || s;
+}
+function getStatusClass(d) { if (!d.online) return 'offline'; if (d.locked) return 'locked'; if (d.alarm && d.alarm !== 'none') return 'fault'; return 'normal'; }
+function getStateText(s) { const map = { idle: t('state.idle'), up: t('state.up'), down: t('state.down'), stop: t('state.stop'), rising: '上升中', dropping: '下降中', locked: t('status.locked'), refilling: '补油中', estop: '急停', photo_alarm: '光电报警' }; return map[s] || s; }
+function getAlarmText(a) { const map = { none: t('alarm.none'), collision: t('alarm.collision'), stall: t('alarm.stall'), balance_timeout: t('alarm.balance_timeout'), safety_bar: t('alarm.safety_bar'), overheight: t('alarm.overheight'), Emergency: t('alarm.Emergency'), estop: '急停触发', photo_alarm: '光电报警' }; return map[a] || a; }
+
+const IO_INPUT_LABELS = {
+  up_button: '上升按钮', btn_up: '上升按钮',
+  down_button: '下降按钮', btn_down: '下降按钮',
+  lock_button: '锁定按钮', btn_lock: '锁定按钮',
+  refill_button: '补油按钮', btn_refill: '补油按钮',
+  estop: '急停',
+  rotary_switch: '旋转开关', rotary: '旋转开关',
+  upper_limit: '上限位', limit_up: '上限位',
+  lower_limit: '下限位', limit_down: '下限位',
+  sub_upper_limit: '子机上限位',
+  photoelectric: '光电开关'
+};
+const IO_OUTPUT_LABELS = {
+  motor: '电机',
+  electromagnet: '电磁铁', solenoid: '电磁铁',
+  drop_valve: '下降阀', valve_drop: '下降阀',
+  main_air_valve: '主机气阀', valve_air_main: '主机气阀',
+  sub_air_valve: '子机气阀', valve_air_sub: '子机气阀',
+  main_work_valve: '主机工作阀', valve_work_main: '主机工作阀',
+  sub_work_valve: '子机工作阀', valve_work_sub: '子机工作阀',
+  valve_air: '气阀'
+};
+
+function parseJsonObject(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function isTruthyIo(v) {
+  return v === true || v === 1 || v === '1' || v === 'on' || v === 'ON';
+}
+
+function hasHeightFeedback(d) {
+  return !!d.has_encoder;
+}
+
+function getProductCaps(d) {
+  return PRODUCT_CAPABILITIES[d.product_type] || PRODUCT_CAPABILITIES.double_post;
+}
+
+function getProductName(productType, fallback) {
+  return PRODUCT_TYPE_NAMES[productType] || fallback || productType || '举升机';
+}
+
+function renderAccessoryTags(d) {
+  const tags = [
+    d.has_encoder ? '<span class="accessory-tag" title="高度编码器">高度</span>' : '',
+    d.has_buzzer ? '<span class="accessory-tag" title="蜂鸣器">蜂鸣</span>' : '',
+    d.has_pressure_sensor ? '<span class="accessory-tag" title="压力传感器">压力</span>' : '',
+    d.has_display ? '<span class="accessory-tag" title="显示屏">屏幕</span>' : ''
+  ].filter(Boolean);
+  if (!tags.length) {
+    tags.push('<span class="accessory-tag muted" title="无高度编码器，页面展示运行状态">状态反馈</span>');
+  }
+  return tags.join('');
+}
+
+function getMotionText(d) {
+  if (!d.online) return '离线';
+  if (d.alarm && d.alarm !== 'none') return getAlarmText(d.alarm);
+  if (d.locked) return '远程锁定';
+  return getStateText(d.state || 'idle');
+}
+
+function renderIoChips(jsonValue, labels, emptyText) {
+  const obj = parseJsonObject(jsonValue);
+  const active = Object.entries(obj)
+    .filter(([, v]) => isTruthyIo(v))
+    .slice(0, 8)
+    .map(([k]) => `<span class="io-chip active">${labels[k] || k}</span>`);
+  return active.length ? active.join('') : `<span class="io-chip muted">${emptyText}</span>`;
+}
+
+function renderHeightPanel(d, compact = false) {
+  const maxH = 2000;
+  const leftPct = Math.min((d.height_left_mm || 0) / maxH * 100, 100);
+  const rightPct = Math.min((d.height_right_mm || 0) / maxH * 100, 100);
+  return `
+    <div class="${compact ? 'capability-panel compact' : 'capability-panel'}">
+      <div class="capability-title">高度反馈</div>
+      <div class="height-values">
+        <div><span>${t('devices.heightLeft')}</span><b>${d.height_left_mm || 0}<small>mm</small></b></div>
+        <div><span>${t('devices.heightRight')}</span><b>${d.height_right_mm || 0}<small>mm</small></b></div>
+        <div><span>${t('devices.heightDiff')}</span><b>${d.height_diff_mm || 0}<small>mm</small></b></div>
+      </div>
+      <div class="height-track"><span>${t('devices.heightLeft')}</span><div class="height-bar"><div class="height-bar-fill" style="width:${leftPct}%;background:var(--primary);"></div></div></div>
+      <div class="height-track"><span>${t('devices.heightRight')}</span><div class="height-bar"><div class="height-bar-fill" style="width:${rightPct}%;background:var(--success);"></div></div></div>
+    </div>`;
+}
+
+function renderMotionPanel(d, compact = false) {
+  return `
+    <div class="${compact ? 'capability-panel compact motion-only' : 'capability-panel motion-only'}">
+      <div class="capability-title">运行状态</div>
+      <div class="motion-status">
+        <span class="motion-icon">${getDirectionIcon(d)}</span>
+        <div><b>${getMotionText(d)}</b><small>${getDirectionText(d)} · ${getProductName(d.product_type, d.product_type_name)}</small></div>
+      </div>
+      <div class="io-chip-row">${renderIoChips(d.io_input_json, IO_INPUT_LABELS, '无输入动作')}</div>
+      <div class="io-chip-row">${renderIoChips(d.io_output_json, IO_OUTPUT_LABELS, '输出关闭')}</div>
+    </div>`;
+}
+
+function renderCapabilityPanel(d, compact = false) {
+  return hasHeightFeedback(d) ? renderHeightPanel(d, compact) : renderMotionPanel(d, compact);
+}
+
+/* ===== Safety / Link Helpers (完整透传字段渲染) ===== */
+function getDirectionIcon(d) {
+  const dir = d.direction || 'stop';
+  if (dir === 'up') return '↑';
+  if (dir === 'down') return '↓';
+  return '■';
+}
+function getDirectionText(d) {
+  const dir = d.direction || 'stop';
+  if (dir === 'up') return t('state.up');
+  if (dir === 'down') return t('state.down');
+  return t('state.stop');
+}
+// 卡片角标：仅非正常态显示，正常态返回空字符串保持卡片简洁
+function renderSafetyBadges(d) {
+  if (!d.online) return '';
+  const caps = getProductCaps(d);
+  const badges = [];
+  const push = (cond, label, cls) => { if (cond) badges.push(`<span class="safety-badge ${cls}" title="${label}">${label}</span>`); };
+  push(d.upper_limit, t('safety.upperLimit'), 'badge-warn');
+  push(caps.lowerLimit && d.lower_limit, t('safety.lowerLimit'), 'badge-warn');
+  push(d.stall, t('safety.stall'), 'badge-danger');
+  push(d.collision_up, t('safety.collisionUp'), 'badge-danger');
+  push(d.collision_down, t('safety.collisionDown'), 'badge-danger');
+  const dir = d.direction || 'stop';
+  if (dir === 'up' || dir === 'down') badges.push(`<span class="safety-badge badge-dir" title="${getDirectionText(d)}">${getDirectionIcon(d)} ${getDirectionText(d)}</span>`);
+  return badges.length ? `<div class="safety-badges">${badges.join('')}</div>` : '';
+}
+// 信号强度等级：CSQ 参考 LTE 模块惯例
+function getCsqLevel(csq) {
+  const v = Number(csq);
+  if (v < 0 || isNaN(v)) return { text: t('link.signalUnknown'), cls: 'signal-unknown', pct: 0 };
+  if (v >= 20) return { text: t('link.signalGood'), cls: 'signal-good', pct: 100 };
+  if (v >= 10) return { text: t('link.signalMedium'), cls: 'signal-medium', pct: 60 };
+  return { text: t('link.signalWeak'), cls: 'signal-weak', pct: 25 };
+}
+function getYesNo(v) { return v ? t('common.yes') : t('common.no'); }
+function formatTime(s) {
+  if (!s) return `0${t('unit.minute')}`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}${t('unit.hour')}${m}${t('unit.minute')}` : `${m}${t('unit.minute')}`;
+}
+function getLiveUptimeSeconds(d) {
+  const base = Number(d.uptime_s || 0);
+  if (!d.online || !d.received_at_ms) return base;
+  const elapsed = Math.max(0, Math.floor((Date.now() - d.received_at_ms) / 1000));
+  return base + elapsed;
+}
+function formatLiveTime(s) {
+  const total = Math.max(0, Math.floor(Number(s) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  if (h > 0) return `${h}${t('unit.hour')}${m}${t('unit.minute')}${sec}${t('unit.second')}`;
+  if (m > 0) return `${m}${t('unit.minute')}${sec}${t('unit.second')}`;
+  return `${sec}${t('unit.second')}`;
+}
+function refreshLiveUptimeDisplays() {
+  document.querySelectorAll('[data-uptime-device]').forEach(el => {
+    const d = devices.find(x => x.device_id === el.dataset.uptimeDevice);
+    if (d) el.textContent = formatLiveTime(getLiveUptimeSeconds(d));
+  });
+}
+function formatTs(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString(currentLang === 'zh' ? 'zh-CN' : currentLang); } catch { return iso; } }
+
+/* ===== Overview Page ===== */
+function renderOverview() {
+  const validDevices = devices.filter(d => d && d.device_id);
+  if (validDevices.length === 0) return `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('overview.waiting')}}</h3><p>${t('overview.waitingSub')}}</p></div>`;
+  const online = devices.filter(d => d.online && !d.locked && (d.alarm === 'none' || !d.alarm)).length;
+  const offline = devices.filter(d => !d.online).length;
+  const fault = devices.filter(d => d.alarm && d.alarm !== 'none').length;
+  const locked = devices.filter(d => d.locked).length;
+  const totalRuns = devices.reduce((s, d) => s + (d.run_count || 0), 0);
+
+  return `
+    <div class="cards-grid">
+      <div class="card online"><div class="card-title">${t('overview.online')}</div><div class="card-value">${online}</div><div class="card-subtitle">/${devices.length}${t('unit.device')}</div></div>
+      <div class="card offline"><div class="card-title">${t('overview.offline')}</div><div class="card-value">${offline}</div></div>
+      <div class="card fault"><div class="card-title">${t('overview.fault')}</div><div class="card-value">${fault}</div></div>
+      <div class="card locked"><div class="card-title">${t('overview.locked')}</div><div class="card-value">${locked}</div></div>
+      <div class="card"><div class="card-title">${t('overview.totalRuns')}</div><div class="card-value">${totalRuns.toLocaleString()}</div></div>
+    </div>
+    <div class="device-cards">${devices.slice(0, 8).map(d => renderDeviceCard(d)).join('')}</div>`;
+}
+
+function renderDeviceCard(d) {
+  const sc = getStatusClass(d);
+  return `
+    <div class="device-card" onclick="showDeviceDetail('${d.device_id}')">
+      <div class="device-card-header">
+        <div><div class="device-card-name">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
+        <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
+      </div>
+      <div style="font-size:11px;margin-bottom:6px;"><span style="background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:4px;font-weight:500;">${getProductName(d.product_type, d.product_type_name)}</span>${getProductCaps(d).rotary ? ` <span style="color:var(--text-muted);">· ${d.rotary_switch === 'sub' ? '子机' : '主机'}</span>` : ''}</div>
+      <div class="device-card-grid">
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.direction')}</div><div class="device-card-metric-value">${getDirectionIcon(d)} ${getDirectionText(d)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
+      </div>
+      <div style="margin-top:8px;">
+        ${renderCapabilityPanel(d, true)}
+        <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
+      </div>
+      ${d.alarm && d.alarm !== 'none' ? `<div style="margin-top:8px;color:var(--danger);font-size:12px;font-weight:500;">⚠ ${getAlarmText(d.alarm)}</div>` : ''}
+      <div class="device-accessories">
+        ${renderAccessoryTags(d)}
+      </div>
+      ${renderSafetyBadges(d)}
+    </div>`;
+}
+
+/* ===== Devices Page ===== */
+function renderDevices() {
+  const validDevices = devices.filter(d => d && d.device_id);
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  // 两层角色模型: admin 拥有控制权, user 仅查看
+  const isOperator = currentUser && currentUser.role === 'admin';
+  const groups = [...new Set(devices.map(d => d.group || t('devices.defaultGroup')))];
+
+  // admin 走多字段"添加设备"(可勾选配件);user 走 SN 绑定
+  const addBtnHtml = isAdmin
+    ? `<button class="btn btn-primary" onclick="showAddDeviceModal()">+ ${t('devices.addDevice')}</button>`
+    : `<button class="btn btn-primary" onclick="showBindDeviceModal()">+ ${t('devices.addDevice')}</button>`;
+  const cardsHtml = devices.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('devices.noDevices')}</h3><p>${t('devices.noDevicesSub')}</p></div>`
+    : `<div class="device-cards" id="device-cards-container">${devices.map(d => renderDeviceCardWithActions(d, isOperator)).join('')}</div>`;
+  return `
+    <div class="filter-bar">
+      <div class="tab-group">
+        <button class="tab-btn active" onclick="filterDeviceView('all', this)">${t('common.all')}(${devices.length})</button>
+        ${groups.map(g => `<button class="tab-btn" onclick="filterDeviceView('${g}', this)">${g}</button>`).join('')}
+      </div>
+      ${addBtnHtml}
+    </div>
+    ${cardsHtml}
+  `;
+}
+
+function renderDeviceCardWithActions(d, canControl) {
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const sc = getStatusClass(d);
+  return `
+    <div class="device-card">
+      <div class="device-card-header">
+        <div><div class="device-card-name" style="cursor:pointer" onclick="showDeviceDetail('${d.device_id}')">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
+        <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
+      </div>
+      <div style="font-size:11px;margin-bottom:6px;"><span style="background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:4px;font-weight:500;">${getProductName(d.product_type, d.product_type_name)}</span>${getProductCaps(d).rotary ? ` <span style="color:var(--text-muted);">· ${d.rotary_switch === 'sub' ? '子机' : '主机'}</span>` : ''}</div>
+      <div class="device-card-grid">
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.status')}</div><div class="device-card-metric-value">${getStateText(d.state)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.alarm')}</div><div class="device-card-metric-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger)' : ''}">${getAlarmText(d.alarm)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runTime')}</div><div class="device-card-metric-value">${formatTime(d.run_time_s)}</div></div>
+        <div class="device-card-metric"><div class="device-card-metric-label">${t('devices.runCount')}</div><div class="device-card-metric-value">${d.run_count || 0}</div></div>
+      </div>
+      <div style="margin-top:8px;">
+        ${renderCapabilityPanel(d, true)}
+        <div class="device-card-subline">${t('devices.onlineDuration')}: <span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div>
+      </div>
+      <div class="device-accessories">
+        ${renderAccessoryTags(d)}
+      </div>
+      ${renderSafetyBadges(d)}
+      <div class="device-card-actions">
+        <button class="btn btn-sm btn-outline" onclick="showDeviceDetail('${d.device_id}')">${t('devices.detail')}</button>
+        ${canControl ? `${d.locked
+          ? `<button class="btn btn-sm btn-success" onclick="unlockDevice('${d.device_id}')">${t('devices.unlock')}</button>`
+          : `<button class="btn btn-sm btn-danger" onclick="lockDevice('${d.device_id}')">${t('devices.lock')}</button>`
+        }` : ''}
+        ${canControl ? `<button class="btn btn-sm btn-outline" onclick="queryDevice('${d.device_id}')">${t('devices.query')}</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">${t('common.delete')}</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function filterDeviceView(group, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = group === 'all' ? devices : devices.filter(d => (d.group || t('devices.defaultGroup')) === group);
+  // 两层角色模型: admin 拥有控制权, user 仅查看
+  const isOperator = currentUser && currentUser.role === 'admin';
+  const container = document.getElementById('device-cards-container');
+  if (container) container.innerHTML = filtered.map(d => renderDeviceCardWithActions(d, isOperator)).join('');
+}
+
+/* ===== Device Detail Modal ===== */
+function showDeviceDetail(deviceId) {
+  const d = devices.find(x => x.device_id === deviceId);
+  if (!d) { showToast(t('common.error'), 'error'); return; }
+  const sc = getStatusClass(d);
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  // 两层角色模型: admin 拥有控制权, user 仅查看
+  const isOperator = currentUser && currentUser.role === 'admin';
+  const caps = getProductCaps(d);
+
+  document.getElementById('device-modal-title').textContent = d.name || d.device_id;
+
+  // 安全状态明细行
+  const safetyRow = (label, v) => {
+    const active = !!v;
+    return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-value" style="${active ? 'color:var(--danger);font-weight:600' : ''}">${getYesNo(v)}</div></div>`;
+  };
+  // CSQ 信号条
+  const csq = getCsqLevel(d.csq);
+  const csqVal = (Number(d.csq) >= 0 && !isNaN(Number(d.csq))) ? d.csq : '--';
+
+  document.getElementById('device-modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+      <div>
+        <div class="detail-row"><div class="detail-label">${t('devices.deviceId')}</div><div class="detail-value">${d.device_id}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.deviceName')}</div><div class="detail-value">${d.name || '-'}${isAdmin ? ` <button class="btn btn-sm btn-outline" style="margin-left:6px;font-size:11px;padding:2px 8px;" onclick="renameDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">✏️</button>` : ''}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.model')}</div><div class="detail-value">${d.model || 'TL-5000'}</div></div>
+        <div class="detail-row"><div class="detail-label">通信网关</div><div class="detail-value">${d.gateway_id || '-'}</div></div>
+        <div class="detail-row"><div class="detail-label">产品型号</div><div class="detail-value">${getProductName(d.product_type, d.product_type_name)}${d.product_type ? ` <span style="font-size:11px;color:var(--text-muted);">(${d.product_type})</span>` : ''}</div></div>
+        ${caps.rotary ? `<div class="detail-row"><div class="detail-label">旋转开关</div><div class="detail-value">${d.rotary_switch === 'sub' ? '子机' : '主机'}</div></div>` : ''}
+        <div class="detail-row"><div class="detail-label">${t('devices.group')}</div><div class="detail-value">${d.group || t('devices.defaultGroup')}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.status')}</div><div class="detail-value"><span class="status-tag status-${sc}">${getStatusText(sc)}</span></div></div>
+        <div class="detail-row"><div class="detail-label">${t('common.runInfo')}</div><div class="detail-value">${getStateText(d.state)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.direction')}</div><div class="detail-value">${getDirectionIcon(d)} ${getDirectionText(d)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('common.lockInfo')}}</div><div class="detail-value">${d.locked ? `<span class="status-tag status-locked">${t('devices.lockStatusYN')}}</span>` : `<span class="status-tag status-normal">${t('devices.lockStatusNormal')}}</span>`}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.alarm')}</div><div class="detail-value" style="${d.alarm && d.alarm !== 'none' ? 'color:var(--danger);font-weight:600' : ''}">${getAlarmText(d.alarm)}</div></div>
+      </div>
+      <div>
+        ${renderCapabilityPanel(d)}
+        <div class="detail-row"><div class="detail-label">${t('devices.runTime')}</div><div class="detail-value">${formatTime(d.run_time_s)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.onlineDuration')}</div><div class="detail-value"><span data-uptime-device="${d.device_id}">${formatLiveTime(getLiveUptimeSeconds(d))}</span></div></div>
+        <div class="detail-row"><div class="detail-label">${t('devices.runCount')}</div><div class="detail-value">${d.run_count || 0}</div></div>
+        <div class="detail-row"><div class="detail-label">最后运行</div><div class="detail-value">${formatTs(d.last_run_at)}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('common.lastUpdate')}</div><div class="detail-value">${formatTs(d.updated_at)}</div></div>
+        <div style="margin-top:12px;font-size:13px;font-weight:600;margin-bottom:6px;">操作计数(设备端)</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">上升</div><div style="font-size:16px;font-weight:600;color:var(--primary);">${d.up_count || 0}</div></div>
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">下降</div><div style="font-size:16px;font-weight:600;color:var(--success);">${d.down_count || 0}</div></div>
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">锁定</div><div style="font-size:16px;font-weight:600;color:var(--warning);">${d.lock_count || 0}</div></div>
+          ${caps.refill ? `<div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">补油</div><div style="font-size:16px;font-weight:600;">${d.refill_count || 0}</div></div>` : ''}
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">急停</div><div style="font-size:16px;font-weight:600;color:var(--danger);">${d.estop_count || 0}</div></div>
+          ${caps.photoelectric ? `<div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center;"><div style="color:var(--text-muted);">光电报警</div><div style="font-size:16px;font-weight:600;color:var(--danger);">${d.photo_alarm_count || 0}</div></div>` : ''}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('common.safetyStatus')}</div>
+        ${safetyRow(t('safety.upperLimit'), d.upper_limit)}
+        ${caps.lowerLimit ? safetyRow(t('safety.lowerLimit'), d.lower_limit) : ''}
+        ${safetyRow(t('safety.stall'), d.stall)}
+        ${safetyRow(t('safety.collisionUp'), d.collision_up)}
+        ${safetyRow(t('safety.collisionDown'), d.collision_down)}
+        <div class="detail-row"><div class="detail-label">${t('safety.alarmCode')}</div><div class="detail-value">${d.alarm_code || 0}</div></div>
+        <div style="font-size:13px;font-weight:600;margin:16px 0 8px;">${t('common.linkDiag')}</div>
+        <div class="detail-row"><div class="detail-label">${t('link.dtuState')}</div><div class="detail-value">${d.dtu_state || '-'}</div></div>
+        <div class="detail-row"><div class="detail-label">${t('link.csq')}</div><div class="detail-value">${csqVal} <span class="csq-tag ${csq.cls}">${csq.text}</span></div></div>
+        <div class="height-bar" style="height:6px;margin-top:4px;"><div class="height-bar-fill" style="width:${csq.pct}%;background:var(--primary);"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:8px;">
+      ${isOperator ? `
+        ${d.locked ? `<button class="btn btn-success" onclick="unlockDevice('${d.device_id}');closeModal('device-modal')">${t('devices.unlock')}}</button>` : `<button class="btn btn-danger" onclick="lockDevice('${d.device_id}');closeModal('device-modal')">${t('devices.lock')}}</button>`}
+        <button class="btn btn-outline" onclick="queryDevice('${d.device_id}')">${t('devices.query')}</button>
+      ` : ''}
+      ${d.has_buzzer && isOperator ? `
+        ${d.buzzer_on
+          ? `<button class="btn btn-warning" onclick="sendBuzzerCmd('${d.device_id}', 'buzzer_off');closeModal('device-modal')">${t('devices.buzzerOff')}</button>`
+          : `<button class="btn btn-success" onclick="sendBuzzerCmd('${d.device_id}', 'buzzer_on');closeModal('device-modal')">${t('devices.buzzerOn')}</button>`
+        }
+      ` : ''}
+      <button class="btn btn-outline" onclick="closeModal('device-modal')">${t('common.close')}</button>
+    </div>`;
+  document.getElementById('device-modal').classList.add('active');
+}
+
+async function showAddDeviceModal() {
+  const modelOptions = LIFT_MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
+  document.getElementById('maintenance-modal-title').textContent = t('devices.addDevice');
+  document.getElementById('maintenance-modal-body').innerHTML = `
+    <form onsubmit="return addDevice(event)">
+      <div class="form-group"><label>${t('devices.deviceId')}</label><input type="text" id="add-device-id" placeholder="${t('devices.idPlaceholder')}" required></div>
+      <div class="form-group"><label>${t('devices.deviceName')}</label><input type="text" id="add-device-name" placeholder="${t('devices.namePlaceholder')}" required></div>
+      <div class="form-group"><label>产品型号</label><select id="add-product-type"><option value="double_post">两柱举升机</option><option value="small_scissor">小剪举升机</option><option value="thin_scissor">超薄小剪举升机</option><option value="large_scissor">大剪举升机</option></select></div>
+      <div class="form-group"><label>${t('devices.model')}</label><select id="add-device-model">${modelOptions}</select></div>
+      <div class="form-group"><label>${t('devices.group')}</label><input type="text" id="add-device-group" value="${t('devices.defaultGroup')}"></div>
+      <div class="form-group">
+        <label>${t('devices.accessories')}</label>
+        <div class="accessory-checkboxes">
+          <label class="checkbox-label"><input type="checkbox" id="add-has-encoder"> ${t('devices.encoder')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-buzzer"> ${t('devices.buzzer')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-pressure"> ${t('devices.pressureSensor')}</label>
+          <label class="checkbox-label"><input type="checkbox" id="add-has-display"> ${t('devices.display')}</label>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">${t('common.add')}</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button></div>
+    </form>`;
+  document.getElementById('maintenance-modal').classList.add('active');
+}
+
+async function addDevice(e) {
+  e.preventDefault();
+  try {
+    await api('/devices', {
+      method: 'POST',
+      body: JSON.stringify({
+        device_id: document.getElementById('add-device-id').value.trim(),
+        name: document.getElementById('add-device-name').value.trim(),
+        model: document.getElementById('add-device-model').value,
+        product_type: document.getElementById('add-product-type').value,
+        group_name: document.getElementById('add-device-group').value.trim(),
+        has_encoder: document.getElementById('add-has-encoder').checked ? 1 : 0,
+        has_buzzer: document.getElementById('add-has-buzzer').checked ? 1 : 0,
+        has_pressure_sensor: document.getElementById('add-has-pressure').checked ? 1 : 0,
+        has_display: document.getElementById('add-has-display').checked ? 1 : 0
+      })
+    });
+    showToast(t('devices.addSuccess'), 'success');
+    closeModal('maintenance-modal');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+  return false;
+}
+
+// 用户端绑定设备:输入 SN 码,后端匹配注册表完成绑定
+async function showBindDeviceModal() {
+  document.getElementById('maintenance-modal-title').textContent = t('devices.addDevice');
+  document.getElementById('maintenance-modal-body').innerHTML = `
+    <form onsubmit="return bindDeviceBySn(event)">
+      <div class="form-group">
+        <label>设备编号 (SN)</label>
+        <input type="text" id="bind-sn" placeholder="输入设备上粘贴的SN码，如GC-2026-00001" required autocomplete="off" onblur="previewBindDevice()">
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">请输入设备铭牌上的出厂编号,系统会自动匹配并绑定到您的账号</div>
+      </div>
+      <div id="bind-preview" class="capability-panel compact" style="display:none;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button type="button" class="btn btn-outline" onclick="previewBindDevice()">查询设备</button>
+        <button type="submit" class="btn btn-primary">绑定设备</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button>
+      </div>
+    </form>`;
+  document.getElementById('maintenance-modal').classList.add('active');
+  setTimeout(() => { const inp = document.getElementById('bind-sn'); if (inp) inp.focus(); }, 100);
+}
+
+async function bindDeviceBySn(e) {
+  e.preventDefault();
+  const sn = document.getElementById('bind-sn').value.trim();
+  if (!sn) { showToast('请输入设备编号', 'error'); return false; }
+  try {
+    const result = await api('/binding/bind', {
+      method: 'POST',
+      body: JSON.stringify({ serial: sn })
+    });
+    showToast(`设备 ${sn} 绑定成功`, 'success');
+    closeModal('maintenance-modal');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+  return false;
+}
+
+/* ===== Commands ===== */
+const _pendingCmds = new Set();
+
+async function lockDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
+  try {
+    await api('/commands/lock/' + id, { method: 'POST' });
+    showToast(t('devices.lockSent'), 'success');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
+}
+
+async function unlockDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
+  try {
+    await api('/commands/unlock/' + id, { method: 'POST' });
+    showToast(t('devices.unlockSent'), 'success');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
+}
+
+async function queryDevice(id) {
+  if (_pendingCmds.has(id)) return;
+  _pendingCmds.add(id);
+  try {
+    await api('/commands/query/' + id, { method: 'POST' });
+    showToast(t('devices.query') + ' ✓', 'info');
+  } catch (err) { showToast(err.message, 'error'); }
+  finally { _pendingCmds.delete(id); }
+}
+
+async function renameDevice(deviceId, currentName) {
+  const newName = prompt(t('devices.renameTitle'), currentName);
+  if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
+  try {
+    await api('/commands/rename/' + deviceId, {
+      method: 'POST',
+      body: JSON.stringify({ name: newName.trim() })
+    });
+    showToast(t('devices.renameSuccess'), 'success');
+    const d = devices.find(x => x.device_id === deviceId);
+    if (d) d.name = newName.trim();
+    renderCurrentPage();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteDevice(deviceId, deviceName) {
+  if (!confirm(t('devices.deleteConfirm').replace('{name}', deviceName))) return;
+  try {
+    await api(`/devices/${deviceId}`, { method: 'DELETE' });
+    showToast(t('devices.deleteSuccess'), 'success');
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function sendBuzzerCmd(deviceId, cmd) {
+  try {
+    await api(`/commands/${cmd}/${deviceId}`, { method: 'POST' });
+    showToast(t(cmd === 'buzzer_on' ? 'devices.buzzerOnSent' : 'devices.buzzerOffSent'), 'success');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+/* ===== Alarms Page ===== */
+function renderAlarms() {
+  return `
+    <div class="filter-bar">
+      <div class="form-group" style="margin-bottom:0">
+        <select id="alarm-filter-ack" onchange="loadAlarms()">
+          <option value="">${t('alarms.all')}</option>
+          <option value="unack">${t('alarms.unack')}</option>
+          <option value="ack">${t('alarms.acked')}</option>
+        </select>
+      </div>
+      <button class="btn btn-outline" onclick="loadAlarms()">${t('common.refresh')}</button>
+    </div>
+    <div id="alarms-list"><div class="loading">${t('common.loading')}</div></div>`;
+}
+
+async function loadAlarms() {
+  try {
+    const alarms = await api('/alarms');
+    const filter = document.getElementById('alarm-filter-ack')?.value || '';
+    let filtered = alarms;
+    if (filter === 'unack') filtered = alarms.filter(a => !a.acknowledged);
+    else if (filter === 'ack') filtered = alarms.filter(a => a.acknowledged);
+
+    const list = document.getElementById('alarms-list');
+    if (!list) return;
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔔</div><h3>${t('alarms.noAlarms')}}</h3><p>${t('alarms.allNormal')}}</p></div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(a => {
+      const deviceIdArg = JSON.stringify(a.device_id || '');
+      return `
+      <div class="alarm-card ${a.level || 'warning'}">
+        <div class="alarm-icon">${a.level === 'danger' || a.alarm_type === 'collision' ? '🔴' : '🟡'}</div>
+        <div class="alarm-info">
+          <div class="alarm-device">${a.device_name || a.device_id}</div>
+          <div class="alarm-message">${getAlarmText(a.alarm_type)}: ${a.message || ''}</div>
+          <div class="alarm-time">${formatTs(a.created_at)}</div>
+        </div>
+        <div class="alarm-actions">
+          ${!a.acknowledged ? `<button class="btn btn-sm btn-outline" onclick="ackAlarm(${a.id})">${t('alarms.acknowledge')}</button>` : ''}
+          ${!a.resolved_at ? `<button class="btn btn-sm btn-success" onclick="resolveAlarm(${a.id}, ${deviceIdArg})">${t('alarms.resolve')}</button>` : `<span style="font-size:12px;color:var(--success);">${t('alarms.resolved')}</span>`}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function ackAlarm(id) {
+  try { await api(`/alarms/${id}/acknowledge`, { method: 'PUT' }); showToast(t('alarms.ackSuccess'), 'success'); fetchUnackAlarms(); loadAlarms(); } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function resolveAlarm(id, deviceId) {
+  try {
+    if (!deviceId) throw new Error('缺少设备ID，无法下发清警命令');
+    await api(`/commands/clear_alarm/${encodeURIComponent(deviceId)}`, { method: 'POST' });
+    showToast('清除报警命令已发送，等待设备确认', 'success');
+    fetchUnackAlarms();
+    loadAlarms();
+    fetchDevices();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function previewBindDevice() {
+  const sn = document.getElementById('bind-sn')?.value.trim();
+  const box = document.getElementById('bind-preview');
+  if (!sn || !box) return;
+  try {
+    const info = await api('/binding/lookup?serial=' + encodeURIComponent(sn));
+    const accessories = [
+      info.has_encoder ? '高度编码器' : '',
+      info.has_buzzer ? '蜂鸣器' : '',
+      info.has_pressure_sensor ? '压力传感器' : '',
+      info.has_display ? '显示屏' : ''
+    ].filter(Boolean);
+    box.style.display = '';
+    box.innerHTML = `
+      <div class="capability-title">设备预览</div>
+      <div style="font-size:13px;font-weight:600;">${info.display_name || info.model || info.serial}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${info.product_type || 'double_post'} · ${info.status === 'bound' ? '已绑定' : '待绑定'}</div>
+      <div class="io-chip-row">${accessories.length ? accessories.map(a => `<span class="io-chip active">${a}</span>`).join('') : '<span class="io-chip muted">无高度编码器，页面显示运行状态</span>'}</div>
+    `;
+  } catch (err) {
+    box.style.display = '';
+    box.innerHTML = `<div style="color:var(--danger);font-size:12px;">${err.message}</div>`;
+  }
+}
+
+/* ===== Maintenance Page ===== */
+function renderMaintenance() {
+  return `
+    <div class="filter-bar">
+      <div class="form-group" style="margin-bottom:0"><select id="mt-device-filter"><option value="">${t('common.allDevices')}</option>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
+      <div class="form-group" style="margin-bottom:0"><select id="mt-type-filter"><option value="">${t('common.allTypes')}</option><option value="保养">${t('maintenance.serviceType')}</option><option value="维修">${t('maintenance.repairType')}</option></select></div>
+      <button class="btn btn-primary" onclick="loadMaintenance()">${t('common.query')}</button>
+      <button class="btn btn-outline" onclick="showAddMaintenanceModal()">+ ${t('maintenance.add')}</button>
+      <button class="btn btn-outline" onclick="exportMaintenance()">${t('common.export')} CSV</button>
+    </div>
+    <div id="maintenance-list"><div class="loading">${t('common.loading')}</div></div>`;
+}
+
+async function loadMaintenance() {
+  try {
+    const params = [];
+    const dev = document.getElementById('mt-device-filter')?.value;
+    const type = document.getElementById('mt-type-filter')?.value;
+    if (dev) params.push('device_id=' + dev);
+    if (type) params.push('type=' + type);
+    const records = await api('/maintenance?' + params.join('&'));
+    const list = document.getElementById('maintenance-list');
+    if (!list) return;
+    if (records.length === 0) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><h3>${t('maintenance.noRecords')}}</h3></div>`; return; }
+    list.innerHTML = `<div class="device-table"><div class="table-header"><span>${t('maintenance.records')} (${records.length}${t('unit.record')})</span></div><table><thead><tr><th>${t('logs.device')}</th><th>${t('maintenance.type')}</th><th>${t('maintenance.description')}</th><th>${t('maintenance.handler')}</th><th>${t('maintenance.result')}</th><th>${t('maintenance.nextDate')}</th><th>${t('maintenance.cost')}</th><th>${t('logs.time')}</th><th>${t('logs.action')}</th></tr></thead><tbody>${records.map(r => `<tr>
+      <td>${r.device_name || r.device_id}</td>
+      <td><span class="status-tag ${r.type === '保养' ? 'status-maintenance' : 'status-fault'}">${r.type === '保养' ? t('maintenance.serviceType') : t('maintenance.repairType')}</span></td>
+      <td>${r.description || '-'}</td>
+      <td>${r.handler || '-'}</td>
+      <td>${r.result || '-'}</td>
+      <td>${r.next_date || '-'}</td>
+      <td>${r.cost || '-'}</td>
+      <td>${formatTs(r.created_at)}</td>
+      <td>${currentUser && currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteMaintenance(${r.id})">${t('common.delete')}</button>` : ''}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function showAddMaintenanceModal() {
+  if (devices.length === 0) { showToast(t('devices.noDevices'), 'warning'); return; }
+  document.getElementById('maintenance-modal-title').textContent = t('maintenance.add');
+  document.getElementById('maintenance-modal-body').innerHTML = `
+    <form onsubmit="return submitMaintenance(event)">
+      <div class="form-group"><label>${t('logs.device')}</label><select id="mt-device" required>${devices.map(d => `<option value="${d.device_id}">${d.name || d.device_id}</option>`).join('')}</select></div>
+      <div class="form-group"><label>${t('maintenance.type')}</label><select id="mt-type"><option value="保养">${t('maintenance.serviceType')}</option><option value="维修">${t('maintenance.repairType')}</option></select></div>
+      <div class="form-group"><label>${t('maintenance.description')}</label><textarea id="mt-desc" rows="2" placeholder="${t('maintenance.descPh')}"></textarea></div>
+      <div class="form-group"><label>${t('maintenance.handler')}</label><input type="text" id="mt-handler" placeholder="${t('maintenance.handlerPh')}"></div>
+      <div class="form-group"><label>${t('maintenance.result')}</label><input type="text" id="mt-result" value="${t('maintenance.inProgress')}"></div>
+      <div class="form-group"><label>${t('maintenance.nextDate')}</label><input type="date" id="mt-next-date"></div>
+      <div class="form-group"><label>${t('maintenance.cost')}(${t('unit.currency')})</label><input type="number" id="mt-cost" step="0.01" value="0"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;"><button type="submit" class="btn btn-primary">${t('common.submit')}</button><button type="button" class="btn btn-outline" onclick="closeModal('maintenance-modal')">${t('common.cancel')}</button></div>
+    </form>`;
+  document.getElementById('maintenance-modal').classList.add('active');
+}
+
+async function submitMaintenance(e) {
+  e.preventDefault();
+  try {
+    await api('/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({
+        device_id: document.getElementById('mt-device').value,
+        type: document.getElementById('mt-type').value,
+        description: document.getElementById('mt-desc').value,
+        handler: document.getElementById('mt-handler').value,
+        result: document.getElementById('mt-result').value,
+        next_date: document.getElementById('mt-next-date').value,
+        cost: parseFloat(document.getElementById('mt-cost').value) || 0
+      })
+    });
+    showToast(t('common.recordAdded'), 'success');
+    closeModal('maintenance-modal');
+    loadMaintenance();
+  } catch (err) { showToast(err.message, 'error'); }
+  return false;
+}
+
+async function deleteMaintenance(id) {
+  if (!confirm(t('common.confirmDelete'))) return;
+  try { await api('/maintenance/' + id, { method: 'DELETE' }); showToast(t('common.deleted'), 'success'); loadMaintenance(); } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function exportMaintenance() {
+  try {
+    const res = await fetch(API_BASE + '/maintenance/export', { headers: { 'Authorization': 'Bearer ' + token } });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `${t('maintenance.records')}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+/* ===== Statistics Page ===== */
+function renderStatistics() {
+  const validDevices = devices.filter(d => d && d.device_id);
+  if (validDevices.length === 0) return `<div class="empty-state"><div class="empty-icon">📊</div><h3>${t('statistics.noData')}</h3><p>${t('statistics.waitingData')}</p></div>`;
+  const totalRunCount = devices.reduce((s, d) => s + (d.run_count || 0), 0);
+  const avgCount = devices.length > 0 ? Math.round(totalRunCount / devices.length) : 0;
+  const onlineCount = devices.filter(d => d.online).length;
+
+  return `
+    <div class="stats-grid">
+      <div class="stat-card"><h4>${t('statistics.totalRunCount')}</h4><div><span class="value">${totalRunCount.toLocaleString()}</span><span class="unit">${t('unit.times')}</span></div></div>
+      <div class="stat-card"><h4>${t('statistics.avgRunCount')}</h4><div><span class="value">${avgCount}</span><span class="unit">${t('unit.times')}/${t('unit.device')}</span></div></div>
+      <div class="stat-card"><h4>${t('overview.online')}</h4><div><span class="value">${onlineCount}</span><span class="unit">/${devices.length}${t('unit.device')}</span></div></div>
+    </div>
+    <div class="device-table" style="margin-top:20px;">
+      <div class="table-header"><span>${t('statistics.deviceDetail')}</span></div>
+      <table><thead><tr><th>${t('devices.deviceName')}</th><th>${t('devices.model')}</th><th>${t('devices.status')}</th><th>${t('devices.runTime')}</th><th>${t('devices.runCount')}</th><th>反馈/状态</th><th>${t('statistics.avgSingle')}(min)</th></tr></thead>
+      <tbody>${devices.map(d => {
+        const avgSingle = d.run_count > 0 ? ((d.run_time_s || 0) / 60 / d.run_count).toFixed(1) : 0;
+        const feedback = hasHeightFeedback(d)
+          ? `${d.height_left_mm || 0}/${d.height_right_mm || 0}mm · 偏差 ${d.height_diff_mm || 0}mm`
+          : `${getStateText(d.state)} · ${getDirectionText(d)}`;
+        return `<tr>
+          <td><span class="device-name" onclick="showDeviceDetail('${d.device_id}')">${d.name || d.device_id}</span></td>
+          <td>${d.model || 'TL-5000'}</td>
+          <td><span class="status-tag status-${getStatusClass(d)}">${getStatusText(getStatusClass(d))}</span></td>
+          <td>${formatTime(d.run_time_s)}</td>
+          <td>${d.run_count || 0}</td>
+          <td>${feedback}</td>
+          <td>${avgSingle}</td></tr>`;
+      }).join('')}</tbody></table>
+    </div>`;
+}
+
+/* ===== Logs Page ===== */
+function renderLogs() {
+  return `
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>${t('logs.filterDevice')}</label>
+        <select id="log-filter-device" onchange="loadLogs()">
+          <option value="">${t('logs.allDevices')}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>操作类型</label>
+        <select id="log-filter-optype" onchange="loadLogs()">
+          <option value="">全部</option>
+          <option value="up">上升</option>
+          <option value="down">下降</option>
+          <option value="lock">锁定</option>
+          <option value="refill">补油</option>
+          <option value="estop">急停</option>
+          <option value="photo_alarm">光电报警</option>
+          <option value="rotary_switch">旋转开关切换</option>
+          <option value="power_on">开机</option>
+          <option value="power_off">关机</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>${t('logs.filterStart')}</label>
+        <input type="date" id="log-filter-start" onchange="loadLogs()">
+      </div>
+      <div class="filter-group">
+        <label>${t('logs.filterEnd')}</label>
+        <input type="date" id="log-filter-end" onchange="loadLogs()">
+      </div>
+    </div>
+    <div id="logs-list"></div>`;
+}
+
+// 设备端操作日志(工人物理操作:上升/下降/锁定等)
+// 调用 /api/device-ops,后端已按 owner_id 隔离,只返回当前用户绑定设备的日志
+async function loadLogs() {
+  try {
+    const deviceId = document.getElementById('log-filter-device')?.value || '';
+    const opType = document.getElementById('log-filter-optype')?.value || '';
+    const startDate = document.getElementById('log-filter-start')?.value || '';
+    const endDate = document.getElementById('log-filter-end')?.value || '';
+    const params = new URLSearchParams();
+    if (deviceId) params.set('device_serial', deviceId);
+    if (opType) params.set('op_type', opType);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+
+    const data = await api(`/device-ops?${params.toString()}&pageSize=100`);
+    const list = document.getElementById('logs-list');
+    if (!list) return;
+    if (!data.list || data.list.length === 0) {
+      list.innerHTML = `<div class="empty-state">${t('logs.noData')}</div>`;
+      return;
+    }
+    list.innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>时间</th>
+          <th>设备编号</th>
+          <th>操作类型</th>
+          <th>结果</th>
+          <th>持续(ms)</th>
+          <th>详情</th>
+        </tr></thead>
+        <tbody>${data.list.map(l => `
+          <tr>
+            <td>${formatTs(l.occurred_at)}</td>
+            <td>${l.device_serial || '-'}</td>
+            <td>${l.op_type_label || l.op_type}</td>
+            <td>${l.op_result || '-'}</td>
+            <td>${l.duration_ms || 0}</td>
+            <td>${l.detail || '-'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadLogFilterOptions() {
+  try {
+    const deviceList = await api('/devices');
+    const deviceSelect = document.getElementById('log-filter-device');
+    if (deviceSelect && Array.isArray(deviceList)) {
+      deviceList.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.device_id;
+        opt.textContent = d.name || d.device_id;
+        deviceSelect.appendChild(opt);
+      });
+    }
+  } catch (e) { /* ignore */ }
+}
+
+/* ===== Settings ===== */
+function showUserSettings() {
+  document.getElementById('settings-modal-body').innerHTML = `
+    <h4 style="margin-bottom:14px;">${t('settings.changePassword')}</h4>
+    <form onsubmit="return changePassword(event)">
+      <div class="form-group"><label>${t('settings.oldPassword')}</label><input type="password" id="old-password" required></div>
+      <div class="form-group"><label>${t('settings.newPassword')}</label><input type="password" id="new-password" required minlength="6"></div>
+      <div class="form-group"><label>${t('settings.confirmPassword')}</label><input type="password" id="confirm-password" required minlength="6"></div>
+      <button type="submit" class="btn btn-primary">${t('settings.changePassword')}</button>
+    </form>
+    ${currentUser && currentUser.role === 'admin' ? `
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
+      <h4 style="margin-bottom:14px;">${t('settings.userManagement')}</h4>
+      <div id="user-list"><div class="loading">${t('common.loading')}</div></div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="showAddUserForm()">${t('settings.addUser')}</button>
+      <div id="add-user-form" style="display:none;margin-top:14px;">
+        <div class="form-group"><label>${t('settings.username')}</label><input type="text" id="new-username" required></div>
+        <div class="form-group"><label>${t('settings.password')}</label><input type="password" id="new-user-pass" required minlength="6"></div>
+        <div class="form-group"><label>${t('settings.role')}</label><select id="new-user-role"><option value="user">用户</option><option value="admin">管理员</option></select></div>
+        <div class="form-group"><label>${t('settings.realname')}</label><input type="text" id="new-user-realname"></div>
+        <div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="addUser()">${t('settings.createUser')}</button><button class="btn btn-outline" onclick="document.getElementById('add-user-form').style.display='none'">${t('common.cancel')}</button></div>
+      </div>` : ''}`;
+  document.getElementById('settings-modal').classList.add('active');
+  if (currentUser && currentUser.role === 'admin') loadUserList();
+}
+
+async function changePassword(e) {
+  e.preventDefault();
+  const oldP = document.getElementById('old-password').value;
+  const newP = document.getElementById('new-password').value;
+  const confP = document.getElementById('confirm-password').value;
+  if (newP !== confP) { showToast(t('settings.pwdMismatch'), 'error'); return false; }
+  try {
+    await api('/auth/password', { method: 'PUT', body: JSON.stringify({ old_password: oldP, new_password: newP }) });
+    showToast(t('settings.pwdSuccess'), 'success');
+    closeModal('settings-modal');
+  } catch (err) { showToast(err.message, 'error'); }
+  return false;
+}
+
+async function loadUserList() {
+  try {
+    const users = await api('/auth/users');
+    const list = document.getElementById('user-list');
+    if (!list) return;
+    list.innerHTML = `<table style="width:100%"><thead><tr><th>${t('settings.username')}</th><th>${t('settings.role')}</th><th>${t('settings.realname')}</th><th>${t('devices.status')}</th><th>${t('settings.lastLogin')}</th><th>${t('logs.action')}</th></tr></thead><tbody>${users.map(u => `<tr>
+      <td>${u.username}</td>
+      <td>${u.role === 'admin' ? '管理员' : '用户'}</td>
+      <td>${u.real_name || '-'}</td>
+      <td>${u.enabled ? `<span class="status-tag status-normal">${t('settings.enabled')}</span>` : `<span class="status-tag status-offline">${t('settings.disabled')}</span>`}</td>
+      <td>${formatTs(u.last_login)}</td>
+      <td>${u.id !== currentUser.id ? `
+        <button class="btn btn-sm btn-outline" onclick="toggleUser(${u.id})">${u.enabled ? t('settings.disable') : t('settings.enable')}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">${t('settings.deleteUser')}</button>` : `<span style="font-size:12px;color:var(--text-muted)">${t('settings.currentUser')}</span>`}</td>
+    </tr>`).join('')}</tbody></table>`;
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function showAddUserForm() { document.getElementById('add-user-form').style.display = 'block'; }
+
+async function addUser() {
+  try {
+    await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: document.getElementById('new-username').value.trim(),
+        password: document.getElementById('new-user-pass').value,
+        role: document.getElementById('new-user-role').value,
+        real_name: document.getElementById('new-user-realname').value.trim()
+      })
+    });
+    showToast(t('settings.userCreated'), 'success');
+    document.getElementById('add-user-form').style.display = 'none';
+    loadUserList();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function toggleUser(id) {
+  try { await api('/auth/users/' + id + '/toggle', { method: 'PUT' }); loadUserList(); } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteUser(id) {
+  if (!confirm(t('common.confirmDeleteUser'))) return;
+  try { await api('/auth/users/' + id, { method: 'DELETE' }); showToast(t('common.deleted'), 'success'); loadUserList(); } catch (err) { showToast(err.message, 'error'); }
+}
+
+/* ===== Utils ===== */
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ===== Init ===== */
+function init() {
+  applyLang();
+  restoreAvatar();
+
+  setInterval(() => { const el = document.getElementById('current-time'); if (el) el.textContent = new Date().toLocaleString('zh-CN'); }, 1000);
+
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (!item.dataset.page) return;
+      loadPage(item.dataset.page);
+    });
+  });
+
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+  });
+
+  if (token && currentUser) {
+    showApp().catch(e => {
+      console.error('[Init] showApp failed:', e);
+      document.getElementById('login-page').style.display = 'flex';
+    });
+  } else {
+    document.getElementById('login-page').style.display = 'flex';
+  }
+}
+
+// Override loadPage for pages that need async data
+const _originalLoadPage = loadPage;
+loadPage = function(page) {
+  currentPage = page;
+  document.querySelectorAll('.menu-item').forEach(i => i.classList.toggle('active', i.dataset.page === page));
+
+  const titles = { overview: t('overview.title'), devices: t('devices.title'), alarms: t('alarms.title'), maintenance: t('maintenance.title'), statistics: t('statistics.title'), logs: t('logs.title') };
+  const breadcrumbs = { overview: t('nav.overview'), devices: t('nav.devices'), alarms: t('nav.alarms'), maintenance: t('nav.maintenance'), statistics: t('nav.statistics'), logs: t('nav.logs') };
+  document.getElementById('page-title').textContent = titles[page] || '';
+  document.getElementById('breadcrumb').textContent = `${t('common.home')} / ${breadcrumbs[page] || ''}`;
+
+  if (page === 'alarms') { renderCurrentPage(); loadAlarms(); }
+  else if (page === 'maintenance') { renderCurrentPage(); loadMaintenance(); }
+  else if (page === 'logs') { renderCurrentPage(); loadLogs(); loadLogFilterOptions(); }
+  else { renderCurrentPage(); }
+};
+
+// Auto-refresh
+setInterval(() => { if (token) fetchDevices(); }, 10000);
+setInterval(() => { if (token) fetchUnackAlarms(); }, 30000);
+setInterval(() => { if (token) refreshLiveUptimeDisplays(); }, 1000);
+
+/* ===== Avatar Upload ===== */
+function showAvatarUpload() {
+  document.getElementById('avatar-input').click();
+}
+
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    localStorage.setItem('lift_avatar', dataUrl);
+    applyAvatar(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyAvatar(dataUrl) {
+  const avatarEl = document.getElementById('user-avatar');
+  if (!avatarEl) return;
+  avatarEl.innerHTML = '';
+  avatarEl.style.backgroundImage = `url(${dataUrl})`;
+  avatarEl.style.backgroundSize = 'cover';
+  avatarEl.style.backgroundPosition = 'center';
+}
+
+function restoreAvatar() {
+  const saved = localStorage.getItem('lift_avatar');
+  if (saved) applyAvatar(saved);
+}
+
+/* ===== AI Chat (MiMo v2.5) ===== */
+let aiChatOpen = false;
+let aiChatLoading = false;
+
+function toggleAIChat() {
+  aiChatOpen = !aiChatOpen;
+  const panel = document.getElementById('ai-chat-panel');
+  const fab = document.getElementById('ai-fab');
+  panel.style.display = aiChatOpen ? 'flex' : 'none';
+  if (aiChatOpen) {
+    document.getElementById('ai-chat-input').focus();
+  }
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const text = input.value.trim();
+  if (!text || aiChatLoading) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  const requestMessages = [...getAIChatHistory(), { role: 'user', content: text }];
+  addAIChatMessage('user', text);
+
+  aiChatLoading = true;
+  const sendBtn = document.querySelector('.ai-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  // Show typing indicator
+  const typingId = addAITyping();
+
+  try {
+    const response = await fetch(API_BASE + '/ai/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        messages: requestMessages,
+        lang: currentLang
+      })
+    });
+
+    removeAITyping(typingId);
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `${t('common.apiError')} ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiText = data.choices?.[0]?.message?.content || t('common.error');
+    addAIChatMessage('bot', aiText);
+  } catch (err) {
+    removeAITyping(typingId);
+    addAIChatMessage('bot', `❌ ${err.message}`);
+  } finally {
+    aiChatLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
+const aiChatHistory = [];
+
+function addAIChatMessage(role, text) {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+
+  const div = document.createElement('div');
+  div.className = `ai-msg ai-${role === 'user' ? 'user' : 'bot'}`;
+  div.innerHTML = `
+    <div class="ai-msg-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+    <div class="ai-msg-text">${role === 'bot' ? formatAIResponse(text) : escapeHTML(text)}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  if (role === 'user' || role === 'bot') {
+    aiChatHistory.push({ role, content: text });
+    // Keep only last 20 messages for context
+    if (aiChatHistory.length > 20) aiChatHistory.splice(0, aiChatHistory.length - 20);
+  }
+}
+
+function getAIChatHistory() {
+  return aiChatHistory.slice(-10).map(m => ({
+    role: m.role === 'bot' ? 'assistant' : m.role,
+    content: m.content
+  }));
+}
+
+let aiTypingCounter = 0;
+function addAITyping() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return -1;
+  const id = ++aiTypingCounter;
+  const div = document.createElement('div');
+  div.className = 'ai-msg ai-bot';
+  div.id = `ai-typing-${id}`;
+  div.innerHTML = `
+    <div class="ai-msg-avatar">🤖</div>
+    <div class="ai-msg-text"><div class="ai-typing"><span></span><span></span><span></span></div></div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeAITyping(id) {
+  if (id < 0) return;
+  const el = document.getElementById(`ai-typing-${id}`);
+  if (el) el.remove();
+}
+
+function formatAIResponse(text) {
+  // Simple markdown-like formatting
+  return escapeHTML(text)
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.*?)`/g, '<code style="background:#e8f0fe;padding:1px 4px;border-radius:3px;font-size:12px;">$1</code>');
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Auto-resize textarea
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'ai-chat-input') {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px';
+  }
+});
+
+/* ===== 用户注册（Canvas图形验证码） ===== */
+let captchaText = '';
+
+function generateCaptchaText(len) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < (len || 4); i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function drawCaptcha() {
+  const canvas = document.getElementById('captcha-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  captchaText = generateCaptchaText(4);
+
+  // 背景
+  ctx.fillStyle = '#f0f4ff';
+  ctx.fillRect(0, 0, w, h);
+
+  // 干扰线
+  for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = `rgba(${Math.random()*100+100},${Math.random()*100+100},${Math.random()*200+55},0.4)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.random() * w, Math.random() * h);
+    ctx.lineTo(Math.random() * w, Math.random() * h);
+    ctx.stroke();
+  }
+
+  // 干扰点
+  for (let i = 0; i < 30; i++) {
+    ctx.fillStyle = `rgba(${Math.random()*255},${Math.random()*255},${Math.random()*255},0.3)`;
+    ctx.beginPath();
+    ctx.arc(Math.random() * w, Math.random() * h, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 文字
+  const colors = ['#2563eb', '#dc2626', '#16a34a', '#7c3aed', '#d97706'];
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    ctx.font = `bold ${20 + Math.random() * 6}px 'Inter', sans-serif`;
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    ctx.translate(18 + i * 26, 26 + Math.random() * 6);
+    ctx.rotate((Math.random() - 0.5) * 0.4);
+    ctx.fillText(captchaText[i], 0, 0);
+    ctx.restore();
+  }
+}
+
+function refreshCaptcha() {
+  drawCaptcha();
+  const input = document.getElementById('reg-captcha');
+  if (input) input.value = '';
+}
+
+function showRegisterPage() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('register-page').style.display = 'flex';
+  drawCaptcha();
+}
+
+function showLoginPage() {
+  document.getElementById('register-page').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+}
+
+function showLangDropdownReg() {
+  const dd = document.getElementById('reg-lang-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('register-error');
+  const btn = document.getElementById('reg-btn');
+  errEl.style.display = 'none';
+
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  if (password !== password2) {
+    errEl.textContent = t('register.passwordMismatch');
+    errEl.style.display = 'block';
+    refreshCaptcha();
+    return false;
+  }
+
+  const captchaInput = document.getElementById('reg-captcha').value.trim();
+  if (captchaInput.toLowerCase() !== captchaText.toLowerCase()) {
+    errEl.textContent = t('register.captchaError');
+    errEl.style.display = 'block';
+    refreshCaptcha();
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = t('register.submitting');
+
+  try {
+    const res = await fetch(API_BASE + '/auth/register-public', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('reg-username').value.trim(),
+        password: password,
+        real_name: document.getElementById('reg-realname').value.trim(),
+        phone: document.getElementById('reg-phone').value.trim()
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || t('register.failed'));
+
+    showLoginPage();
+    showToast(t('register.success'), 'success');
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    refreshCaptcha();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('register.submit');
+  }
+  return false;
+}
+
+window.onerror = function(msg, src, line, col, err) {
+  console.error('[GlobalError]', msg, src, line);
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[UnhandledPromise]', e.reason);
+});
+
+window.onload = init;

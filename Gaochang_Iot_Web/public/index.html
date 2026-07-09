@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaoChang Lift IoT Platform</title>
+    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="icon" href="img/logo.png" type="image/png">
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="login-page" class="login-page">
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="img/logo.png" alt="GaoChang" class="login-logo-img">
+                <h1 data-i18n="app.name">高昌举升机管理平台</h1>
+                <p data-i18n="app.subtitle">IoT Management System</p>
+            </div>
+            <!-- Language Switcher on Login -->
+            <div class="lang-switch-login">
+                <button class="globe-btn-login" onclick="showLangDropdown()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span id="login-lang-label">中文</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="lang-dropdown" id="login-lang-dropdown" style="display:none;">
+                    <button onclick="setLang('zh')">🇨🇳 中文</button>
+                    <button onclick="setLang('en')">🇺🇸 English</button>
+                    <button onclick="setLang('ja')">🇯🇵 日本語</button>
+                    <button onclick="setLang('ko')">🇰🇷 한국어</button>
+                    <button onclick="setLang('fr')">🇫🇷 Français</button>
+                    <button onclick="setLang('de')">🇩🇪 Deutsch</button>
+                    <button onclick="setLang('es')">🇪🇸 Español</button>
+                    <button onclick="setLang('pt')">🇧🇷 Português</button>
+                    <button onclick="setLang('ru')">🇷🇺 Русский</button>
+                    <button onclick="setLang('ar')">🇸🇦 العربية</button>
+                </div>
+            </div>
+            <form id="login-form" onsubmit="return handleLogin(event)">
+                <div class="form-group">
+                    <label data-i18n="login.username">用户名</label>
+                    <input type="text" id="login-username" data-i18n-placeholder="login.username_ph" placeholder="请输入用户名" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="login.password">密码</label>
+                    <input type="password" id="login-password" data-i18n-placeholder="login.password_ph" placeholder="请输入密码" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="error-msg" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary btn-block" id="login-btn" data-i18n="login.submit">登录</button>
+            </form>
+            <div class="login-footer">
+                <span>&nbsp;</span>
+            </div>
+            <div class="register-link">
+                <a href="#" onclick="showRegisterPage();return false;" data-i18n="login.registerLink">注册账号</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Page -->
+    <div id="register-page" class="login-page" style="display:none;">
+        <div class="login-card register-card">
+            <div class="login-logo">
+                <img src="img/logo.png" alt="GaoChang" class="login-logo-img">
+                <h1 data-i18n="register.title">注册账号</h1>
+                <p data-i18n="app.subtitle">IoT Management System</p>
+            </div>
+            <form id="register-form" onsubmit="return handleRegister(event)">
+                <div class="form-group">
+                    <label data-i18n="register.username">用户名</label>
+                    <div class="input-icon-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <input type="text" id="reg-username" data-i18n-placeholder="register.usernamePh" placeholder="字母、数字、下划线，3-20位" required pattern="[a-zA-Z0-9_]{3,20}" autocomplete="username">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="register.password">密码</label>
+                    <div class="input-icon-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="reg-password" data-i18n-placeholder="register.passwordPh" placeholder="至少6位" required minlength="6" autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="register.confirmPassword">确认密码</label>
+                    <div class="input-icon-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><path d="M12 16v.01"/></svg>
+                        <input type="password" id="reg-password2" data-i18n-placeholder="register.confirmPasswordPh" placeholder="再次输入密码" required autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:1">
+                        <label data-i18n="register.realName">真实姓名 <span class="optional-tag" data-i18n="register.optional">选填</span></label>
+                        <input type="text" id="reg-realname" data-i18n-placeholder="register.realNamePh" placeholder="选填">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label data-i18n="register.phone">手机号 <span class="optional-tag" data-i18n="register.optional">选填</span></label>
+                        <input type="text" id="reg-phone" data-i18n-placeholder="register.phonePh" placeholder="选填">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="register.captcha">验证码</label>
+                    <div class="captcha-row">
+                        <input type="text" id="reg-captcha" data-i18n-placeholder="register.captchaPh" placeholder="请输入验证码" required maxlength="4" autocomplete="off">
+                        <canvas id="captcha-canvas" class="captcha-canvas" width="120" height="40" onclick="refreshCaptcha()"></canvas>
+                        <button type="button" class="captcha-refresh" onclick="refreshCaptcha()" title="刷新验证码">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="register-error" class="error-msg" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary btn-block" id="reg-btn" data-i18n="register.submit">注册</button>
+            </form>
+            <div class="login-footer">
+                <span data-i18n="register.hasAccount">已有账号？</span>
+                <a href="#" onclick="showLoginPage();return false;" data-i18n="register.backToLogin">返回登录</a>
+            </div>
+            <div class="lang-switch-login" style="margin-top:14px;">
+                <button class="globe-btn-login" onclick="showLangDropdownReg()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span id="reg-lang-label">中文</span>
+                </button>
+                <div class="lang-dropdown" id="reg-lang-dropdown" style="display:none;">
+                    <button onclick="setLang('zh')">🇨🇳 中文</button>
+                    <button onclick="setLang('en')">🇺🇸 English</button>
+                    <button onclick="setLang('ja')">🇯🇵 日本語</button>
+                    <button onclick="setLang('ko')">🇰🇷 한국어</button>
+                    <button onclick="setLang('fr')">🇫🇷 Français</button>
+                    <button onclick="setLang('de')">🇩🇪 Deutsch</button>
+                    <button onclick="setLang('es')">🇪🇸 Español</button>
+                    <button onclick="setLang('pt')">🇧🇷 Português</button>
+                    <button onclick="setLang('ru')">🇷🇺 Русский</button>
+                    <button onclick="setLang('ar')">🇸🇦 العربية</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="container" style="display:none;">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="img/logo.png" alt="GaoChang" class="logo-img">
+                <div class="logo-text">
+                    <h1 data-i18n="app.name_short">高昌举升机</h1>
+                    <p data-i18n="app.iot">物联网平台</p>
+                </div>
+            </div>
+            <nav class="menu">
+                <button class="menu-item active" data-page="overview">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <span data-i18n="nav.overview">系统概览</span>
+                </button>
+                <button class="menu-item" data-page="devices">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                    <span data-i18n="nav.devices">设备管理</span>
+                </button>
+                <button class="menu-item" data-page="alarms">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span data-i18n="nav.alarms">报警管理</span>
+                    <span id="alarm-badge" class="badge" style="display:none;">0</span>
+                </button>
+                <button class="menu-item" data-page="maintenance">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    <span data-i18n="nav.maintenance">维修保养</span>
+                </button>
+                <button class="menu-item" data-page="statistics">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    <span data-i18n="nav.statistics">运行统计</span>
+                </button>
+                <button class="menu-item" data-page="logs">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span data-i18n="nav.logs">操作日志</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info" id="user-info">
+                    <div class="user-avatar-wrap" onclick="showAvatarUpload()">
+                        <div class="user-avatar" id="user-avatar">A</div>
+                        <div class="avatar-edit-badge">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </div>
+                    </div>
+                    <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+                    <div class="user-detail">
+                        <div class="user-name" id="user-name">管理员</div>
+                        <div class="user-role" id="user-role">admin</div>
+                    </div>
+                    <button class="btn-icon" onclick="handleLogout()" data-i18n-title="login.logout" title="退出登录">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                </div>
+                <div class="mqtt-status-bar">
+                    <span class="indicator-dot" id="mqtt-dot"></span>
+                    <span id="mqtt-status-text">未连接</span>
+                </div>
+            </div>
+        </aside>
+        <main class="content">
+            <header class="header">
+                <div class="header-left">
+                    <h2 id="page-title" data-i18n="nav.overview">系统概览</h2>
+                    <span class="breadcrumb" id="breadcrumb">首页 / 系统概览</span>
+                </div>
+                <div class="header-right">
+                    <div class="lang-switcher">
+                        <button class="lang-btn-globe" onclick="toggleLangMenu()" id="globe-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            <span id="current-lang-label">中文</span>
+                        </button>
+                        <div class="lang-dropdown-menu" id="lang-menu">
+                            <button onclick="setLang('zh')">🇨🇳 中文</button>
+                            <button onclick="setLang('en')">🇺🇸 English</button>
+                            <button onclick="setLang('ja')">🇯🇵 日本語</button>
+                            <button onclick="setLang('ko')">🇰🇷 한국어</button>
+                            <button onclick="setLang('fr')">🇫🇷 Français</button>
+                            <button onclick="setLang('de')">🇩🇪 Deutsch</button>
+                            <button onclick="setLang('es')">🇪🇸 Español</button>
+                            <button onclick="setLang('pt')">🇧🇷 Português</button>
+                            <button onclick="setLang('ru')">🇷🇺 Русский</button>
+                            <button onclick="setLang('ar')">🇸🇦 العربية</button>
+                        </div>
+                    </div>
+                    <span class="current-time" id="current-time"></span>
+                    <button class="btn btn-sm btn-outline" onclick="showUserSettings()" data-i18n="nav.settings">设置</button>
+                </div>
+            </header>
+            <div class="page-content" id="page-content">
+                <div class="loading" data-i18n="common.loading">加载中...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- AI Chat Widget -->
+    <div id="ai-chat-widget" class="ai-chat-widget">
+        <button class="ai-chat-fab" onclick="toggleAIChat()" id="ai-fab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </button>
+        <div class="ai-chat-panel" id="ai-chat-panel" style="display:none;">
+            <div class="ai-chat-header">
+                <div class="ai-chat-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    <span data-i18n="ai.title">高昌AI助手</span>
+                </div>
+                <button class="ai-chat-close" onclick="toggleAIChat()">&times;</button>
+            </div>
+            <div class="ai-chat-messages" id="ai-chat-messages">
+                <div class="ai-msg ai-bot">
+                    <div class="ai-msg-avatar">🤖</div>
+                    <div class="ai-msg-text" data-i18n="ai.welcome">您好！我是高昌举升机AI助手，可以帮您解答设备操作、故障排查、维修保养等问题。</div>
+                </div>
+            </div>
+            <div class="ai-chat-input-area">
+                <textarea id="ai-chat-input" placeholder="输入您的问题..." data-i18n-placeholder="ai.placeholder" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage();}"></textarea>
+                <button class="ai-send-btn" onclick="sendAIMessage()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="device-modal">
+        <div class="modal-content" style="max-width:700px;">
+            <div class="modal-header">
+                <h3 id="device-modal-title" data-i18n="devices.detailTitle">设备详情</h3>
+                <button class="close-btn" onclick="closeModal('device-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="device-modal-body"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="alarm-modal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h3 data-i18n="alarms.detailTitle">报警详情</h3>
+                <button class="close-btn" onclick="closeModal('alarm-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="alarm-modal-body"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="maintenance-modal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h3 id="maintenance-modal-title" data-i18n="maintenance.add">添加维修记录</h3>
+                <button class="close-btn" onclick="closeModal('maintenance-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="maintenance-modal-body"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="settings-modal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">
+                <h3 data-i18n="settings.title">个人设置</h3>
+                <button class="close-btn" onclick="closeModal('settings-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="settings-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="i18n.js?v=4"></script>
+    <script src="app.js?v=4"></script>
+
+</body>
+</html>

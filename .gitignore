@@ -1,0 +1,48 @@
+# Build output
+build/
+Debug/
+Release/
+Objects/
+Listings/
+*.o
+*.obj
+*.elf
+*.hex
+*.axf
+*.htm
+*.lnp
+*.lst
+*.crf
+*.d
+*.dep
+*.bin
+*.map
+
+# Logs and temporary debug captures
+logs/
+*.log
+rtt_capture*.txt
+rtt_logger*.txt
+jlink_*.txt
+sram_dump.bin
+
+# Test output
+Tests/*/out/
+
+# Web dependencies and local runtime data
+node_modules/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local/editor state
+.vs/
+.vscode/
+.idea/
+.claude/
+.agents/
+.sisyphus/
+
+# OS files
+Thumbs.db
+desktop.ini

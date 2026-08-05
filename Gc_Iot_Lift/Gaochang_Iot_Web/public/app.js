@@ -1208,7 +1208,11 @@ function findPendingCommand(deviceId, msgId, command) {
   return msgId && pending?.msgId === msgId ? pending : null;
 }
 function normalizeCommandResult(command, result) {
-  if (result === 'succeeded' || (command === 'lock' && result === 'locked') || (command === 'unlock' && result === 'unlocked')) return 'succeeded';
+  if (result === 'succeeded' ||
+      (command === 'lock' && result === 'locked') ||
+      (command === 'unlock' && result === 'unlocked') ||
+      (command === 'maintenance_done' && result === 'maintenance_done') ||
+      (command === 'reset_usage' && result === 'usage_reset')) return 'succeeded';
   return ['rejected', 'failed', 'timeout'].includes(result) ? result : 'failed';
 }
 
@@ -1268,16 +1272,9 @@ async function sendMaintenanceCommand(deviceId, command, body = {}) {
 }
 
 async function registerMaintenanceDone(deviceId) {
-  if (!confirm(`确认 ${deviceId} 已完成保养？平台将记录当前累计举升为基准，后续周期从头计算。`)) return;
-  try {
-    const result = await api('/maintenance/register_done/' + encodeURIComponent(deviceId), { method: 'POST' });
-    showToast(`保养已登记，基准举升 ${result.total_lift_count || 0}`, 'success');
-    // 刷新设备数据以确保各页面显示最新状态
-    await fetchDevices();
-    showMaintenanceStatus(deviceId);
-  } catch (err) {
-    showToast('登记失败: ' + err.message, 'error');
-  }
+  if (getPendingCommand(deviceId, 'maintenance_done')) return;
+  if (!confirm(`确认 ${deviceId} 已完成保养？将由设备保存新的保养基准。`)) return;
+  await sendMaintenanceCommand(deviceId, 'maintenance_done');
 }
 
 async function clearPhotoAlarm(deviceId) {
@@ -1323,14 +1320,16 @@ function renderMaintenanceDialog(deviceId, records = []) {
   const cycle = getCycleCount(d);
   const pct = Math.min(100, (cycle / (d.maintenance_threshold || 5000)) * 100);
   const threshold = d.maintenance_threshold || 5000;
+  const pending = getPendingCommand(deviceId, 'maintenance_done');
+  const actionLabel = pending ? '等待设备回执...' : '发送保养完成';
   const history = records.length ? records.slice(0, 10).map(record => `<div class="maintenance-history-row"><div><strong>${record.type || '保养'}</strong><span>${record.handler || '系统记录'}</span></div><div><b>累计 ${record.total_lift_count || 0} 次</b><span>${formatTs(record.created_at)}</span></div></div>`).join('') : '<div class="maintenance-history-empty">暂无保养记录</div>';
   document.getElementById('maintenance-modal-body').innerHTML = `
     <div class="maintenance-dialog">
       <div class="maintenance-dialog-status ${due ? 'is-due' : ''}"><span>${due ? '!' : '✓'}</span><div><strong>${due ? '已到保养周期' : '保养状态正常'}</strong><small>平台记录，下次保底 ${threshold} 次</small></div></div>
       <div class="maintenance-dialog-progress"><div><span>本周期举升</span><strong>${cycle} / ${threshold}</strong></div><div class="maintenance-progress-track"><i style="width:${pct}%"></i></div></div>
       <div class="maintenance-stat-grid"><div><span>累计举升</span><strong>${d.total_lift_count || 0}</strong></div><div><span>已保养</span><strong>${d.maintenance_count || 0} 次</strong></div><div><span>上次保养时累计</span><strong>${d.last_maintenance_total || 0}</strong></div></div>
-      <div class="maintenance-history"><div class="detail-section-title">最近保养记录（平台）</div>${history}</div>
-      <div class="maintenance-dialog-actions"><button class="btn btn-success" onclick="registerMaintenanceDone('${deviceId}')">登记保养完成</button><button class="btn btn-outline" onclick="closeModal('maintenance-modal')">关闭</button></div>
+      <div class="maintenance-history"><div class="detail-section-title">最近保养记录</div>${history}</div>
+      <div class="maintenance-dialog-actions"><button class="btn btn-success" ${pending ? 'disabled' : ''} onclick="registerMaintenanceDone('${deviceId}')">${actionLabel}</button><button class="btn btn-outline" onclick="closeModal('maintenance-modal')">关闭</button></div>
     </div>`;
 }
 
@@ -1377,7 +1376,7 @@ function finishCommandTracking(deviceId, commandName, status, detail) {
     if (currentPage === 'alarms') loadAlarms();
   }
   fetchDevices().then(() => {
-    if (commandName === 'get_status' && document.getElementById('maintenance-modal').classList.contains('active')) {
+    if (['get_status', 'maintenance_done'].includes(commandName) && document.getElementById('maintenance-modal').classList.contains('active')) {
       api('/maintenance?device_id=' + encodeURIComponent(deviceId)).then(records => renderMaintenanceDialog(deviceId, records)).catch(() => {});
     }
   });

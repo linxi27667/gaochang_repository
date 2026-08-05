@@ -693,14 +693,14 @@ function applyCommandResultToDevice(deviceId, cmd, result, responseData, msgId =
         maintenance_count, last_maintenance_total, maintenance_due, usage_epoch, maintenance_revision FROM device_status WHERE device_id = ?`).get(deviceId);
       const cycleBefore = clampInt(current?.maintenance_lift_count, 0, 4294967295, 0);
       const reported = normalizeTelemetry(responseData || {});
-      const next = resolveMaintenanceStatus(current, reported);
+      // A successful maintenance command is not enough to mutate the cache.
+      // The device Flash ledger is authoritative, so require its maintenance
+      // snapshot in the command response before updating SQLite.
       if (!reported.maintenance_reported) {
-        next.maintenance_lift_count = 0;
-        next.maintenance_count += 1;
-        next.last_maintenance_total = next.total_lift_count;
-        next.maintenance_due = 0;
-        next.maintenance_revision = Math.min(4294967295, next.maintenance_revision + 1);
+        console.warn(`[MQTT] maintenance_done response missing device ledger; keeping cached counters device=${deviceId} msg_id=${msgId || '-'}`);
+        return;
       }
+      const next = resolveMaintenanceStatus(current, reported);
       const command = msgId ? db.prepare('SELECT operator_name FROM command_queue WHERE msg_id = ?').get(msgId) : null;
       db.transaction(() => {
         db.prepare(`UPDATE device_status SET total_lift_count=?, maintenance_lift_count=?, maintenance_threshold=?,
@@ -727,16 +727,11 @@ function applyCommandResultToDevice(deviceId, cmd, result, responseData, msgId =
         usage_epoch: current.usage_epoch
       } : {};
       const reported = normalizeTelemetry(responseData || {});
-      const next = resolveMaintenanceStatus(current, reported);
       if (!reported.maintenance_reported) {
-        next.total_lift_count = 0;
-        next.maintenance_lift_count = 0;
-        next.maintenance_count = 0;
-        next.last_maintenance_total = 0;
-        next.maintenance_due = 0;
-        next.usage_epoch = Math.min(4294967295, next.usage_epoch + 1);
-        next.maintenance_revision = Math.min(4294967295, next.maintenance_revision + 1);
+        console.warn(`[MQTT] reset_usage response missing device ledger; keeping cached counters device=${deviceId} msg_id=${msgId || '-'}`);
+        return;
       }
+      const next = resolveMaintenanceStatus(current, reported);
       db.prepare(`UPDATE device_status SET total_lift_count=?, maintenance_lift_count=?, maintenance_threshold=?,
         maintenance_count=?, last_maintenance_total=?, maintenance_due=?, usage_epoch=?, maintenance_revision=? WHERE device_id=?`).run(
         next.total_lift_count, next.maintenance_lift_count, next.maintenance_threshold, next.maintenance_count,

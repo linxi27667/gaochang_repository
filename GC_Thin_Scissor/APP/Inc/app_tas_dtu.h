@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 #ifndef TAS_DTU_BROKER_HOST
-#define TAS_DTU_BROKER_HOST              "8.134.167.240"
+#define TAS_DTU_BROKER_HOST              "8.134.201.118"
 #endif
 
 #ifndef TAS_DTU_BROKER_PORT

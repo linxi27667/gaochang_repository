@@ -213,7 +213,7 @@ wss.on('connection', (ws, req) => {
 
 initDb();
 
-const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://8.134.167.240:1883';
+const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://127.0.0.1:1883';
 const MQTT_OPTIONS = {
   topicPrefix: process.env.MQTT_TOPIC_PREFIX || 'gaochang/lift',
   gatewayId: process.env.MQTT_GATEWAY_ID || 'f407zet6',

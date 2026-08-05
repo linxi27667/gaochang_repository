@@ -178,7 +178,7 @@ cmake --build build\Debug
 
 ```text
 AT+DTUMODE=2,1
-AT+IPPORT="8.134.167.240",1883,1
+AT+IPPORT="mqtt.gclift.net",1883,1
 AT+CLIENTID="gaochang_lift_f407zet6_dtu",1
 AT+USERPWD="","",1
 AT+MQTTSUB=1,"gaochang/lift/#",0,1,1
@@ -274,7 +274,7 @@ npm start
    - 如不再使用，移动到 `web_monitor_legacy` 或删除；
    - 若保留，必须 README 明确“旧版，不用于正式部署”。
 3. 统一环境变量：
-   - `MQTT_BROKER=mqtt://8.134.167.240:1883`
+   - `MQTT_BROKER=mqtt://mqtt.gclift.net:1883`
    - `MQTT_TOPIC_PREFIX=gaochang/lift`
    - `MQTT_GATEWAY_ID=f407zet6`
    - `MQTT_DEVICE_ID=gaochang_lift_f407zet6`
@@ -334,7 +334,7 @@ node tools/e2e_test.js
 2. MQTT Broker 开启抓包订阅：
 
 ```bash
-mqtt_sub -h 8.134.167.240 -p 1883 -t "gaochang/lift/#" -v
+mqtt_sub -h mqtt.gclift.net -p 1883 -t "gaochang/lift/#" -v
 ```
 
 3. F407 RTT/串口日志开启 DTU 日志。

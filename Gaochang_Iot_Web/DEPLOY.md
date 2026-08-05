@@ -38,6 +38,13 @@ node server.js
 #    放行 1883（MQTT，设备/DTU 需要连）
 ```
 
+## MQTT endpoint
+
+- Hardware DTUs connect to `mqtt.gclift.net:1883` through a DNS-only A record.
+- The Node service stays on the local broker: `mqtt://127.0.0.1:1883`.
+- Keep the MQTT topics, port, and anonymous-access policy unchanged during the domain migration.
+- When moving servers, deploy Mosquitto and this service first, then change the DNS A record.
+
 ## 目录结构
 
 | 路径 | 说明 |

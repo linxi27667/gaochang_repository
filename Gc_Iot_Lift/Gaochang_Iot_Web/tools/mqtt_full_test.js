@@ -5,7 +5,7 @@
 
 const mqtt = require('mqtt');
 
-const BROKER = process.env.MQTT_BROKER || 'mqtt://8.134.167.240:1883';
+const BROKER = process.env.MQTT_BROKER || 'mqtt://8.134.201.118:1883';
 const TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX || 'gaochang/lift';
 const GATEWAY_ID = process.env.MQTT_GATEWAY_ID || 'f407zet6';
 const DEVICE_ID = process.env.MQTT_DEVICE_ID || 'gaochang_lift_f407zet6';

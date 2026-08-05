@@ -354,7 +354,7 @@ AT+IPPORT="服务器地址",端口,通道
 示例：
 
 ```text
-AT+IPPORT="8.134.167.240",1883,1
+AT+IPPORT="mqtt.gclift.net",1883,1
 ```
 
 参数：
@@ -554,7 +554,7 @@ AT+UARTCFG?
 +++
 AT
 AT+DTUMODE=2,1
-AT+IPPORT="8.134.167.240",1883,1
+AT+IPPORT="mqtt.gclift.net",1883,1
 AT+CLIENTID="gaochang_lift_f407zet6_dtu",1
 AT+USERPWD="","",1
 AT+MQTTSUB=1,"gaochang/lift/#",0,1,1
@@ -579,7 +579,7 @@ AT+CFUN=1,1
 +++
 AT
 AT+DTUMODE=2,1
-AT+IPPORT="8.134.167.240",1883,1
+AT+IPPORT="mqtt.gclift.net",1883,1
 AT+CLIENTID="gaochang_lift_f407zet6_dtu",1
 AT+USERPWD="","",1
 AT+MQTTSUB=1,"gaochang/lift/#",0,1,1
@@ -858,7 +858,7 @@ DTU 会把 MQTT payload 原样送到串口。STM32 应按 JSON 对象边界解�
 
 Web 后端必须做到：
 
-- 连接同一个 Broker：`mqtt://8.134.167.240:1883`；
+- 连接同一个 Broker：`mqtt://mqtt.gclift.net:1883`；
 - 订阅：
   - `gaochang/lift/+/telemetry`
   - `gaochang/lift/+/status`
@@ -1008,13 +1008,13 @@ AT+CSQ
 Broker 侧订阅：
 
 ```bash
-mqtt_sub -h 8.134.167.240 -p 1883 -t "gaochang/lift/#" -v
+mqtt_sub -h mqtt.gclift.net -p 1883 -t "gaochang/lift/#" -v
 ```
 
 下发测试：
 
 ```bash
-mqtt_pub -h 8.134.167.240 -p 1883 \
+mqtt_pub -h mqtt.gclift.net -p 1883 \
   -t "gaochang/lift/f407zet6/command" \
   -m "{\"type\":\"command\",\"device\":\"gaochang_lift_f407zet6\",\"cmd\":\"ping\",\"msg_id\":\"test001\"}"
 ```

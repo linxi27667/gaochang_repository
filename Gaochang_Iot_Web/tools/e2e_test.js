@@ -6,7 +6,7 @@
 const mqtt = require('mqtt');
 const http = require('http');
 
-const BROKER = process.env.MQTT_BROKER || 'mqtt://8.134.201.118:1883';
+const BROKER = process.env.MQTT_BROKER || 'mqtt://mqtt.gclift.net:1883';
 const API_BASE = process.env.API_BASE || 'http://localhost:3000/api';
 const TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX || 'gaochang/lift';
 const GATEWAY_ID = process.env.MQTT_GATEWAY_ID || 'f407zet6';

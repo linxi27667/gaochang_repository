@@ -27,7 +27,7 @@
 默认配置可通过环境变量覆盖：
 
 ```text
-MQTT_BROKER=mqtt://8.134.167.240:1883
+MQTT_BROKER=mqtt://127.0.0.1:1883
 MQTT_TOPIC_PREFIX=gaochang/lift
 MQTT_DEVICE_ID=gaochang_lift_f407zet6
 PORT=3000

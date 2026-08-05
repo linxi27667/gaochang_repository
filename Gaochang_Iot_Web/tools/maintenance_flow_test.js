@@ -13,7 +13,7 @@ const mqtt = require('mqtt');
 
 const projectRoot = path.resolve(__dirname, '..');
 const runId = `${Date.now().toString(36)}-${process.pid}`;
-const broker = process.env.MQTT_BROKER || 'mqtt://8.134.201.118:1883';
+const broker = process.env.MQTT_BROKER || 'mqtt://mqtt.gclift.net:1883';
 const topicPrefix = process.env.MQTT_TOPIC_PREFIX || `gaochang/test-maint-${runId}`;
 const v1Prefix = process.env.MQTT_V1_PREFIX || `${topicPrefix}/v1`;
 const port = Number(process.env.TEST_PORT || (3300 + (process.pid % 500)));

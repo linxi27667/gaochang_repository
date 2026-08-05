@@ -123,8 +123,9 @@ router.get('/export', authMiddleware, (req, res) => {
   res.send(csv);
 });
 
-// 平台保养登记(不发送 MQTT,仅 Web 端记录)
-// 登记时将当前 total_lift_count 设为基准,后续周期 = 累计 − 基准
+// 兼容旧版前端的保养入口。
+// 计数只能由设备 Flash 维护；此接口仅转发 maintenance_done MQTT 命令，
+// 设备成功回执后由 mqtt-bridge.js 写入维护记录。
 // POST /api/maintenance/register_done/GC-2026-00001
 router.post('/register_done/:deviceId', authMiddleware, (req, res) => {
   const db = getDb();
@@ -135,34 +136,31 @@ router.post('/register_done/:deviceId', authMiddleware, (req, res) => {
     return res.status(403).json({ error: '无权操作该设备' });
   }
 
-  // 获取设备当前累计举升
-  const status = db.prepare('SELECT total_lift_count FROM device_status WHERE device_id = ?').get(deviceId);
-  if (!status) {
-    return res.status(404).json({ error: '设备状态不存在' });
+  const device = db.prepare('SELECT device_id, name FROM devices WHERE device_id = ?').get(deviceId);
+  if (!device) return res.status(404).json({ error: '设备不存在' });
+
+  // 复用命令路由的入队逻辑，确保旧版客户端也走同一套回执状态机。
+  const commandsRouter = require('./commands');
+  const msgId = commandsRouter.createMsgId();
+  const queued = commandsRouter.enqueueAndSendCommand(
+    db, deviceId, 'maintenance_done', msgId, {}, req.user
+  );
+  db.prepare('INSERT INTO operation_logs (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(req.user.id, 'maintenance_done', deviceId, `device ${device.name} (legacy endpoint)`, queued.sent ? 'sent' : 'send_failed', nowISO());
+
+  if (!queued.sent) {
+    return res.status(503).json({
+      error: queued.error || 'MQTT未连接，保养命令发送失败',
+      msg_id: queued.msg_id || msgId,
+      status: 'failed'
+    });
   }
 
-  const totalLift = Number(status.total_lift_count) || 0;
-  const now = nowISO();
-
-  // 更新设备状态:记录本次保养基准,增加保养次数,清除到期标记
-  db.prepare(`
-    UPDATE device_status SET
-      last_maintenance_total = ?,
-      maintenance_count = maintenance_count + 1,
-      maintenance_due = 0
-    WHERE device_id = ?
-  `).run(totalLift, deviceId);
-
-  // 插入保养记录
-  db.prepare(
-    'INSERT INTO maintenance_records (device_id, type, description, handler, result, next_date, cost, created_at, total_lift_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(deviceId, '平台保养', `累计举升 ${totalLift} 次时登记`, (req.user.real_name || req.user.username), '完成', '', 0, now, totalLift);
-
-  // 记录操作日志
-  db.prepare('INSERT INTO operation_logs (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(req.user.id, '平台保养登记', deviceId, `基准举升=${totalLift}`, '成功', now);
-
-  res.json({ message: '保养已登记', total_lift_count: totalLift });
+  res.json({
+    message: queued.existing ? '保养命令已在等待设备确认' : '保养命令已发送，等待设备确认',
+    msg_id: queued.msg_id,
+    status: queued.status
+  });
 });
 
 module.exports = router;

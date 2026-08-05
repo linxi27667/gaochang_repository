@@ -44,6 +44,21 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
   // Destructive commands are idempotent by persistent firmware msg_id dedupe.
   const maxAttempts = CMD_MAX_ATTEMPTS;
 
+  // A second browser tab must not create a new maintenance message while the
+  // first one is still awaiting the device response. Reuse the active message
+  // ID so the firmware cannot count one physical service twice.
+  if (cmd === 'maintenance_done') {
+    const active = db.prepare(`
+      SELECT msg_id, status
+      FROM command_queue
+      WHERE device_id = ? AND cmd = ? AND status IN ('pending', 'sent')
+      ORDER BY id DESC LIMIT 1
+    `).get(deviceId, cmd);
+    if (active) {
+      return { msg_id: active.msg_id, sent: true, status: active.status, existing: true, error: '' };
+    }
+  }
+
   // 查找设备的 chip_uid
   let chipUid = '';
   try {
@@ -183,10 +198,11 @@ router.post('/maintenance_done/:deviceId', authMiddleware, requireDeviceAccess, 
   const device = db.prepare('SELECT device_id, name FROM devices WHERE device_id = ?').get(deviceId);
   if (!device) return res.status(404).json({ error: '设备不存在' });
   const msgId = createMsgId();
-  const { sent, status } = enqueueAndSendCommand(db, deviceId, 'maintenance_done', msgId, {}, req.user);
+  const queued = enqueueAndSendCommand(db, deviceId, 'maintenance_done', msgId, {}, req.user);
+  const { sent, status } = queued;
   logOp(req.user.id, 'maintenance_done', deviceId, `device ${device.name}`, sent ? 'sent' : 'send_failed');
-  if (!sent) return res.status(503).json({ error: 'MQTT not connected', msg_id: msgId, status: 'failed' });
-  res.json({ message: 'maintenance command sent, awaiting device response', msg_id: msgId, status });
+  if (!sent) return res.status(503).json({ error: queued.error || 'MQTT not connected', msg_id: queued.msg_id || msgId, status: 'failed' });
+  res.json({ message: queued.existing ? 'maintenance command already pending' : 'maintenance command sent, awaiting device response', msg_id: queued.msg_id, status });
 });
 
 router.post('/reset_usage/:deviceId', authMiddleware, adminOnly, requireDeviceAccess, (req, res) => {
@@ -413,4 +429,9 @@ router.get('/history/:deviceId', authMiddleware, requireDeviceAccess, (req, res)
 // 注意:set_product_type 接口已移除
 // 产品型号由固件固定,禁止通过平台远程切换型号
 
+// Expose the command primitives for the legacy maintenance endpoint. Express
+// still receives the router function; these properties are only an internal
+// compatibility bridge so both endpoints share one queue implementation.
 module.exports = router;
+module.exports.createMsgId = createMsgId;
+module.exports.enqueueAndSendCommand = enqueueAndSendCommand;

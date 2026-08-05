@@ -43,7 +43,9 @@ const mqttStreamCarryByTopic = new Map();
 
 const ALARM_MESSAGES = {
   collision: '碰撞报警',
-  stall: '失速报警',
+  // The firmware reports an operation timeout as "stall"; without encoder feedback
+  // this is not enough evidence to call it a mechanical stall.
+  stall: '运行超时',
   fault: '设备故障',
   balance_timeout: '平衡超时报警',
   safety_bar: '安全杆触发',
@@ -344,7 +346,7 @@ const LOCK_TELEMETRY_GUARD_MS = 30000;
 
 const PRODUCT_LOG_CAPABILITIES = {
   double_post: { photo: false, lower: false, rotary: false },
-  small_scissor: { photo: true, lower: false, rotary: false },
+  small_scissor: { photo: true, lower: true, rotary: false },
   thin_scissor: { photo: true, lower: true, rotary: false },
   large_scissor: { photo: true, lower: true, rotary: true }
 };
@@ -419,7 +421,7 @@ function handleV1Telemetry(deviceId, chipUid, data, registry, partial = false) {
   normalized.uid = chipUid;
   normalized.chip_uid = chipUid;
   if (registry.product_type) normalized.product_type = registry.product_type;
-  if (partial) mergePartialStatus(deviceId, normalized);
+  if (partial) mergePartialStatus(deviceId, normalized, adapted);
   handleStatusUpdate(deviceId, normalized);
 }
 
@@ -442,7 +444,7 @@ function applyLockTelemetryGuard(deviceId, telemetry) {
   console.warn(`[CMD] stale lock telemetry suppressed device=${deviceId} expected=${Number(guard.locked)} reported=${Number(reportedLocked)} msg_id=${guard.msgId} at_ms=${Date.now()}`);
 }
 
-function mergePartialStatus(deviceId, normalized) {
+function mergePartialStatus(deviceId, normalized, raw = {}) {
   const current = getDb().prepare('SELECT * FROM device_status WHERE device_id = ?').get(deviceId);
   if (!current) return normalized;
   const preserve = ['run_count', 'run_time_s', 'total_run_ms', 'up_count', 'down_count', 'lock_count',
@@ -457,6 +459,20 @@ function mergePartialStatus(deviceId, normalized) {
     try { newValue = objectOrEmpty(JSON.parse(normalized[key] || '{}')); } catch (e) { /* invalid payload JSON */ }
     normalized[key] = JSON.stringify({ ...oldValue, ...newValue });
   }
+
+  const safety = objectOrEmpty(raw.safety);
+  const io = objectOrEmpty(raw.io);
+  const ioInput = objectOrEmpty(raw.io_input || io.input);
+  const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+  const lowerReported = hasOwn(raw, 'lower_limit') || hasOwn(safety, 'lower') ||
+    hasOwn(safety, 'lower_limit') || hasOwn(ioInput, 'lower_limit') || hasOwn(ioInput, 'limit_down');
+  const upperReported = hasOwn(raw, 'upper_limit') || hasOwn(safety, 'upper') ||
+    hasOwn(safety, 'upper_limit') || hasOwn(ioInput, 'upper_limit') || hasOwn(ioInput, 'limit_up');
+
+  // status/command_response packets often omit IO. Treat omitted limits as unchanged,
+  // rather than overwriting the last telemetry value with normalizeTelemetry's default 0.
+  if (!lowerReported) normalized.lower_limit = current.lower_limit;
+  if (!upperReported) normalized.upper_limit = current.upper_limit;
   return normalized;
 }
 

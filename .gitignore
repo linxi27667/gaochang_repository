@@ -1,0 +1,52 @@
+# Build output
+build/
+Debug/
+Release/
+Objects/
+Listings/
+*.o
+*.obj
+*.elf
+*.hex
+*.axf
+*.htm
+*.lnp
+*.lst
+*.crf
+*.d
+*.dep
+*.bin
+*.map
+*.exe
+
+# Logs and temporary debug captures
+logs/
+*.log
+rtt_capture*.txt
+rtt_logger*.txt
+jlink_*.txt
+sram_dump.bin
+
+# Test output
+Tests/*/out/
+
+# Web dependencies and local runtime data
+node_modules/
+*.db
+*.sqlite
+*.sqlite3
+.env
+Gaochang_Iot_Web/Gaochang_Iot_Web
+
+# Local/editor state
+.vs/
+.vscode/
+.idea/
+.claude/
+.agents/
+.sisyphus/
+.superpowers/
+
+# OS files
+Thumbs.db
+desktop.ini

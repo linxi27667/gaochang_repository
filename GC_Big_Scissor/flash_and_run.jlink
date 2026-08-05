@@ -1,0 +1,9 @@
+device STM32F407ZG
+speed 4000
+if SWD
+connect
+erase
+loadfile "e:\MCU\gaochang\code\GC-DaJian\MDK-ARM\gaochang_lift_2\gaochang_lift_2.hex"
+r
+g
+exit

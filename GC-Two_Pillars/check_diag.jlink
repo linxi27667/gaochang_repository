@@ -1,0 +1,9 @@
+device STM32F407ZG
+speed 4000
+if SWD
+connect
+mem8 0x200001dc,1
+mem8 0x200001dd,1
+mem8 0x200001de,1
+mem32 0x2000016c,1
+exit

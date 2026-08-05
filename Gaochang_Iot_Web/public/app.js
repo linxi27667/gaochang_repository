@@ -10,6 +10,7 @@ let unackAlarmCount = 0;
 let productMetadata = {};
 const commandStateByKey = new Map();
 let maintenanceReminderShown = false;
+let activeFilterGroup = 'all';
 
 function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('lift_user') || 'null'); }
@@ -20,7 +21,7 @@ function readStoredUser() {
 const LIFT_MODELS = ['GC-4.0sle', 'GC-4.0sb', 'GC-4.0MSL', 'GC-4.0PRO-DW'];
 const PRODUCT_CAPABILITIES = {
   double_post: { refill: false, photoelectric: false, rotary: false, lowerLimit: false },
-  small_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: false },
+  small_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: true },
   thin_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: true },
   large_scissor: { refill: true, photoelectric: true, rotary: true, lowerLimit: true }
 };
@@ -480,7 +481,7 @@ function showMaintenanceReminderOnce() {
 function getStateText(s) { const map = { idle: t('state.idle'), up: t('state.up'), down: t('state.down'), stop: t('state.stop'), rising: '上升中', dropping: '下降中', locked: t('status.locked'), refilling: '补油中', estop: '急停', photo_alarm: '光电报警', maintenance_due: t('status.maintenance') }; return map[s] || s; }
 function getAlarmText(a, productType) {
   if (isAlarmHidden(a, productType)) return t('alarm.none');
-  const map = { none: t('alarm.none'), fault: '设备故障', stall: '堵转报警', balance_timeout: t('alarm.balance_timeout'), safety_bar: t('alarm.safety_bar'), overheight: t('alarm.overheight'), Emergency: t('alarm.Emergency'), estop: '急停触发', photo_alarm: '光电报警' };
+  const map = { none: t('alarm.none'), fault: '设备故障', stall: t('alarm.stall'), balance_timeout: t('alarm.balance_timeout'), safety_bar: t('alarm.safety_bar'), overheight: t('alarm.overheight'), Emergency: t('alarm.Emergency'), estop: '急停触发', photo_alarm: '光电报警' };
   return map[a] || a;
 }
 
@@ -827,18 +828,18 @@ function renderDevices() {
   const addBtnHtml = isAdmin
     ? `<button class="btn btn-primary" onclick="showAddDeviceModal()">+ ${t('devices.addDevice')}</button>`
     : `<button class="btn btn-primary" onclick="showBindDeviceModal()">+ ${t('devices.addDevice')}</button>`;
-  const cardsHtml = devices.length === 0
+  const filteredDevices = activeFilterGroup === 'all' ? devices : devices.filter(d => (d.group || t('devices.defaultGroup')) === activeFilterGroup);
+  const filteredCardsHtml = filteredDevices.length === 0
     ? `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('devices.noDevices')}</h3><p>${t('devices.noDevicesSub')}</p></div>`
-    : `<div class="device-cards" id="device-cards-container">${devices.map(d => renderDeviceCardWithActions(d, canControlBoundDevices)).join('')}</div>`;
+    : `<div class="device-cards" id="device-cards-container">${filteredDevices.map(d => renderDeviceCardWithActions(d, canControlBoundDevices)).join('')}</div>`;
   return `
     <div class="filter-bar">
       <div class="tab-group">
-        <button class="tab-btn active" onclick="filterDeviceView('all', this)">${t('common.all')}(${devices.length})</button>
-        ${groups.map(g => `<button class="tab-btn" onclick="filterDeviceView('${g}', this)">${g}</button>`).join('')}
+        ${['all', ...groups].map(g => `<button class="tab-btn${activeFilterGroup === g ? ' active' : ''}" onclick="filterDeviceView('${g}', this)">${g === 'all' ? t('common.all') + '(' + devices.length + ')' : g + '(' + devices.filter(d => (d.group || t('devices.defaultGroup')) === g).length + ')'}</button>`).join('')}
       </div>
       ${addBtnHtml}
     </div>
-    ${cardsHtml}
+    ${filteredCardsHtml}
   `;
 }
 
@@ -863,6 +864,7 @@ function renderDeviceCardWithActions(d, canControl) {
 }
 
 function filterDeviceView(group, btn) {
+  activeFilterGroup = group;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const filtered = group === 'all' ? devices : devices.filter(d => (d.group || t('devices.defaultGroup')) === group);
@@ -1370,7 +1372,7 @@ function finishCommandTracking(deviceId, commandName, status, detail) {
   refreshDeviceCommandControls(deviceId);
   const action = pending.action || '查询';
   showToast(status === 'succeeded' ? `${action}成功：${detail}` : `${action}失败：${detail}`, status === 'succeeded' ? 'success' : 'error');
-  if (status === 'succeeded' && action === '解除光电报警') {
+  if (status === 'succeeded' && commandName === 'clear_alarm') {
     fetchUnackAlarms();
     if (currentPage === 'alarms') loadAlarms();
   }
@@ -1413,71 +1415,263 @@ async function sendBuzzerCmd(deviceId, cmd) {
 }
 
 /* ===== Alarms Page ===== */
-function renderAlarms() {
-  return `
-    <div class="filter-bar">
-      <div class="form-group" style="margin-bottom:0">
-        <select id="alarm-filter-ack" onchange="loadAlarms()">
-          <option value="">${t('alarms.all')}</option>
-          <option value="unack">${t('alarms.unack')}</option>
-          <option value="ack">${t('alarms.acked')}</option>
-        </select>
-      </div>
-      <button class="btn btn-outline" onclick="loadAlarms()">${t('common.refresh')}</button>
-    </div>
-    <div id="alarms-list"><div class="loading">${t('common.loading')}</div></div>`;
+const ALARM_TYPE_LABELS = {
+  collision: '碰撞报警', collision_up: '上行碰撞', collision_down: '下行碰撞',
+  stall: '运行超时', fault: '设备故障', balance_timeout: '平衡超时',
+  safety_bar: '安全杆触发', overheight: '超高报警', Emergency: '急停触发',
+  estop: '急停触发', photo_alarm: '光电报警', unknown: '未知报警'
+};
+const ALARM_FILTER_TYPES = ['fault', 'stall', 'photo_alarm', 'safety_bar', 'overheight', 'balance_timeout', 'estop', 'unknown'];
+let alarmRecords = [];
+let alarmSummary = null;
+let alarmRequestSerial = 0;
+let alarmFilters = {
+  status: 'active', level: '', deviceId: '', type: '', query: '', range: '7d', startDate: '', endDate: ''
+};
+
+function alarmTypeLabel(type) { return ALARM_TYPE_LABELS[type] || type || '未知报警'; }
+function alarmLevelLabel(level) { return level === 'danger' ? '严重' : '警告'; }
+function alarmStatusMeta(alarm) {
+  if (alarm.resolved_at) return { label: '已解除', cls: 'resolved' };
+  if (!alarm.acknowledged) return { label: '待确认', cls: 'unack' };
+  return { label: '已确认', cls: 'ack' };
+}
+function alarmDateInput(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function alarmRangeDates() {
+  if (alarmFilters.range === 'all') return { start: '', end: '' };
+  if (alarmFilters.range === 'custom') return { start: alarmFilters.startDate, end: alarmFilters.endDate };
+  const days = alarmFilters.range === '24h' ? 1 : alarmFilters.range === '30d' ? 30 : 7;
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  return { start: alarmDateInput(start), end: alarmDateInput(new Date()) };
+}
+function alarmQueryParams() {
+  const params = new URLSearchParams();
+  if (alarmFilters.status) params.set('status', alarmFilters.status);
+  if (alarmFilters.level) params.set('level', alarmFilters.level);
+  if (alarmFilters.deviceId) params.set('device_id', alarmFilters.deviceId);
+  if (alarmFilters.type) params.set('type', alarmFilters.type);
+  if (alarmFilters.query.trim()) params.set('q', alarmFilters.query.trim());
+  const dates = alarmRangeDates();
+  if (dates.start) params.set('start_date', dates.start);
+  if (dates.end) params.set('end_date', dates.end);
+  params.set('limit', '1000');
+  return params;
+}
+function alarmTypeOptions(selected) {
+  return `<option value="">全部类型</option>${ALARM_FILTER_TYPES.map(type => `<option value="${type}" ${selected === type ? 'selected' : ''}>${alarmTypeLabel(type)}</option>`).join('')}`;
+}
+function alarmDeviceOptions(selected) {
+  return `<option value="">全部设备</option>${devices.map(device => `<option value="${escapeHTML(device.device_id)}" ${selected === device.device_id ? 'selected' : ''}>${escapeHTML(device.name || device.device_id)}</option>`).join('')}`;
 }
 
-async function loadAlarms() {
+function renderAlarms() {
+  const summary = alarmSummary || {};
+  return `
+    <section class="alarm-console">
+      <div class="alarm-page-head">
+        <div>
+          <div class="alarm-eyebrow">SAFETY / EVENTS</div>
+          <h3>报警处置中心</h3>
+          <p>集中查看设备异常，先确认责任人，再跟踪解除结果。</p>
+        </div>
+        <div class="alarm-live-actions">
+          <span class="alarm-live-state"><span class="alarm-live-dot"></span>实时同步</span>
+          <button class="btn btn-outline btn-sm" onclick="loadAlarms({announce:true})" title="刷新报警列表">↻ 刷新</button>
+        </div>
+      </div>
+
+      <div class="alarm-summary-grid" id="alarm-summary-grid">
+        <div class="alarm-summary-card alarm-summary-total"><span class="alarm-summary-label">全部记录</span><strong id="alarm-summary-total">${summary.total ?? '—'}</strong><small>当前保留的报警事件</small></div>
+        <div class="alarm-summary-card alarm-summary-active"><span class="alarm-summary-label">待处置</span><strong id="alarm-summary-active">${summary.active ?? '—'}</strong><small>尚未解除的事件</small></div>
+        <div class="alarm-summary-card alarm-summary-unack"><span class="alarm-summary-label">未确认</span><strong id="alarm-summary-unack">${summary.unacknowledged ?? '—'}</strong><small>需要值班人员跟进</small></div>
+        <div class="alarm-summary-card alarm-summary-critical"><span class="alarm-summary-label">严重未解除</span><strong id="alarm-summary-critical">${summary.critical ?? '—'}</strong><small>高优先级安全事件</small></div>
+      </div>
+
+      <div class="alarm-filter-panel">
+        <div class="alarm-filter-heading"><div><strong>筛选报警</strong><span>组合条件后点击查询，列表和数量会同步更新</span></div><button class="alarm-clear-btn" onclick="resetAlarmFilters()">清空条件</button></div>
+        <div class="alarm-status-tabs" role="tablist" aria-label="报警状态">
+          ${[['active','待处置'],['unack','未确认'],['resolved','已解除'],['','全部']].map(([value,label]) => `<button class="alarm-status-tab ${alarmFilters.status === value ? 'active' : ''}" data-alarm-status="${value}" onclick="setAlarmStatusFilter('${value}')">${label}</button>`).join('')}
+        </div>
+        <div class="alarm-filter-grid">
+          <label class="alarm-filter-field alarm-filter-search"><span>关键词</span><input id="alarm-filter-query" value="${escapeHTML(alarmFilters.query)}" placeholder="设备名、设备ID、报警内容" onkeydown="if(event.key==='Enter')applyAlarmFilters()"></label>
+          <label class="alarm-filter-field"><span>设备</span><select id="alarm-filter-device">${alarmDeviceOptions(alarmFilters.deviceId)}</select></label>
+          <label class="alarm-filter-field"><span>报警类型</span><select id="alarm-filter-type">${alarmTypeOptions(alarmFilters.type)}</select></label>
+          <label class="alarm-filter-field"><span>级别</span><select id="alarm-filter-level"><option value="">全部级别</option><option value="danger" ${alarmFilters.level === 'danger' ? 'selected' : ''}>严重</option><option value="warning" ${alarmFilters.level === 'warning' ? 'selected' : ''}>警告</option></select></label>
+          <label class="alarm-filter-field"><span>时间范围</span><select id="alarm-filter-range" onchange="toggleAlarmCustomDates()"><option value="24h" ${alarmFilters.range === '24h' ? 'selected' : ''}>近 24 小时</option><option value="7d" ${alarmFilters.range === '7d' ? 'selected' : ''}>近 7 天</option><option value="30d" ${alarmFilters.range === '30d' ? 'selected' : ''}>近 30 天</option><option value="custom" ${alarmFilters.range === 'custom' ? 'selected' : ''}>自定义</option><option value="all" ${alarmFilters.range === 'all' ? 'selected' : ''}>全部时间</option></select></label>
+          <div class="alarm-custom-dates ${alarmFilters.range === 'custom' ? 'visible' : ''}" id="alarm-custom-dates"><input type="date" id="alarm-filter-start" value="${alarmFilters.startDate}"><span>至</span><input type="date" id="alarm-filter-end" value="${alarmFilters.endDate}"></div>
+          <button class="btn btn-primary alarm-filter-submit" onclick="applyAlarmFilters()">查询报警</button>
+        </div>
+      </div>
+
+      <div class="alarm-results-bar"><div><strong id="alarm-result-count">加载中...</strong><span id="alarm-result-meta">—</span></div><div class="alarm-results-actions"><span id="alarm-last-refresh">—</span><button class="btn btn-outline btn-sm" onclick="exportAlarmsCSV()">↓ 导出 CSV</button></div></div>
+      <div class="alarm-table-shell" id="alarms-list"><div class="loading">${t('common.loading')}</div></div>
+    </section>`;
+}
+
+function toggleAlarmCustomDates() {
+  const range = document.getElementById('alarm-filter-range')?.value || '7d';
+  document.getElementById('alarm-custom-dates')?.classList.toggle('visible', range === 'custom');
+}
+
+function setAlarmStatusFilter(status) {
+  alarmFilters.status = status;
+  document.querySelectorAll('[data-alarm-status]').forEach(button => button.classList.toggle('active', button.dataset.alarmStatus === status));
+  loadAlarms();
+}
+
+function applyAlarmFilters() {
+  alarmFilters.query = document.getElementById('alarm-filter-query')?.value || '';
+  alarmFilters.deviceId = document.getElementById('alarm-filter-device')?.value || '';
+  alarmFilters.type = document.getElementById('alarm-filter-type')?.value || '';
+  alarmFilters.level = document.getElementById('alarm-filter-level')?.value || '';
+  alarmFilters.range = document.getElementById('alarm-filter-range')?.value || '7d';
+  alarmFilters.startDate = document.getElementById('alarm-filter-start')?.value || '';
+  alarmFilters.endDate = document.getElementById('alarm-filter-end')?.value || '';
+  loadAlarms({ announce: true });
+}
+
+function resetAlarmFilters() {
+  alarmFilters = { status: 'active', level: '', deviceId: '', type: '', query: '', range: '7d', startDate: '', endDate: '' };
+  renderCurrentPage();
+  loadAlarms();
+}
+
+function renderAlarmSummary(summary = {}) {
+  const summaryIds = { total: 'total', active: 'active', unacknowledged: 'unack', critical: 'critical' };
+  Object.entries(summaryIds).forEach(([key, id]) => {
+    const node = document.getElementById(`alarm-summary-${id}`);
+    if (node) node.textContent = Number(summary[key] || 0).toLocaleString();
+  });
+}
+
+function renderAlarmResults() {
+  const list = document.getElementById('alarms-list');
+  if (!list) return;
+  const count = document.getElementById('alarm-result-count');
+  const meta = document.getElementById('alarm-result-meta');
+  if (count) count.textContent = `${alarmRecords.length.toLocaleString()} 条报警`;
+  if (meta) meta.textContent = alarmFilters.status === 'active' ? '待处置视图' : '按当前条件筛选';
+
+  if (!alarmRecords.length) {
+    list.innerHTML = `<div class="alarm-empty"><div class="alarm-empty-mark">✓</div><h4>没有符合条件的报警</h4><p>可以清空筛选，或切换到“全部”查看历史记录。</p><button class="btn btn-outline btn-sm" onclick="resetAlarmFilters()">清空筛选</button></div>`;
+    return;
+  }
+
+  const rows = alarmRecords.map(alarm => {
+    const status = alarmStatusMeta(alarm);
+    const device = devices.find(item => item.device_id === alarm.device_id);
+    const deviceOnline = !!device?.online;
+    const deviceName = escapeHTML(alarm.device_name || alarm.device_id || '未知设备');
+    const message = escapeHTML(alarm.message || '设备上报了异常状态');
+    const type = escapeHTML(alarmTypeLabel(alarm.alarm_type));
+    const level = alarm.level === 'danger' ? 'danger' : 'warning';
+    const actionButtons = [
+      !alarm.acknowledged ? `<button class="alarm-action alarm-action-ack" onclick="event.stopPropagation();ackAlarm(${alarm.id})">确认</button>` : '',
+      !alarm.resolved_at && deviceOnline ? `<button class="alarm-action alarm-action-resolve" onclick="event.stopPropagation();resolveAlarm(${alarm.id}, ${JSON.stringify(alarm.device_id || '')})">清除报警</button>` : ''
+    ].filter(Boolean).join('');
+    return `<tr class="alarm-row" data-alarm-id="${alarm.id}" onclick="showAlarmDetail(${alarm.id})">
+      <td><span class="alarm-severity ${level}"><i></i>${alarmLevelLabel(level)}</span></td>
+      <td><div class="alarm-event-title">${type}</div><div class="alarm-event-id">#${alarm.id}</div></td>
+      <td><div class="alarm-device-cell"><strong>${deviceName}</strong><small>${escapeHTML(alarm.device_id || '-')}</small><span class="alarm-device-live ${deviceOnline ? 'online' : 'offline'}">${deviceOnline ? '在线' : '离线'}</span></div></td>
+      <td><span class="alarm-message-cell">${message}</span></td>
+      <td><div class="alarm-time-cell"><strong>${formatTs(alarm.created_at)}</strong><small>${formatAlarmAge(alarm.created_at)}</small></div></td>
+      <td><span class="alarm-status ${status.cls}">${status.label}</span>${alarm.resolved_at ? `<small class="alarm-resolved-time">${formatTs(alarm.resolved_at)}</small>` : ''}</td>
+      <td><div class="alarm-row-actions">${actionButtons || '<button class="alarm-action alarm-action-view" onclick="event.stopPropagation();showAlarmDetail(' + alarm.id + ')">查看</button>'}</div></td>
+    </tr>`;
+  }).join('');
+
+  list.innerHTML = `<div class="alarm-table-scroll"><table class="alarm-table"><thead><tr><th>级别</th><th>事件</th><th>设备</th><th>现场信息</th><th>发生时间</th><th>处置状态</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function formatAlarmAge(iso) {
+  if (!iso) return '-';
+  const delta = Math.max(0, Date.now() - new Date(iso).getTime());
+  const minutes = Math.floor(delta / 60000);
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  return `${Math.floor(hours / 24)} 天前`;
+}
+
+async function loadAlarms(options = {}) {
+  const requestId = ++alarmRequestSerial;
+  const list = document.getElementById('alarms-list');
+  if (list && !alarmRecords.length) list.innerHTML = `<div class="loading">正在读取报警...</div>`;
   try {
-    const alarms = await api('/alarms');
-    const filter = document.getElementById('alarm-filter-ack')?.value || '';
-    let filtered = alarms;
-    if (filter === 'unack') filtered = alarms.filter(a => !a.acknowledged);
-    else if (filter === 'ack') filtered = alarms.filter(a => a.acknowledged);
+    const params = alarmQueryParams();
+    const [alarms, summary] = await Promise.all([api(`/alarms?${params.toString()}`), api('/alarms/summary')]);
+    if (requestId !== alarmRequestSerial) return;
+    alarmRecords = Array.isArray(alarms) ? alarms : [];
+    alarmSummary = summary || {};
+    renderAlarmSummary(alarmSummary);
+    renderAlarmResults();
+    const refreshed = document.getElementById('alarm-last-refresh');
+    if (refreshed) refreshed.textContent = `更新于 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    if (options.announce) showToast(`已更新，找到 ${alarmRecords.length} 条报警`, 'success');
+  } catch (err) {
+    if (list) list.innerHTML = `<div class="alarm-empty alarm-empty-error"><div class="alarm-empty-mark">!</div><h4>报警读取失败</h4><p>${escapeHTML(err.message)}</p><button class="btn btn-outline btn-sm" onclick="loadAlarms({announce:true})">重试</button></div>`;
+    if (options.announce) showToast(err.message, 'error');
+  }
+}
 
-    const list = document.getElementById('alarms-list');
-    if (!list) return;
-
-    if (filtered.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔔</div><h3>${t('alarms.noAlarms')}</h3><p>${t('alarms.allNormal')}</p></div>`;
-      return;
-    }
-
-    list.innerHTML = filtered.map(a => {
-      const deviceIdArg = JSON.stringify(a.device_id || '');
-      return `
-      <div class="alarm-card ${a.level || 'warning'}">
-        <div class="alarm-icon">${a.level === 'danger' || a.alarm_type === 'collision' ? '🔴' : '🟡'}</div>
-        <div class="alarm-info">
-          <div class="alarm-device">${a.device_name || a.device_id}</div>
-          <div class="alarm-message">${getAlarmText(a.alarm_type, a.product_type)}: ${a.message || ''}</div>
-          <div class="alarm-time">${formatTs(a.created_at)}</div>
-        </div>
-        <div class="alarm-actions">
-          ${!a.acknowledged ? `<button class="btn btn-sm btn-outline" onclick="ackAlarm(${a.id})">${t('alarms.acknowledge')}</button>` : ''}
-          ${!a.resolved_at ? `<button class="btn btn-sm btn-success" onclick="resolveAlarm(${a.id}, ${deviceIdArg})">${t('alarms.resolve')}</button>` : `<span style="font-size:12px;color:var(--success);">${t('alarms.resolved')}</span>`}
-        </div>
-      </div>`;
-    }).join('');
-  } catch (err) { showToast(err.message, 'error'); }
+function showAlarmDetail(id) {
+  const alarm = alarmRecords.find(item => Number(item.id) === Number(id));
+  if (!alarm) return;
+  const status = alarmStatusMeta(alarm);
+  const device = devices.find(item => item.device_id === alarm.device_id);
+  const deviceId = JSON.stringify(alarm.device_id || '');
+  document.getElementById('alarm-modal-title').textContent = `${alarmTypeLabel(alarm.alarm_type)} · #${alarm.id}`;
+  document.getElementById('alarm-modal-body').innerHTML = `
+    <div class="alarm-detail-head"><span class="alarm-severity ${alarm.level === 'danger' ? 'danger' : 'warning'}"><i></i>${alarmLevelLabel(alarm.level)}</span><span class="alarm-status ${status.cls}">${status.label}</span></div>
+    <div class="alarm-detail-grid">
+      <div><span>设备</span><strong>${escapeHTML(alarm.device_name || alarm.device_id || '-')}</strong><small>${escapeHTML(alarm.device_id || '-')}</small></div>
+      <div><span>发生时间</span><strong>${formatTs(alarm.created_at)}</strong><small>${formatAlarmAge(alarm.created_at)}</small></div>
+      <div><span>确认状态</span><strong>${alarm.acknowledged ? '已确认' : '待确认'}</strong></div>
+      <div><span>解除时间</span><strong>${alarm.resolved_at ? formatTs(alarm.resolved_at) : '尚未解除'}</strong></div>
+    </div>
+    <div class="alarm-detail-message"><span>现场信息</span><p>${escapeHTML(alarm.message || '设备未提供附加描述')}</p></div>
+    <div class="alarm-detail-actions">
+      ${!alarm.acknowledged ? `<button class="btn btn-outline" onclick="ackAlarm(${alarm.id})">确认报警</button>` : ''}
+      ${!alarm.resolved_at && device?.online ? `<button class="btn btn-danger" onclick="resolveAlarm(${alarm.id}, ${deviceId})">发送清除命令</button>` : ''}
+      ${device ? `<button class="btn btn-outline" onclick="closeModal('alarm-modal');loadPage('devices');setTimeout(() => showDeviceDetail(${deviceId}), 0)">打开设备</button>` : ''}
+    </div>`;
+  document.getElementById('alarm-modal').classList.add('active');
 }
 
 async function ackAlarm(id) {
-  try { await api(`/alarms/${id}/acknowledge`, { method: 'PUT' }); showToast(t('alarms.ackSuccess'), 'success'); fetchUnackAlarms(); loadAlarms(); } catch (err) { showToast(err.message, 'error'); }
+  try { await api(`/alarms/${id}/acknowledge`, { method: 'PUT' }); showToast(t('alarms.ackSuccess'), 'success'); closeModal('alarm-modal'); fetchUnackAlarms(); loadAlarms(); } catch (err) { showToast(err.message, 'error'); }
 }
 
 async function resolveAlarm(id, deviceId) {
   if (getPendingCommand(deviceId, 'clear_alarm')) return;
   try {
     if (!deviceId) throw new Error('缺少设备ID，无法下发清警命令');
+    const device = devices.find(item => item.device_id === deviceId);
+    if (device && !device.online) throw new Error('设备当前离线，无法发送清除命令');
     const response = await api(`/commands/clear_alarm/${encodeURIComponent(deviceId)}`, { method: 'POST' });
-    beginCommandTracking(deviceId, 'clear_alarm', response, '解除光电报警');
+    beginCommandTracking(deviceId, 'clear_alarm', response, '清除报警');
     showToast('清除报警命令已发送，等待设备确认', 'info');
     pollCommandStatus(deviceId, 'clear_alarm', response.msg_id);
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function exportAlarmsCSV() {
+  if (!alarmRecords.length) { showToast('当前没有可导出的报警', 'error'); return; }
+  const rows = [['报警ID', '设备', '设备ID', '类型', '级别', '状态', '发生时间', '解除时间', '现场信息']];
+  alarmRecords.forEach(alarm => rows.push([
+    alarm.id, alarm.device_name || '', alarm.device_id || '', alarmTypeLabel(alarm.alarm_type), alarmLevelLabel(alarm.level), alarmStatusMeta(alarm).label,
+    alarm.created_at || '', alarm.resolved_at || '', String(alarm.message || '').replace(/[\r\n,]+/g, ' ')
+  ]));
+  const csv = '\uFEFF' + rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a'); link.href = url; link.download = `报警记录_${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
 }
 
 async function previewBindDevice() {

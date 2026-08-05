@@ -8,36 +8,75 @@ const HIDDEN_COLLISION_ALARMS = ['collision', 'collision_up', 'collision_down'];
 const HIDDEN_WEB_ALARM_SQL = ` AND a.alarm_type NOT IN (${HIDDEN_COLLISION_ALARMS.map(() => '?').join(',')})
   AND NOT (a.alarm_type = 'stall' AND COALESCE(d.product_type, '') <> 'small_scissor')`;
 
-router.get('/', authMiddleware, (req, res) => {
-  const db = getDb();
-  const { device_id, type, start_date, end_date } = req.query;
+function buildAlarmFilters(req) {
+  const { device_id, type, start_date, end_date, status, level, q } = req.query;
+  const clauses = ['1=1'];
+  const params = [];
+
+  clauses.push(HIDDEN_WEB_ALARM_SQL.replace(/^\s*AND\s+/, ''));
+  params.push(...HIDDEN_COLLISION_ALARMS);
+
   const isAdmin = req.user && req.user.role === 'admin';
   const userId = req.user && req.user.id;
+  if (!isAdmin) {
+    clauses.push(`EXISTS (
+      SELECT 1 FROM device_bindings b
+      WHERE b.device_id = d.device_id AND b.user_id = ? AND b.status = 'active'
+    )`);
+    params.push(userId);
+  }
+
+  if (device_id) { clauses.push('a.device_id = ?'); params.push(String(device_id).slice(0, 128)); }
+  if (type) { clauses.push('a.alarm_type LIKE ?'); params.push(`%${String(type).slice(0, 64)}%`); }
+  if (level && ['warning', 'danger'].includes(level)) { clauses.push('a.level = ?'); params.push(level); }
+  if (status === 'unack') clauses.push('a.acknowledged = 0');
+  if (status === 'ack') clauses.push('a.acknowledged = 1');
+  if (status === 'active') clauses.push('a.resolved_at IS NULL');
+  if (status === 'resolved') clauses.push('a.resolved_at IS NOT NULL');
+  if (start_date) { clauses.push('a.created_at >= ?'); params.push(String(start_date).slice(0, 32)); }
+  if (end_date) { clauses.push('a.created_at <= ?'); params.push(String(end_date).slice(0, 32) + ' 23:59:59'); }
+  if (q) {
+    const keyword = `%${String(q).trim().slice(0, 80)}%`;
+    clauses.push(`(
+      CAST(a.id AS TEXT) LIKE ? OR a.device_id LIKE ? OR COALESCE(d.name, '') LIKE ?
+      OR a.alarm_type LIKE ? OR COALESCE(a.message, '') LIKE ?
+    )`);
+    params.push(keyword, keyword, keyword, keyword, keyword);
+  }
+
+  return { where: clauses.join(' AND '), params };
+}
+
+router.get('/', authMiddleware, (req, res) => {
+  const db = getDb();
+  const { where, params } = buildAlarmFilters(req);
+  const rawLimit = Number.parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 1000)) : 500;
 
   let sql = `SELECT a.*, d.name AS device_name, d.product_type
              FROM alarms a
              LEFT JOIN devices d ON a.device_id = d.device_id
-             WHERE 1=1`;
-  const params = [];
-  sql += HIDDEN_WEB_ALARM_SQL;
-  params.push(...HIDDEN_COLLISION_ALARMS);
-
-  // 非 admin 强制只看自己有效绑定的设备
-  if (!isAdmin) {
-    sql += ` AND EXISTS (
-      SELECT 1 FROM device_bindings b
-      WHERE b.device_id = d.device_id AND b.user_id = ? AND b.status = 'active'
-    )`;
-    params.push(userId);
-  }
-  if (device_id) { sql += ' AND a.device_id = ?'; params.push(device_id); }
-  if (type) { sql += ' AND a.alarm_type LIKE ?'; params.push(`%${type}%`); }
-  if (start_date) { sql += ' AND a.created_at >= ?'; params.push(start_date); }
-  if (end_date) { sql += " AND a.created_at <= ?"; params.push(end_date + ' 23:59:59'); }
-
-  sql += ' ORDER BY a.id DESC LIMIT 500';
+             WHERE ${where}
+             ORDER BY a.id DESC LIMIT ${limit}`;
   const alarms = db.prepare(sql).all(...params);
   res.json(alarms);
+});
+
+router.get('/summary', authMiddleware, (req, res) => {
+  const db = getDb();
+  const { where, params } = buildAlarmFilters(req);
+  const summary = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      COALESCE(SUM(CASE WHEN a.acknowledged = 0 THEN 1 ELSE 0 END), 0) AS unacknowledged,
+      COALESCE(SUM(CASE WHEN a.resolved_at IS NULL THEN 1 ELSE 0 END), 0) AS active,
+      COALESCE(SUM(CASE WHEN a.level = 'danger' AND a.resolved_at IS NULL THEN 1 ELSE 0 END), 0) AS critical,
+      MAX(a.created_at) AS latest_at
+    FROM alarms a
+    LEFT JOIN devices d ON a.device_id = d.device_id
+    WHERE ${where}
+  `).get(...params);
+  res.json(summary);
 });
 
 router.get('/unacknowledged', authMiddleware, (req, res) => {

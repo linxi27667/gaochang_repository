@@ -714,6 +714,12 @@ function getDirectionText(d) {
   if (dir === 'down') return t('state.down');
   return t('state.stop');
 }
+
+function renderOfflineCardOverlay(d) {
+  if (d.online) return '';
+  return `<div class="device-card-offline-overlay" aria-hidden="true"><span class="device-card-offline-label"><i></i>${t('status.offline')}</span></div>`;
+}
+
 // 卡片角标：仅非正常态显示，正常态返回空字符串保持卡片简洁
 function renderSafetyBadges(d) {
   if (!d.online) return '';
@@ -787,12 +793,13 @@ function renderOverview() {
 function renderDeviceCard(d) {
   const sc = getStatusClass(d);
   return `
-    <div class="device-card" onclick="showDeviceDetail('${d.device_id}')">
+    <div class="device-card${d.online ? '' : ' is-offline'}" onclick="showDeviceDetail('${d.device_id}')">
       <div class="device-card-header">
         <div><div class="device-card-name">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}${d.bound_at ? ' · 绑定 ' + formatTs(d.bound_at) : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
       ${renderDeviceSummary(d)}
+      ${renderOfflineCardOverlay(d)}
     </div>`;
 }
 
@@ -847,7 +854,7 @@ function renderDeviceCardWithActions(d, canControl) {
   const isAdmin = currentUser && currentUser.role === 'admin';
   const sc = getStatusClass(d);
   return `
-    <div class="device-card" data-device-id="${d.device_id}">
+    <div class="device-card${d.online ? '' : ' is-offline'}" data-device-id="${d.device_id}">
       <div class="device-card-header">
         <div><div class="device-card-name" style="cursor:pointer" onclick="showDeviceDetail('${d.device_id}')">${d.name || d.device_id}</div><div class="device-card-id">${d.device_id}${d.group ? ' · ' + d.group : ''}</div></div>
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
@@ -860,6 +867,7 @@ function renderDeviceCardWithActions(d, canControl) {
         ${canControl ? `<button class="btn btn-sm btn-outline" onclick="renameDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">改名</button>` : ''}
         ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">${t('common.delete')}</button>` : ''}
       </div>
+      ${renderOfflineCardOverlay(d)}
     </div>`;
 }
 

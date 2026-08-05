@@ -33,7 +33,7 @@ const PRODUCT_CONFIGS = [
   {
     product_type: 'small_scissor',
     display_name: '小剪举升机',
-    inputs_json: '["btn_up","btn_down","btn_lock","estop","limit_up","btn_refill","photoelectric"]',
+    inputs_json: '["btn_up","btn_down","btn_lock","estop","limit_up","limit_down","btn_refill","photoelectric"]',
     outputs_json: '["motor","valve_air","valve_drop"]',
     default_motor_hold_ms: 3000,
     default_motor_to_valve_delay_ms: 200,
@@ -41,7 +41,7 @@ const PRODUCT_CONFIGS = [
     has_refill: 1,
     has_photoelectric: 1,
     has_rotary: 0,
-    has_limit_down: 0,
+    has_limit_down: 1,
     firmware_folder: FIRMWARE_DISPLAY_NAMES.small_scissor
   },
   {

@@ -672,7 +672,10 @@ function renderDeclaredIo(d) {
   </div>`;
 }
 
-function renderSafetyState(label, active, action = '') {
+function renderSafetyState(label, active, action = '', available = true) {
+  if (!available) {
+    return `<div class="safety-state is-unavailable"><span class="safety-state-icon">-</span><span>${label}</span><strong>未知</strong></div>`;
+  }
   return `<div class="safety-state ${active ? 'is-alert' : 'is-normal'}"><span class="safety-state-icon">${active ? '!' : '✓'}</span><span>${label}</span><strong>${active ? '已触发' : '正常'}</strong>${action ? `<div class="safety-state-action">${action}</div>` : ''}</div>`;
 }
 
@@ -694,9 +697,9 @@ function renderPhotoAlarmAction(d, compact) {
 function renderSafetyStates(d, compact = false) {
   const caps = getProductCaps(d);
   const rows = [
-    renderSafetyState(t('safety.upperLimit'), d.upper_limit),
-    caps.lowerLimit ? renderSafetyState(t('safety.lowerLimit'), d.lower_limit) : '',
-    caps.photoelectric ? renderSafetyState('光电传感器', isPhotoelectricTriggered(d), renderPhotoAlarmAction(d, compact)) : ''
+    renderSafetyState(t('safety.upperLimit'), d.upper_limit, '', d.online),
+    caps.lowerLimit ? renderSafetyState(t('safety.lowerLimit'), d.lower_limit, '', d.online) : '',
+    caps.photoelectric ? renderSafetyState('光电传感器', isPhotoelectricTriggered(d), d.online ? renderPhotoAlarmAction(d, compact) : '', d.online) : ''
   ].filter(Boolean);
   return `<div class="safety-state-list ${compact ? 'compact' : ''}">${rows.join('')}</div>`;
 }
@@ -713,11 +716,6 @@ function getDirectionText(d) {
   if (dir === 'up') return t('state.up');
   if (dir === 'down') return t('state.down');
   return t('state.stop');
-}
-
-function renderOfflineCardOverlay(d) {
-  if (d.online) return '';
-  return `<div class="device-card-offline-overlay" aria-hidden="true"><span class="device-card-offline-label"><i></i>${t('status.offline')}</span></div>`;
 }
 
 // 卡片角标：仅非正常态显示，正常态返回空字符串保持卡片简洁
@@ -799,7 +797,6 @@ function renderDeviceCard(d) {
         <span class="status-tag status-${sc}">${getStatusText(sc)}</span>
       </div>
       ${renderDeviceSummary(d)}
-      ${renderOfflineCardOverlay(d)}
     </div>`;
 }
 
@@ -809,15 +806,15 @@ function renderDeviceSummary(d) {
   const keyInputs = declaredKeys(d, 'input').filter(key => BUTTON_INPUTS.has(key));
   const inputValues = parseJsonObject(d.io_input_json);
   return `
-    <div class="device-product-line"><span>${getProductName(d.product_type, d.product_type_name)}</span>${caps.rotary ? `<b>旋转开关当前控制：${d.rotary_switch === 'sub' ? '子机' : '主机'}</b>` : ''}</div>
+    <div class="device-product-line"><span>${getProductName(d.product_type, d.product_type_name)}</span>${caps.rotary ? `<b>旋转开关${d.online ? '当前控制' : '最后状态'}：${d.rotary_switch === 'sub' ? '子机' : '主机'}</b>` : ''}</div>
     <div class="device-runtime-strip">
       <div><span>运行状态</span><strong>${getMotionText(d)}</strong></div>
-      <div><span>运动方向</span><strong>${getDirectionIcon(d)} ${getDirectionText(d)}</strong></div>
-      <div><span>报警</span><strong class="${alarmActive ? 'text-danger' : ''}">${getAlarmText(d.alarm, d.product_type)}</strong></div>
+      <div><span>运动方向</span><strong>${d.online ? `${getDirectionIcon(d)} ${getDirectionText(d)}` : '未知'}</strong></div>
+      <div><span>报警</span><strong class="${d.online && alarmActive ? 'text-danger' : ''}">${d.online ? getAlarmText(d.alarm, d.product_type) : '未知'}</strong></div>
     </div>
     <div class="device-summary-section"><div class="device-summary-title">关键输入</div><div class="compact-inputs">${keyInputs.map(key => {
       const active = isTruthyIo(getIoValue(inputValues, key));
-      return `<span class="compact-input ${active ? 'is-active' : ''}">${IO_INPUT_LABELS[key] || key}<b>${ioStateText(key, active)}</b></span>`;
+      return `<span class="compact-input ${!d.online ? 'is-unavailable' : (active ? 'is-active' : '')}">${IO_INPUT_LABELS[key] || key}<b>${d.online ? ioStateText(key, active) : '未知'}</b></span>`;
     }).join('')}</div></div>
     <div class="device-summary-section"><div class="device-summary-title">安全状态</div>${renderSafetyStates(d, true)}</div>
     <div class="maintenance-progress ${isMaintenanceDue(d) ? 'is-due' : ''}"><div><span>保养周期</span><strong>${getCycleCount(d)} / ${d.maintenance_threshold || 5000}</strong></div><div class="maintenance-progress-track"><i style="width:${Math.min(100, (getCycleCount(d) / (d.maintenance_threshold || 5000)) * 100)}%"></i></div></div>`;
@@ -867,7 +864,6 @@ function renderDeviceCardWithActions(d, canControl) {
         ${canControl ? `<button class="btn btn-sm btn-outline" onclick="renameDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">改名</button>` : ''}
         ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_id}', '${(d.name||'').replace(/'/g,"\\'")}')">${t('common.delete')}</button>` : ''}
       </div>
-      ${renderOfflineCardOverlay(d)}
     </div>`;
 }
 

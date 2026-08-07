@@ -192,11 +192,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans
 .device-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 .device-card { background: var(--white); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); transition: var(--transition); cursor: pointer; min-width: 0; position: relative; overflow: hidden; }
 .device-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: #cbd5e1; }
-.device-card.is-offline { border-color: #cbd5e1; }
-.device-card.is-offline > :not(.device-card-offline-overlay) { filter: brightness(0.86) saturate(0.68); opacity: 1; }
-.device-card-offline-overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: flex-start; justify-content: flex-end; padding: 12px; pointer-events: none; background: rgba(15, 23, 42, 0.045); }
-.device-card-offline-label { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(51, 65, 85, 0.45); border-radius: 6px; background: rgba(51, 65, 85, 0.94); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12); }
-.device-card-offline-label i { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16); }
+.device-card.is-offline { background: #f8fafc; border-color: #cbd5e1; box-shadow: inset 3px 0 0 #94a3b8, var(--shadow-sm); }
+.device-card.is-offline:hover { border-color: #94a3b8; box-shadow: inset 3px 0 0 #64748b, var(--shadow-md); }
+.device-card.is-offline .device-runtime-strip,
+.device-card.is-offline .maintenance-progress { border-color: #d8e0e8; }
+.device-card.is-offline .device-runtime-strip > div,
+.device-card.is-offline .maintenance-progress { background: rgba(255, 255, 255, 0.72); }
 .device-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .device-card-name { font-size: 15px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
 .device-card-id { font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow-wrap: anywhere; }
@@ -233,6 +234,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans
 .compact-input b { color: var(--text-muted); font-weight: 700; }
 .compact-input.is-active { border-color: #86efac; background: var(--success-bg); color: #166534; }
 .compact-input.is-active b { color: var(--success); }
+.compact-input.is-unavailable { border-style: dashed; border-color: #cbd5e1; background: rgba(255, 255, 255, 0.66); color: #64748b; }
+.compact-input.is-unavailable b { color: #64748b; }
 .maintenance-progress { margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; }
 .maintenance-progress > div:first-child, .maintenance-dialog-progress > div:first-child { display: flex; justify-content: space-between; gap: 8px; color: var(--text-secondary); font-size: 12px; }
 .maintenance-progress strong, .maintenance-dialog-progress strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
@@ -278,6 +281,7 @@ tr:hover td { background: #f8fafc; }
 .status-normal { background: var(--success-bg); color: var(--success); }
 .status-normal::before { background: var(--success); box-shadow: 0 0 6px var(--success); }
 .status-offline { background: #f1f5f9; color: #64748b; }
+.device-card .status-offline { padding: 4px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #e2e8f0; color: #475569; font-size: 12px; }
 .status-offline::before { background: #94a3b8; }
 .status-fault { background: var(--danger-bg); color: var(--danger); }
 .status-fault::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
@@ -382,6 +386,8 @@ tr:hover td { background: #f8fafc; }
 .safety-state-action .btn { width: 100%; white-space: normal; }
 .safety-state.is-alert { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .safety-state.is-alert .safety-state-icon { background: #fee2e2; }
+.safety-state.is-unavailable { border-style: dashed; border-color: #cbd5e1; background: rgba(255, 255, 255, 0.66); color: #64748b; }
+.safety-state.is-unavailable .safety-state-icon { background: #e2e8f0; color: #64748b; }
 .alarm-code-row { margin-top: 10px; }
 .maintenance-dialog-loading, .maintenance-history-empty { padding: 30px; text-align: center; color: var(--text-muted); }
 .maintenance-dialog-status { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; color: #166534; }

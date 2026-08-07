@@ -16,9 +16,11 @@ const runId = `${Date.now().toString(36)}-${process.pid}`;
 const broker = process.env.MQTT_BROKER || 'mqtt://mqtt.gclift.net:1883';
 const topicPrefix = process.env.MQTT_TOPIC_PREFIX || `gaochang/test-firmware-matrix-${runId}`;
 const v1Prefix = process.env.MQTT_V1_PREFIX || `${topicPrefix}/v1`;
+const expectedFirmwareBroker = process.env.EXPECTED_FIRMWARE_BROKER || '';
 const port = Number(process.env.TEST_PORT || (4300 + (process.pid % 500)));
 const dbPath = path.join(os.tmpdir(), `gaochang-firmware-matrix-${runId}.db`);
 const firmwareRoot = path.resolve(projectRoot, '..');
+const discoveredFirmwareBrokers = new Set();
 
 const firmware = [
   { productType: 'double_post', folder: 'GC-Two_Pillars', identity: 'both' },
@@ -88,7 +90,9 @@ function assertFirmwareSource(config) {
   const sourcePath = path.join(firmwareRoot, config.folder, 'APP', 'Src', 'app_tas_dtu.c');
   const header = fs.readFileSync(headerPath, 'utf8');
   const source = fs.readFileSync(sourcePath, 'utf8');
-  check(`${config.productType} broker domain`, /#define\s+TAS_DTU_BROKER_HOST\s+"mqtt\.gclift\.net"/.test(header));
+  const brokerMatch = header.match(/#define\s+TAS_DTU_BROKER_HOST\s+"([^"]+)"/);
+  if (brokerMatch) discoveredFirmwareBrokers.add(brokerMatch[1]);
+  check(`${config.productType} broker host`, !!brokerMatch && (!expectedFirmwareBroker || brokerMatch[1] === expectedFirmwareBroker), brokerMatch?.[1] || 'missing');
   check(`${config.productType} MQTT port`, /#define\s+TAS_DTU_BROKER_PORT\s+1883U/.test(header));
   check(`${config.productType} v1 up topic`, /TAS_DTU_TOPIC_TELEMETRY\s+"gaochang\/lift\/v1\/devices\/\{chip_uid\}\/up"/.test(header));
   check(`${config.productType} v1 down topic`, /TAS_DTU_TOPIC_COMMAND_SUB\s+"gaochang\/lift\/v1\/devices\/\{chip_uid\}\/down"/.test(header));
@@ -283,6 +287,7 @@ async function cleanup() {
 
 async function run() {
   firmware.forEach(assertFirmwareSource);
+  check('all firmware broker hosts match', discoveredFirmwareBrokers.size === 1, [...discoveredFirmwareBrokers].join(', '));
   await startServer();
   const login = await api('POST', '/api/auth/login', { username: 'admin', password: 'admin123' });
   check('isolated admin login', login.status === 200 && !!login.data.token);

@@ -619,6 +619,8 @@ tr:hover td { background: #f8fafc; }
 .alarm-action:hover { border-color: #0f8b8d; color: #087f8c; background: #f1fbfa; }
 .alarm-action-ack { color: #8c5b15; }
 .alarm-action-resolve { color: #b5483e; }
+.alarm-action-delete { color: #b5483e; }
+.alarm-action-delete:hover { border-color: #d95546; color: #a53830; background: #fff4f2; }
 .alarm-empty { padding: 70px 20px; text-align: center; }
 .alarm-empty-mark { width: 42px; height: 42px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #18714f; background: #e5f5ec; font-size: 22px; font-weight: 750; }
 .alarm-empty-error .alarm-empty-mark { color: #b5483e; background: #fce9e6; }

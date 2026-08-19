@@ -1429,7 +1429,7 @@ let alarmRecords = [];
 let alarmSummary = null;
 let alarmRequestSerial = 0;
 let alarmFilters = {
-  status: 'active', level: '', deviceId: '', type: '', query: '', range: '7d', startDate: '', endDate: ''
+  status: '', level: '', deviceId: '', type: '', query: '', range: 'all', startDate: '', endDate: ''
 };
 
 function alarmTypeLabel(type) { return ALARM_TYPE_LABELS[type] || type || '未知报警'; }
@@ -1510,7 +1510,7 @@ function renderAlarms() {
         </div>
       </div>
 
-      <div class="alarm-results-bar"><div><strong id="alarm-result-count">加载中...</strong><span id="alarm-result-meta">—</span></div><div class="alarm-results-actions"><span id="alarm-last-refresh">—</span><button class="btn btn-outline btn-sm" onclick="exportAlarmsCSV()">↓ 导出 CSV</button></div></div>
+      <div class="alarm-results-bar"><div><strong id="alarm-result-count">加载中...</strong><span id="alarm-result-meta">—</span></div><div class="alarm-results-actions"><span id="alarm-last-refresh">—</span><button class="btn btn-outline btn-sm" onclick="exportAlarmsCSV()">↓ 导出 CSV</button><button class="btn btn-danger btn-sm" onclick="deleteFilteredAlarms()">清空当前记录</button></div></div>
       <div class="alarm-table-shell" id="alarms-list"><div class="loading">${t('common.loading')}</div></div>
     </section>`;
 }
@@ -1538,7 +1538,7 @@ function applyAlarmFilters() {
 }
 
 function resetAlarmFilters() {
-  alarmFilters = { status: 'active', level: '', deviceId: '', type: '', query: '', range: '7d', startDate: '', endDate: '' };
+  alarmFilters = { status: '', level: '', deviceId: '', type: '', query: '', range: 'all', startDate: '', endDate: '' };
   renderCurrentPage();
   loadAlarms();
 }
@@ -1574,7 +1574,8 @@ function renderAlarmResults() {
     const level = alarm.level === 'danger' ? 'danger' : 'warning';
     const actionButtons = [
       !alarm.acknowledged ? `<button class="alarm-action alarm-action-ack" onclick="event.stopPropagation();ackAlarm(${alarm.id})">确认</button>` : '',
-      !alarm.resolved_at && deviceOnline ? `<button class="alarm-action alarm-action-resolve" onclick="event.stopPropagation();resolveAlarm(${alarm.id}, ${JSON.stringify(alarm.device_id || '')})">清除报警</button>` : ''
+      !alarm.resolved_at && deviceOnline ? `<button class="alarm-action alarm-action-resolve" onclick="event.stopPropagation();resolveAlarm(${alarm.id}, ${JSON.stringify(alarm.device_id || '')})">清除报警</button>` : '',
+      `<button class="alarm-action alarm-action-delete" onclick="event.stopPropagation();deleteAlarmRecord(${alarm.id})">删除记录</button>`
     ].filter(Boolean).join('');
     return `<tr class="alarm-row" data-alarm-id="${alarm.id}" onclick="showAlarmDetail(${alarm.id})">
       <td><span class="alarm-severity ${level}"><i></i>${alarmLevelLabel(level)}</span></td>
@@ -1607,7 +1608,7 @@ async function loadAlarms(options = {}) {
   if (list && !alarmRecords.length) list.innerHTML = `<div class="loading">正在读取报警...</div>`;
   try {
     const params = alarmQueryParams();
-    const [alarms, summary] = await Promise.all([api(`/alarms?${params.toString()}`), api('/alarms/summary')]);
+    const [alarms, summary] = await Promise.all([api(`/alarms?${params.toString()}`), api(`/alarms/summary?${params.toString()}`)]);
     if (requestId !== alarmRequestSerial) return;
     alarmRecords = Array.isArray(alarms) ? alarms : [];
     alarmSummary = summary || {};
@@ -1641,6 +1642,7 @@ function showAlarmDetail(id) {
     <div class="alarm-detail-actions">
       ${!alarm.acknowledged ? `<button class="btn btn-outline" onclick="ackAlarm(${alarm.id})">确认报警</button>` : ''}
       ${!alarm.resolved_at && device?.online ? `<button class="btn btn-danger" onclick="resolveAlarm(${alarm.id}, ${deviceId})">发送清除命令</button>` : ''}
+      <button class="btn btn-outline" onclick="deleteAlarmRecord(${alarm.id})">删除记录</button>
       ${device ? `<button class="btn btn-outline" onclick="closeModal('alarm-modal');loadPage('devices');setTimeout(() => showDeviceDetail(${deviceId}), 0)">打开设备</button>` : ''}
     </div>`;
   document.getElementById('alarm-modal').classList.add('active');
@@ -1660,6 +1662,35 @@ async function resolveAlarm(id, deviceId) {
     beginCommandTracking(deviceId, 'clear_alarm', response, '清除报警');
     showToast('清除报警命令已发送，等待设备确认', 'info');
     pollCommandStatus(deviceId, 'clear_alarm', response.msg_id);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteAlarmRecord(id) {
+  if (!window.confirm(`确定删除报警记录 #${id} 吗？此操作只删除网站历史，不能恢复。`)) return;
+  try {
+    await api(`/alarms/${id}`, { method: 'DELETE' });
+    closeModal('alarm-modal');
+    fetchUnackAlarms();
+    loadAlarms({ announce: true });
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteFilteredAlarms() {
+  if (!alarmRecords.length) {
+    showToast('当前筛选没有可删除的报警记录', 'error');
+    return;
+  }
+  const count = alarmRecords.length;
+  if (!window.confirm(`确定删除当前筛选出的 ${count} 条报警记录吗？此操作只删除网站历史，不能恢复。`)) return;
+  try {
+    const result = await api(`/alarms?${alarmQueryParams().toString()}`, { method: 'DELETE' });
+    fetchUnackAlarms();
+    await loadAlarms();
+    showToast(result.message || `已删除 ${count} 条报警记录`, 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }

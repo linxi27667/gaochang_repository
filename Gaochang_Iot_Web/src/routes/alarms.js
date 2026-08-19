@@ -153,4 +153,48 @@ router.put('/:id/resolve', authMiddleware, (req, res) => {
   res.json({ message: '已解除' });
 });
 
+// 删除仅清理网站内的报警历史，不会向设备发送 MQTT 命令或改变设备实时状态。
+router.delete('/:id', authMiddleware, (req, res) => {
+  const db = getDb();
+  const alarmId = Number.parseInt(req.params.id, 10);
+  if (!Number.isInteger(alarmId) || alarmId < 1) {
+    return res.status(400).json({ error: '报警ID无效' });
+  }
+  if (!checkAlarmAccess(db, req, alarmId)) {
+    return res.status(403).json({ error: '无权删除该报警' });
+  }
+
+  const alarm = db.prepare('SELECT device_id FROM alarms WHERE id = ?').get(alarmId);
+  if (!alarm) return res.status(404).json({ error: '报警不存在' });
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM alarms WHERE id = ?').run(alarmId);
+    db.prepare('INSERT INTO operation_logs (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, '删除报警记录', alarm.device_id, `删除报警ID=${alarmId}`, '成功', nowISO());
+  })();
+  res.json({ message: '报警记录已删除', deleted: 1 });
+});
+
+// 仅删除当前筛选范围内、且当前用户有权限访问的报警历史。
+router.delete('/', authMiddleware, (req, res) => {
+  const db = getDb();
+  const { where, params } = buildAlarmFilters(req);
+  const deleted = db.transaction(() => {
+    const result = db.prepare(`
+      DELETE FROM alarms
+      WHERE id IN (
+        SELECT a.id FROM alarms a
+        LEFT JOIN devices d ON a.device_id = d.device_id
+        WHERE ${where}
+      )
+    `).run(...params);
+    if (result.changes) {
+      db.prepare('INSERT INTO operation_logs (user_id, action, detail, result, created_at) VALUES (?, ?, ?, ?, ?)')
+        .run(req.user.id, '批量删除报警记录', `按当前筛选条件删除 ${result.changes} 条报警记录`, '成功', nowISO());
+    }
+    return result.changes;
+  })();
+  res.json({ message: `已删除 ${deleted} 条报警记录`, deleted });
+});
+
 module.exports = router;

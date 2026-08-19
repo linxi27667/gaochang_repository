@@ -29,12 +29,9 @@ extern "C" {
 #define TAS_DTU_AT_PASSWORD              "usr.cn#"
 
 #define TAS_DTU_PRIMARY_BAUD             9600U
-#define TAS_DTU_FALLBACK_BAUD            115200U
 
 #define TAS_DTU_STARTUP_WAIT_MS           3000U
-#define TAS_DTU_LINK_POLL_INTERVAL_MS    15000U
-#define TAS_DTU_LINK_POLL_COUNT_9600     6U
-#define TAS_DTU_LINK_POLL_COUNT_115200   2U
+#define TAS_DTU_MQTT_KEEPALIVE_SEC         120U
 #define TAS_DTU_CONFIGURE_WAIT_MS        180000U
 
 #define TAS_DTU_RX_DMA_SIZE              512U

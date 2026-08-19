@@ -65,7 +65,6 @@ typedef struct
 
 static tas_dtu_cmd_cache_t g_tas_dtu_cmd_cache[TAS_DTU_MSG_ID_CACHE_SIZE];
 static uint8_t g_tas_dtu_cmd_cache_next;
-static uint8_t g_tas_dtu_saved_config_mismatch;
 
 /* ================= Private Helpers ================= */
 
@@ -702,7 +701,9 @@ static tas_dtu_result_t App_TasDtu_ConfigMqttChannel(void)
         return result;
     }
 
-    result = App_TasDtu_SendConfigCommand("AT+MQTTKEEP=30,1", 3000U);
+    result = App_TasDtu_SendConfigFormat(3000U,
+                                         "AT+MQTTKEEP=%u,1",
+                                         (unsigned int)TAS_DTU_MQTT_KEEPALIVE_SEC);
     if (result != TAS_DTU_RESULT_OK)
     {
         return result;
@@ -1078,7 +1079,6 @@ static tas_dtu_result_t App_TasDtu_QuerySavedMqttLink(void)
 
     if (App_TasDtu_SavedMqttConfigMatches() == 0U)
     {
-        g_tas_dtu_saved_config_mismatch = 1U;
         App_TasDtu_FlushInput();
         (void)App_TasDtu_ExitCommandMode();
         return TAS_DTU_RESULT_NOT_READY;
@@ -1110,46 +1110,6 @@ static tas_dtu_result_t App_TasDtu_QuerySavedMqttLinkAtBaud(uint32_t baud)
 
     DTU_CONNECT_LOG_A("DTU", "[DTU] probe saved MQTT link at %lu", (unsigned long)baud);
     return App_TasDtu_QuerySavedMqttLink();
-}
-
-static tas_dtu_result_t App_TasDtu_PollMqttLinkAtBaud(uint32_t baud,
-                                                        uint32_t poll_interval_ms,
-                                                        uint32_t max_polls)
-{
-    tas_dtu_result_t result;
-    uint32_t i;
-
-    for (i = 0U; i < max_polls; i++)
-    {
-        DTU_CONNECT_LOG_A("DTU", "[DTU] poll ASKCONNECT at %lu (%lu/%lu)",
-               (unsigned long)baud,
-               (unsigned long)(i + 1U),
-               (unsigned long)max_polls);
-
-        result = App_TasDtu_QuerySavedMqttLinkAtBaud(baud);
-        if (g_tas_dtu_saved_config_mismatch != 0U)
-        {
-            return TAS_DTU_RESULT_NOT_READY;
-        }
-        if (result == TAS_DTU_RESULT_OK)
-        {
-            return TAS_DTU_RESULT_OK;
-        }
-
-        if (result != TAS_DTU_RESULT_NOT_READY)
-        {
-            DTU_CONNECT_LOG_W("DTU", "[DTU] poll AT error at %lu: %s",
-                   (unsigned long)baud, App_TasDtu_ResultName(result));
-            return result;
-        }
-
-        if (i < (max_polls - 1U))
-        {
-            App_TasDtu_DelayMs(poll_interval_ms);
-        }
-    }
-
-    return TAS_DTU_RESULT_NOT_READY;
 }
 
 static tas_dtu_result_t App_TasDtu_BuildTelemetryJson(char *buf,
@@ -1991,7 +1951,6 @@ tas_dtu_result_t App_TasDtu_ConfigureMqtt(void)
 
     g_tas_dtu_status.mqtt_configured = 0U;
     g_tas_dtu_status.transparent_ready = 0U;
-    g_tas_dtu_saved_config_mismatch = 0U;
 
     DTU_CONNECT_LOG_A("DTU",
            "[DTU] MQTT config start broker=%s:%u pub=%s sub=%s",
@@ -2061,7 +2020,6 @@ tas_dtu_result_t App_TasDtu_StartMqtt(void)
 
     g_tas_dtu_status.mqtt_configured = 0U;
     g_tas_dtu_status.transparent_ready = 0U;
-    g_tas_dtu_saved_config_mismatch = 0U;
 
     (void)App_TasDtu_SetUartBaud(TAS_DTU_PRIMARY_BAUD);
     App_TasDtu_FlushInput();
@@ -2077,30 +2035,13 @@ tas_dtu_result_t App_TasDtu_StartMqtt(void)
         return TAS_DTU_RESULT_OK;
     }
 
-    DTU_CONNECT_LOG_W("DTU", "[DTU] no URC, poll ASKCONNECT at %lu",
+    DTU_CONNECT_LOG_W("DTU", "[DTU] no URC, verify saved MQTT link at %lu",
            (unsigned long)TAS_DTU_PRIMARY_BAUD);
-    result = App_TasDtu_PollMqttLinkAtBaud(TAS_DTU_PRIMARY_BAUD,
-                                            TAS_DTU_LINK_POLL_INTERVAL_MS,
-                                            TAS_DTU_LINK_POLL_COUNT_9600);
+    result = App_TasDtu_QuerySavedMqttLinkAtBaud(TAS_DTU_PRIMARY_BAUD);
     if (result == TAS_DTU_RESULT_OK)
     {
         App_TasDtu_SampleCsqOnce();
         return TAS_DTU_RESULT_OK;
-    }
-
-    if (result == TAS_DTU_RESULT_NOT_READY)
-    {
-        DTU_CONNECT_LOG_W("DTU", "[DTU] poll at %lu still not connected, try %lu",
-               (unsigned long)TAS_DTU_PRIMARY_BAUD,
-               (unsigned long)TAS_DTU_FALLBACK_BAUD);
-        result = App_TasDtu_PollMqttLinkAtBaud(TAS_DTU_FALLBACK_BAUD,
-                                                TAS_DTU_LINK_POLL_INTERVAL_MS,
-                                                TAS_DTU_LINK_POLL_COUNT_115200);
-        if (result == TAS_DTU_RESULT_OK)
-        {
-            App_TasDtu_SampleCsqOnce();
-            return TAS_DTU_RESULT_OK;
-        }
     }
 
     if (result != TAS_DTU_RESULT_NOT_READY)

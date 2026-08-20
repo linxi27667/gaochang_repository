@@ -2,6 +2,22 @@
 
 高昌物联网举升机项目集合。仓库内包含四个 STM32F407 固件项目和一个 Node.js Web 管理端。
 
+## 项目入口
+
+- 业务负责人：[[高昌机电客户服务与产品研发]]
+- 技术负责人：GcCarLifts IoT Team
+- 代码权威源：`https://github.com/GcCarLifts/Gc_Iot_Lift`（稳定后改名为 `GcLiftIoT`）
+- 正式业务资料：客户项目资料进入受控 `P:\` 项目路径；原件不进入 Git
+- 部署/运行说明：`deployments/sites/README.md`
+- 凭据：Bitwarden 组织集合 / `cred://bitwarden/corp/GcLiftIoT`
+
+## 产品边界
+
+- 本仓是面向外部客户的举升机 IoT 平台，当前学校项目是首个受控站点。
+- `GcMultiLinkLift` 是控制板、Bootloader、OTA 基础和设备协议主档。
+- `GcFactoryIoT` 是公司内部工厂设备只读采集与语义模型项目。
+- 共享板卡/协议通过 `contracts/` 的版本化兼容矩阵协作，不复制或直接合并三仓代码。
+
 ## 项目列表
 
 | 目录 | 项目 |

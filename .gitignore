@@ -39,6 +39,17 @@ node_modules/
 Gaochang_Iot_Web/Gaochang_Iot_Web
 GC_Small_Scissor/GC_Small_Scissor
 
+# Customer site runtime data and credentials
+deployments/sites/**/inventory.yaml
+deployments/sites/**/secrets.*
+deployments/sites/**/production-logs/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
 # Local/editor state
 .vs/
 .vscode/

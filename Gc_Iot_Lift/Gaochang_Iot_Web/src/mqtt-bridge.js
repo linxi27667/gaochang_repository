@@ -40,6 +40,9 @@ const REDUNDANT_COMMANDS = new Set(['lock', 'unlock']);
 const MQTT_STREAM_MAX_CARRY_BYTES = parseInt(process.env.MQTT_STREAM_MAX_CARRY_BYTES || '16384', 10);
 const MQTT_STREAM_CARRY_TTL_MS = parseInt(process.env.MQTT_STREAM_CARRY_TTL_MS || '30000', 10);
 const mqttStreamCarryByTopic = new Map();
+// Prevent duplicate shipping-reset publishes when an online device emits
+// several packets in the same event-loop window.
+const shippingResetDispatchLocks = new Set();
 
 const ALARM_MESSAGES = {
   collision: '碰撞报警',
@@ -271,6 +274,7 @@ function handleV1Message(topic, data) {
       if (recovered && !recovered.online) broadcastToClients({
         type: 'device_status', device_id: devRow.device_id, data: { online: true }
       });
+      dispatchPendingShippingReset(devRow.device_id);
     } catch (e) { /* ignore */ }
   }
 
@@ -1581,13 +1585,46 @@ function handleStatusUpdate(deviceId, data) {
         maintenance_count, last_maintenance_total, maintenance_due, usage_epoch, maintenance_revision,
         run_count, run_time_s, total_run_ms, up_count, down_count, lock_count, refill_count, estop_count, photo_alarm_count
         FROM device_status WHERE device_id = ?`).get(deviceId);
-      const maintenanceState = resolveMaintenanceStatus(currentMaintenance, data);
+      const resetPending = hasPendingShippingReset(db, deviceId);
+      const resetBaseline = resetPending && currentMaintenance ? {
+        ...currentMaintenance,
+        total_lift_count: 0,
+        maintenance_lift_count: 0,
+        maintenance_count: 0,
+        last_maintenance_total: 0,
+        maintenance_due: 0,
+        run_count: 0,
+        run_time_s: 0,
+        total_run_ms: 0,
+        up_count: 0,
+        down_count: 0,
+        lock_count: 0,
+        refill_count: 0,
+        estop_count: 0,
+        photo_alarm_count: 0,
+        last_run_at: null
+      } : currentMaintenance;
+      const maintenanceState = resolveMaintenanceStatus(resetBaseline, resetPending ? {
+        ...data,
+        total_lift_count: 0,
+        maintenance_lift_count: 0,
+        maintenance_count: 0,
+        last_maintenance_total: 0,
+        maintenance_due: 0
+      } : data);
       Object.assign(data, maintenanceState);
-      if (currentMaintenance) {
+      if (currentMaintenance && !resetPending) {
         for (const key of ['run_count', 'run_time_s', 'total_run_ms', 'up_count', 'down_count', 'lock_count',
           'refill_count', 'estop_count', 'photo_alarm_count']) {
           data[key] = Math.max(Number(currentMaintenance[key] || 0), Number(data[key] || 0));
         }
+      }
+      if (resetPending) {
+        for (const key of ['run_count', 'run_time_s', 'total_run_ms', 'up_count', 'down_count', 'lock_count',
+          'refill_count', 'estop_count', 'photo_alarm_count', 'total_lift_count', 'maintenance_lift_count',
+          'maintenance_count', 'last_maintenance_total']) data[key] = 0;
+        data.maintenance_due = 0;
+        data.last_run_at = null;
       }
       db.prepare(`UPDATE devices SET
         name = COALESCE(NULLIF(?, ''), name),
@@ -1902,6 +1939,63 @@ function createInternalMsgId(prefix = 'cmd') {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// A deferred reset is created only for an offline shipping initialization.
+// The atomic purpose transition is the durable one-shot guard: later packets
+// cannot dispatch it again because it is no longer in the deferred state.
+function dispatchPendingShippingReset(deviceId) {
+  if (shippingResetDispatchLocks.has(deviceId)) return;
+  shippingResetDispatchLocks.add(deviceId);
+  try {
+    const db = getDb();
+    const deferred = db.prepare(`
+      SELECT q.msg_id, q.chip_uid, q.operator_id, q.operator_name, d.product_type
+      FROM command_queue q
+      JOIN devices d ON d.device_id = q.device_id
+      WHERE q.device_id = ? AND q.purpose = 'shipping_reset_deferred'
+        AND q.status = 'pending'
+      ORDER BY q.id DESC LIMIT 1
+    `).get(deviceId);
+    if (!deferred) return;
+
+    const isLargeScissor = deferred.product_type === 'large_scissor';
+    const nextCmd = isLargeScissor ? 'admin_enter' : 'reset_usage';
+    const nextPurpose = isLargeScissor ? 'shipping_reset_admin_enter' : 'shipping_reset';
+    const claimed = db.prepare(`
+      UPDATE command_queue SET cmd = ?, purpose = ?
+      WHERE msg_id = ? AND purpose = 'shipping_reset_deferred' AND status = 'pending'
+    `).run(nextCmd, nextPurpose, deferred.msg_id);
+    if (claimed.changes !== 1) return;
+
+    const extra = isLargeScissor
+      ? { password: process.env.LIFT_IOT_ADMIN_PASSWORD || '123456' }
+      : {};
+    if (!sendCommand(deviceId, nextCmd, deferred.msg_id, extra)) {
+      // Keep pending for the next valid device message instead of converting a
+      // one-shot deferred command into a terminal failure because of a brief
+      // broker publishing outage.
+      db.prepare(`UPDATE command_queue SET cmd = ?, purpose = 'shipping_reset_deferred'
+        WHERE msg_id = ? AND status = 'pending'`)
+        .run(isLargeScissor ? 'admin_enter' : 'reset_usage', deferred.msg_id);
+      return;
+    }
+    console.log(`[CMD] dispatched deferred shipping reset device=${deviceId} msg_id=${deferred.msg_id} cmd=${nextCmd}`);
+  } catch (e) {
+    console.error(`[CMD] deferred shipping reset dispatch failed device=${deviceId}: ${e.message}`);
+  } finally {
+    shippingResetDispatchLocks.delete(deviceId);
+  }
+}
+
+function hasPendingShippingReset(db, deviceId) {
+  return !!db.prepare(`
+    SELECT 1 FROM command_queue
+    WHERE device_id = ?
+      AND purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+      AND status IN ('pending', 'sent')
+    LIMIT 1
+  `).get(deviceId);
+}
+
 // Continue the server-side shipping reset workflow only after the previous
 // command has a successful device response. This is intentionally kept out of
 // the public API so the MCU admin password never reaches a browser.
@@ -2122,5 +2216,7 @@ module.exports = {
     handleStatusUpdate,
     resolveMaintenanceStatus
     , applyCommandResultToDevice
+    , dispatchPendingShippingReset
+    , hasPendingShippingReset
   }
 };

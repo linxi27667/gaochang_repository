@@ -305,7 +305,7 @@ function renderShippingResetDevices(list) {
     tbody.innerHTML = list.map(row => {
         const state = shippingResetRowState(row.device_id, row.reset_pending ? '等待设备响应' : '');
         const terminal = /^(清理成功|失败|设备离线|超时|拒绝)/.test(state);
-        const canSelect = row.online && !row.reset_pending && !terminal;
+        const canSelect = !row.reset_pending && !terminal;
         const checked = shippingResetSelected.has(row.device_id);
         const statusTag = row.online ? '<span class="tag tag-success">在线</span>' : '<span class="tag tag-default">离线</span>';
         const stateClass = state === '清理成功' ? 'tag-success' : (state.startsWith('失败') || state === '超时' || state === '拒绝' ? 'tag-danger' : 'tag-warning');
@@ -331,7 +331,7 @@ function toggleShippingResetDevice(deviceId, checked) {
 
 function toggleAllShippingReset(checked) {
     (window.shippingResetRows || []).forEach(row => {
-        if (checked && row.online && !row.reset_pending && !shippingResetRowState(row.device_id)) shippingResetSelected.add(row.device_id);
+        if (checked && !row.reset_pending && !shippingResetRowState(row.device_id)) shippingResetSelected.add(row.device_id);
         if (!checked) shippingResetSelected.delete(row.device_id);
     });
     renderShippingResetDevices(window.shippingResetRows || []);
@@ -344,7 +344,7 @@ function updateShippingSelectionSummary() {
     if (summary) summary.textContent = `已选择 ${count} 台`;
     if (submit) submit.disabled = count === 0;
     const selectAll = document.getElementById('shipping-select-all');
-    const selectable = (window.shippingResetRows || []).filter(row => row.online && !row.reset_pending && !shippingResetRowState(row.device_id));
+    const selectable = (window.shippingResetRows || []).filter(row => !row.reset_pending && !shippingResetRowState(row.device_id));
     if (selectAll) {
         selectAll.checked = selectable.length > 0 && selectable.every(row => shippingResetSelected.has(row.device_id));
         selectAll.indeterminate = count > 0 && !selectAll.checked;
@@ -355,7 +355,7 @@ function startShippingReset() {
     const ids = [...shippingResetSelected];
     if (!ids.length) return;
     const names = (window.shippingResetRows || []).filter(row => shippingResetSelected.has(row.device_id)).map(row => row.name || row.device_id);
-    showConfirm(`将向 ${ids.length} 台在线设备下发清除命令：${names.join('、')}。设备成功回执后才会删除网站业务历史，资产和绑定不会改变。继续吗？`, async () => {
+    showConfirm(`将初始化 ${ids.length} 台设备：在线设备立即下发，离线设备在下次上线时自动下发。设备成功回执后完成 Flash 同步，资产和绑定不会改变。继续吗？`, async () => {
         try {
             const data = await api('/api/admin/shipping-reset/start', { method: 'POST', body: JSON.stringify({ device_ids: ids }) });
             shippingResetSelected.clear();

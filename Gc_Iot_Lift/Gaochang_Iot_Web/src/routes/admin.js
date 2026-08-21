@@ -63,6 +63,36 @@ function logOperation(userId, action, deviceId, detail, result) {
   }
 }
 
+// Clear the website-side business ledger immediately. Device identity,
+// registry and bindings are deliberately outside this transaction.
+function initializeShippingResetWebsite(db, deviceId, operatorId, msgId) {
+  const device = db.prepare(`
+    SELECT d.uid, r.serial FROM devices d
+    LEFT JOIN device_registry r ON r.uid = d.uid
+    WHERE d.device_id = ?
+  `).get(deviceId) || {};
+  db.transaction(() => {
+    db.prepare(`UPDATE device_status SET
+      run_count=0, run_time_s=0, total_run_ms=0, up_count=0, down_count=0,
+      lock_count=0, refill_count=0, estop_count=0, photo_alarm_count=0,
+      total_lift_count=0, maintenance_lift_count=0, maintenance_count=0,
+      last_maintenance_total=0, maintenance_due=0, last_run_at=NULL
+      WHERE device_id=?`).run(deviceId);
+    db.prepare('DELETE FROM alarms WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM maintenance_records WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM command_queue WHERE device_id = ?').run(deviceId);
+    if (device.uid || device.serial) {
+      db.prepare(`DELETE FROM device_operation_logs
+        WHERE (? <> '' AND device_uid = ?) OR (? <> '' AND device_serial = ?)`)
+        .run(device.uid || '', device.uid || '', device.serial || '', device.serial || '');
+    }
+    db.prepare(`INSERT INTO operation_logs
+      (user_id, action, device_id, detail, result, created_at)
+      VALUES (?, 'shipping_reset', ?, ?, 'queued', ?)`).run(
+      operatorId || null, deviceId, JSON.stringify({ msg_id: msgId, mode: 'website_initialized' }), nowISO());
+  })();
+}
+
 // 获取客户端 IP
 function getClientIp(req) {
   return req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '';
@@ -591,7 +621,7 @@ router.get('/shipping-reset/devices', (req, res) => {
                WHERE account_binding.device_id = d.device_id AND account_binding.status = 'active') AS account_names,
              (SELECT COUNT(*) FROM command_queue pending
                WHERE pending.device_id = d.device_id
-                 AND pending.purpose IN ('shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                 AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
                  AND pending.status IN ('pending', 'sent')) AS reset_pending
         FROM devices d
         LEFT JOIN device_status s ON s.device_id = d.device_id
@@ -636,13 +666,9 @@ router.post('/shipping-reset/start', (req, res) => {
         results.push({ device_id: deviceId, status: 'failed', error: '设备不存在' });
         continue;
       }
-      if (!device.online) {
-        results.push({ device_id: deviceId, status: 'failed', error: '设备离线，未执行清理' });
-        continue;
-      }
       const existing = db.prepare(`
         SELECT msg_id, status FROM command_queue
-         WHERE device_id = ? AND purpose IN ('shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+         WHERE device_id = ? AND purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
            AND status IN ('pending', 'sent')
          ORDER BY id DESC LIMIT 1
       `).get(deviceId);
@@ -654,14 +680,17 @@ router.post('/shipping-reset/start', (req, res) => {
       const msgId = createMsgId();
       const isLargeScissor = device.product_type === 'large_scissor';
       const initialCmd = isLargeScissor ? 'admin_enter' : 'reset_usage';
-      const purpose = isLargeScissor ? 'shipping_reset_admin_enter' : 'shipping_reset';
+      const purpose = device.online
+        ? (isLargeScissor ? 'shipping_reset_admin_enter' : 'shipping_reset')
+        : 'shipping_reset_deferred';
       const extra = isLargeScissor
-        ? { purpose, password: process.env.LIFT_IOT_ADMIN_PASSWORD || '123456' }
-        : { purpose };
+        ? { purpose, password: process.env.LIFT_IOT_ADMIN_PASSWORD || '123456', deferIfOffline: !device.online }
+        : { purpose, deferIfOffline: !device.online };
+      initializeShippingResetWebsite(db, deviceId, req.user.id, msgId);
       const queued = enqueueAndSendCommand(db, deviceId, initialCmd, msgId, extra, req.user);
       logOperation(req.user.id, '发货前清除', deviceId,
-        `设备 ${device.name}; ${isLargeScissor ? '先进入管理员模式，再清除 Flash 台账' : '等待设备清除 Flash 后回执'}`,
-        queued.sent ? '已下发' : '下发失败');
+        `设备 ${device.name}; ${device.online ? (isLargeScissor ? '先进入管理员模式，再清除 Flash 台账' : '等待设备清除 Flash 后回执') : '网站已初始化，等待设备上线自动清除 Flash 台账'}`,
+        queued.sent ? '已下发' : (queued.deferred ? '等待设备上线' : '下发失败'));
       results.push({
         device_id: deviceId,
         msg_id: queued.msg_id || msgId,
@@ -1547,3 +1576,4 @@ function getDateNDaysAgo(n) {
 }
 
 module.exports = router;
+module.exports.initializeShippingResetWebsite = initializeShippingResetWebsite;

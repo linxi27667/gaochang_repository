@@ -44,8 +44,10 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
   // Destructive commands are idempotent by persistent firmware msg_id dedupe.
   const maxAttempts = CMD_MAX_ATTEMPTS;
   const purpose = typeof extra.purpose === 'string' ? extra.purpose : '';
+  const deferIfOffline = extra.deferIfOffline === true;
   const commandArgs = { ...(extra || {}) };
   delete commandArgs.purpose;
+  delete commandArgs.deferIfOffline;
   // admin_enter password is a server-side credential and must not be persisted
   // in command history or exposed through the browser APIs.
   delete commandArgs.password;
@@ -83,7 +85,8 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
     return { msg_id: msgId, sent: false, status: 'failed', error: '设备未登记芯片 UID，无法发送命令' };
   }
   const online = db.prepare('SELECT online FROM device_status WHERE device_id = ?').get(deviceId);
-  if (!online || !online.online) {
+  const isOnline = !!(online && online.online);
+  if (!isOnline && !deferIfOffline) {
     console.warn(`[CMD] rejected stage=preflight reason=device_offline device=${deviceId} uid=${chipUid} cmd=${cmd} msg_id=${msgId}`);
     return { msg_id: msgId, sent: false, status: 'failed', error: '设备当前离线，未发送查询命令' };
   }
@@ -104,6 +107,11 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
     maxAttempts,
     purpose
   );
+
+  if (!isOnline && deferIfOffline) {
+    console.log(`[CMD] deferred device=${deviceId} uid=${chipUid} cmd=${cmd} msg_id=${msgId} reason=device_offline`);
+    return { msg_id: msgId, sent: false, status: 'pending', deferred: true, error: '设备离线，已排队等待上线' };
+  }
 
   // 发送命令
   const sent = sendCommand(deviceId, cmd, msgId, extra);

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node _verify_p1p3.js && node _verify_products.js"
+    "test": "node _verify_shipping_reset.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

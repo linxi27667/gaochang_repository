@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { getDb, PRODUCT_CONFIGS, FIRMWARE_DISPLAY_NAMES } = require('../database');
 const { nowISO } = require('../utils');
 const { authMiddleware, adminOnly, bumpAuthVersion } = require('./auth');
+const { createMsgId, enqueueAndSendCommand } = require('./commands');
 
 const router = express.Router();
 
@@ -537,6 +538,142 @@ router.get('/bindings', (req, res) => {
   } catch (e) {
     console.error('[admin] 查询绑定看板失败:', e);
     res.status(500).json({ error: '查询失败: ' + e.message });
+  }
+});
+
+// 发货前数据清理设备列表。账号筛选只匹配有效绑定，不改变绑定关系。
+router.get('/shipping-reset/devices', (req, res) => {
+  try {
+    const db = getDb();
+    const { account, search, product_type, online } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+
+    if (product_type) {
+      where += ' AND d.product_type = ?';
+      params.push(product_type);
+    }
+    if (online === '1' || online === '0') {
+      where += ' AND COALESCE(s.online, 0) = ?';
+      params.push(online === '1' ? 1 : 0);
+    }
+    if (search) {
+      const keyword = `%${search}%`;
+      where += ' AND (d.device_id LIKE ? OR d.name LIKE ? OR d.uid LIKE ? OR r.serial LIKE ?)';
+      params.push(keyword, keyword, keyword, keyword);
+    }
+    if (account) {
+      const keyword = `%${account}%`;
+      where += ` AND EXISTS (
+        SELECT 1 FROM device_bindings account_binding
+        JOIN users account_user ON account_user.id = account_binding.user_id
+        WHERE account_binding.device_id = d.device_id AND account_binding.status = 'active'
+          AND (account_user.username LIKE ? OR account_user.real_name LIKE ? OR account_user.phone LIKE ?)
+      )`;
+      params.push(keyword, keyword, keyword);
+    }
+
+    const rows = db.prepare(`
+      SELECT d.device_id, d.name, d.uid, d.product_type, r.serial,
+             COALESCE(s.online, 0) AS online,
+             COALESCE(s.run_count, 0) AS run_count,
+             COALESCE(s.run_time_s, 0) AS run_time_s,
+             COALESCE(s.total_lift_count, 0) AS total_lift_count,
+             COALESCE(s.maintenance_lift_count, 0) AS maintenance_lift_count,
+             (SELECT COUNT(*) FROM alarms a WHERE a.device_id = d.device_id) AS alarm_count,
+             (SELECT COUNT(*) FROM maintenance_records m WHERE m.device_id = d.device_id) AS maintenance_record_count,
+             (SELECT COUNT(*) FROM command_queue q WHERE q.device_id = d.device_id) AS command_count,
+             (SELECT COUNT(*) FROM device_operation_logs o
+               WHERE (d.uid <> '' AND o.device_uid = d.uid) OR (r.serial IS NOT NULL AND r.serial <> '' AND o.device_serial = r.serial)) AS device_log_count,
+             (SELECT GROUP_CONCAT(account_user.username, ' / ')
+                FROM device_bindings account_binding
+                JOIN users account_user ON account_user.id = account_binding.user_id
+               WHERE account_binding.device_id = d.device_id AND account_binding.status = 'active') AS account_names,
+             (SELECT COUNT(*) FROM command_queue pending
+               WHERE pending.device_id = d.device_id
+                 AND pending.purpose IN ('shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                 AND pending.status IN ('pending', 'sent')) AS reset_pending
+        FROM devices d
+        LEFT JOIN device_status s ON s.device_id = d.device_id
+        LEFT JOIN device_registry r ON r.uid = d.uid
+        ${where}
+       ORDER BY d.product_type, d.device_id
+       LIMIT 500
+    `).all(...params);
+
+    res.json({
+      list: rows.map(row => ({
+        ...row,
+        online: !!row.online,
+        reset_pending: !!row.reset_pending,
+        product_type_name: PRODUCT_TYPE_MAP[row.product_type] || row.product_type || '两柱举升机',
+        account_names: row.account_names || '未绑定账号'
+      }))
+    });
+  } catch (e) {
+    console.error('[admin] 查询发货前清理设备失败:', e);
+    res.status(500).json({ error: '查询失败: ' + e.message });
+  }
+});
+
+router.post('/shipping-reset/start', (req, res) => {
+  try {
+    const deviceIds = Array.isArray(req.body && req.body.device_ids)
+      ? [...new Set(req.body.device_ids.map(value => String(value || '').trim()).filter(Boolean))]
+      : [];
+    if (deviceIds.length === 0) return res.status(400).json({ error: '请选择至少一台设备' });
+    if (deviceIds.length > 100) return res.status(400).json({ error: '单次最多清理 100 台设备' });
+
+    const db = getDb();
+    const results = [];
+    for (const deviceId of deviceIds) {
+      const device = db.prepare(`
+        SELECT d.device_id, d.name, d.product_type, COALESCE(s.online, 0) AS online
+          FROM devices d LEFT JOIN device_status s ON s.device_id = d.device_id
+         WHERE d.device_id = ?
+      `).get(deviceId);
+      if (!device) {
+        results.push({ device_id: deviceId, status: 'failed', error: '设备不存在' });
+        continue;
+      }
+      if (!device.online) {
+        results.push({ device_id: deviceId, status: 'failed', error: '设备离线，未执行清理' });
+        continue;
+      }
+      const existing = db.prepare(`
+        SELECT msg_id, status FROM command_queue
+         WHERE device_id = ? AND purpose IN ('shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+           AND status IN ('pending', 'sent')
+         ORDER BY id DESC LIMIT 1
+      `).get(deviceId);
+      if (existing) {
+        results.push({ device_id: deviceId, msg_id: existing.msg_id, status: existing.status, existing: true });
+        continue;
+      }
+
+      const msgId = createMsgId();
+      const isLargeScissor = device.product_type === 'large_scissor';
+      const initialCmd = isLargeScissor ? 'admin_enter' : 'reset_usage';
+      const purpose = isLargeScissor ? 'shipping_reset_admin_enter' : 'shipping_reset';
+      const extra = isLargeScissor
+        ? { purpose, password: process.env.LIFT_IOT_ADMIN_PASSWORD || '123456' }
+        : { purpose };
+      const queued = enqueueAndSendCommand(db, deviceId, initialCmd, msgId, extra, req.user);
+      logOperation(req.user.id, '发货前清除', deviceId,
+        `设备 ${device.name}; ${isLargeScissor ? '先进入管理员模式，再清除 Flash 台账' : '等待设备清除 Flash 后回执'}`,
+        queued.sent ? '已下发' : '下发失败');
+      results.push({
+        device_id: deviceId,
+        msg_id: queued.msg_id || msgId,
+        status: queued.status,
+        error: queued.error || ''
+      });
+    }
+
+    res.json({ results });
+  } catch (e) {
+    console.error('[admin] 启动发货前清理失败:', e);
+    res.status(500).json({ error: '启动失败: ' + e.message });
   }
 });
 

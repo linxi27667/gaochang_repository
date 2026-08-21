@@ -235,6 +235,8 @@
         .shipping-reset-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
         .shipping-select-all { font-size: 13px; color: var(--text); cursor: pointer; }
         .shipping-reset-table td { vertical-align: top; }
+        .shipping-queue-detail { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--warning); background: rgba(245, 158, 11, .08); font-size: 11px; line-height: 1.45; white-space: nowrap; }
+        .shipping-queue-detail strong { font-size: 12px; }
         .shipping-device-primary { font-weight: 600; }
         .shipping-device-secondary { margin-top: 3px; color: var(--text-light); font-size: 11px; word-break: break-all; }
         .shipping-data-summary { color: var(--text-light); font-size: 11px; line-height: 1.7; white-space: nowrap; }
@@ -867,6 +869,10 @@
                         <option value="">全部在线状态</option>
                         <option value="1">在线</option>
                         <option value="0">离线</option>
+                    </select>
+                    <select class="select" id="shipping-queue-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部清除状态</option>
+                        <option value="1">仅显示清除队列</option>
                     </select>
                     <button class="btn btn-primary btn-sm" onclick="loadShippingResetDevices()">搜索</button>
                 </div>

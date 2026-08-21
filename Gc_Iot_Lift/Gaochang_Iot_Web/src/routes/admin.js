@@ -575,7 +575,7 @@ router.get('/bindings', (req, res) => {
 router.get('/shipping-reset/devices', (req, res) => {
   try {
     const db = getDb();
-    const { account, search, product_type, online } = req.query;
+    const { account, search, product_type, online, queue } = req.query;
     let where = 'WHERE 1=1';
     const params = [];
 
@@ -602,6 +602,14 @@ router.get('/shipping-reset/devices', (req, res) => {
       )`;
       params.push(keyword, keyword, keyword);
     }
+    if (queue === '1') {
+      where += ` AND EXISTS (
+        SELECT 1 FROM command_queue queue_filter
+         WHERE queue_filter.device_id = d.device_id
+           AND queue_filter.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+           AND queue_filter.status IN ('pending', 'sent')
+      )`;
+    }
 
     const rows = db.prepare(`
       SELECT d.device_id, d.name, d.uid, d.product_type, r.serial,
@@ -623,6 +631,36 @@ router.get('/shipping-reset/devices', (req, res) => {
                WHERE pending.device_id = d.device_id
                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
                  AND pending.status IN ('pending', 'sent')) AS reset_pending
+             ,(SELECT pending.cmd FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_cmd
+             ,(SELECT pending.msg_id FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_msg_id
+             ,(SELECT pending.status FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_status
+             ,(SELECT pending.purpose FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_purpose
+             ,(SELECT pending.created_at FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_created_at
+             ,(SELECT pending.sent_at FROM command_queue pending
+                WHERE pending.device_id = d.device_id
+                  AND pending.purpose IN ('shipping_reset_deferred', 'shipping_reset', 'shipping_reset_admin_enter', 'shipping_reset_admin_exit')
+                  AND pending.status IN ('pending', 'sent')
+                ORDER BY pending.id DESC LIMIT 1) AS reset_sent_at
         FROM devices d
         LEFT JOIN device_status s ON s.device_id = d.device_id
         LEFT JOIN device_registry r ON r.uid = d.uid
@@ -636,6 +674,14 @@ router.get('/shipping-reset/devices', (req, res) => {
         ...row,
         online: !!row.online,
         reset_pending: !!row.reset_pending,
+        reset_queue: row.reset_status ? {
+          cmd: row.reset_cmd,
+          msg_id: row.reset_msg_id,
+          status: row.reset_status,
+          purpose: row.reset_purpose,
+          created_at: row.reset_created_at,
+          sent_at: row.reset_sent_at
+        } : null,
         product_type_name: PRODUCT_TYPE_MAP[row.product_type] || row.product_type || '两柱举升机',
         account_names: row.account_names || '未绑定账号'
       }))

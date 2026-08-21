@@ -277,10 +277,12 @@ async function loadShippingResetDevices() {
         const search = document.getElementById('shipping-device-filter').value.trim();
         const productType = document.getElementById('shipping-product-filter').value;
         const online = document.getElementById('shipping-online-filter').value;
+        const queue = document.getElementById('shipping-queue-filter').value;
         if (account) params.set('account', account);
         if (search) params.set('search', search);
         if (productType) params.set('product_type', productType);
         if (online) params.set('online', online);
+        if (queue) params.set('queue', queue);
         const data = await api('/api/admin/shipping-reset/devices?' + params.toString());
         window.shippingResetRows = data.list || [];
         const visibleIds = new Set(window.shippingResetRows.map(row => row.device_id));
@@ -295,6 +297,23 @@ function shippingResetRowState(deviceId, fallback = '') {
     return shippingResetState.get(deviceId) || fallback;
 }
 
+function shippingResetQueueLabel(queue) {
+    if (!queue) return '';
+    if (queue.purpose === 'shipping_reset_deferred') return '等待设备上线';
+    if (queue.purpose === 'shipping_reset_admin_enter') return queue.status === 'sent' ? '等待大剪进入管理员模式' : '等待发送管理员验证';
+    if (queue.purpose === 'shipping_reset_admin_exit') return queue.status === 'sent' ? '等待退出管理员模式' : '等待发送退出命令';
+    if (queue.cmd === 'reset_usage') return queue.status === 'sent' ? '设备清除中，等待回执' : '等待发送清除命令';
+    return `清除队列：${queue.status}`;
+}
+
+function shippingResetQueueHtml(queue) {
+    if (!queue) return '';
+    const label = shippingResetQueueLabel(queue);
+    const created = queue.created_at ? new Date(queue.created_at).toLocaleString() : '-';
+    const sent = queue.sent_at ? new Date(queue.sent_at).toLocaleString() : '尚未下发';
+    return `<div class="shipping-queue-detail"><strong>${escapeHtml(label)}</strong><br><span>命令 ${escapeHtml(queue.cmd || '-')} · ${escapeHtml(queue.status || '-')}</span><br><span>创建 ${escapeHtml(created)} · 下发 ${escapeHtml(sent)}</span><br><span>消息 ${escapeHtml(queue.msg_id || '-')}</span></div>`;
+}
+
 function renderShippingResetDevices(list) {
     const tbody = document.getElementById('shipping-reset-tbody');
     if (!list.length) {
@@ -303,7 +322,8 @@ function renderShippingResetDevices(list) {
         return;
     }
     tbody.innerHTML = list.map(row => {
-        const state = shippingResetRowState(row.device_id, row.reset_pending ? '等待设备响应' : '');
+        const queueLabel = shippingResetQueueLabel(row.reset_queue);
+        const state = shippingResetRowState(row.device_id, queueLabel || (row.reset_pending ? '等待设备响应' : ''));
         const terminal = /^(清理成功|失败|设备离线|超时|拒绝)/.test(state);
         const canSelect = !row.reset_pending && !terminal;
         const checked = shippingResetSelected.has(row.device_id);
@@ -317,7 +337,7 @@ function renderShippingResetDevices(list) {
             <td>${escapeHtml(row.account_names)}</td>
             <td class="shipping-status-cell">${statusTag}</td>
             <td><div class="shipping-data-summary">运行 ${row.run_count || 0} 次 / ${row.run_time_s || 0} 秒<br>举升 ${row.total_lift_count || 0} 次 · 保养 ${row.maintenance_lift_count || 0} 次<br>报警 ${row.alarm_count || 0} · 保养记录 ${row.maintenance_record_count || 0} · 命令 ${row.command_count || 0} · 操作日志 ${row.device_log_count || 0}</div></td>
-            <td class="shipping-status-cell">${stateHtml}</td>
+            <td class="shipping-status-cell">${stateHtml}${shippingResetQueueHtml(row.reset_queue)}</td>
         </tr>`;
     }).join('');
     updateShippingSelectionSummary();

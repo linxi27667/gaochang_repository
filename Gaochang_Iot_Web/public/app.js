@@ -11,6 +11,8 @@ let productMetadata = {};
 const commandStateByKey = new Map();
 let maintenanceReminderShown = false;
 let activeFilterGroup = 'all';
+let overviewOnlineFilter = 'all';
+let deviceOnlineFilter = 'all';
 
 function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('lift_user') || 'null'); }
@@ -777,6 +779,7 @@ function renderOverview() {
   const offline = devices.filter(d => !d.online).length;
   const fault = devices.filter(d => d.online && hasVisibleAlarm(d)).length;
   const locked = devices.filter(d => d.locked).length;
+  const filteredDevices = validDevices.filter(d => matchesOnlineFilter(d, overviewOnlineFilter));
 
   return `
     <div class="cards-grid">
@@ -785,7 +788,10 @@ function renderOverview() {
       <div class="card fault"><div class="card-title">${t('overview.fault')}</div><div class="card-value">${fault}</div></div>
       <div class="card locked"><div class="card-title">${t('overview.locked')}</div><div class="card-value">${locked}</div></div>
     </div>
-    <div class="device-cards">${devices.map(d => renderDeviceCard(d)).join('')}</div>`;
+    ${renderOnlineFilterTabs('overview', overviewOnlineFilter)}
+    ${filteredDevices.length
+      ? `<div class="device-cards">${filteredDevices.map(d => renderDeviceCard(d)).join('')}</div>`
+      : `<div class="empty-state compact"><h3>没有符合当前状态的设备</h3><p>请选择其他在线状态查看设备。</p></div>`}`;
 }
 
 function renderDeviceCard(d) {
@@ -832,15 +838,22 @@ function renderDevices() {
   const addBtnHtml = isAdmin
     ? `<button class="btn btn-primary" onclick="showAddDeviceModal()">+ ${t('devices.addDevice')}</button>`
     : `<button class="btn btn-primary" onclick="showBindDeviceModal()">+ ${t('devices.addDevice')}</button>`;
-  const filteredDevices = activeFilterGroup === 'all' ? devices : devices.filter(d => (d.group || t('devices.defaultGroup')) === activeFilterGroup);
+  const filteredDevices = devices.filter(d => {
+    const matchesGroup = activeFilterGroup === 'all' || (d.group || t('devices.defaultGroup')) === activeFilterGroup;
+    return matchesGroup && matchesOnlineFilter(d, deviceOnlineFilter);
+  });
   const filteredCardsHtml = filteredDevices.length === 0
     ? `<div class="empty-state"><div class="empty-icon">📡</div><h3>${t('devices.noDevices')}</h3><p>${t('devices.noDevicesSub')}</p></div>`
     : `<div class="device-cards" id="device-cards-container">${filteredDevices.map(d => renderDeviceCardWithActions(d, canControlBoundDevices)).join('')}</div>`;
   return `
     <div class="filter-bar">
-      <div class="tab-group">
-        ${['all', ...groups].map(g => `<button class="tab-btn${activeFilterGroup === g ? ' active' : ''}" onclick="filterDeviceView('${g}', this)">${g === 'all' ? t('common.all') + '(' + devices.length + ')' : g + '(' + devices.filter(d => (d.group || t('devices.defaultGroup')) === g).length + ')'}</button>`).join('')}
+      <div class="filter-set">
+        <span class="filter-label">分组</span>
+        <div class="tab-group">
+          ${['all', ...groups].map(g => `<button class="tab-btn${activeFilterGroup === g ? ' active' : ''}" onclick="filterDeviceView('${g}')">${g === 'all' ? t('common.all') + '(' + devices.length + ')' : g + '(' + devices.filter(d => (d.group || t('devices.defaultGroup')) === g).length + ')'}</button>`).join('')}
+        </div>
       </div>
+      ${renderOnlineFilterTabs('devices', deviceOnlineFilter)}
       ${addBtnHtml}
     </div>
     ${filteredCardsHtml}
@@ -867,14 +880,37 @@ function renderDeviceCardWithActions(d, canControl) {
     </div>`;
 }
 
-function filterDeviceView(group, btn) {
+function matchesOnlineFilter(device, filter) {
+  if (filter === 'online') return !!device.online;
+  if (filter === 'offline') return !device.online;
+  return true;
+}
+
+function renderOnlineFilterTabs(scope, activeFilter) {
+  const onlineCount = devices.filter(d => d.online).length;
+  const offlineCount = devices.filter(d => !d.online).length;
+  const labels = [
+    ['all', `全部(${devices.length})`],
+    ['online', `在线(${onlineCount})`],
+    ['offline', `离线(${offlineCount})`]
+  ];
+  return `<div class="filter-set online-filter-set">
+    <span class="filter-label">在线状态</span>
+    <div class="tab-group status-tab-group">
+      ${labels.map(([value, label]) => `<button class="tab-btn${activeFilter === value ? ' active' : ''}" onclick="setOnlineFilter('${scope}', '${value}')">${label}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function setOnlineFilter(scope, filter) {
+  if (scope === 'overview') overviewOnlineFilter = filter;
+  else deviceOnlineFilter = filter;
+  renderCurrentPage();
+}
+
+function filterDeviceView(group) {
   activeFilterGroup = group;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const filtered = group === 'all' ? devices : devices.filter(d => (d.group || t('devices.defaultGroup')) === group);
-  const canControlBoundDevices = !!currentUser;
-  const container = document.getElementById('device-cards-container');
-  if (container) container.innerHTML = filtered.map(d => renderDeviceCardWithActions(d, canControlBoundDevices)).join('');
+  renderCurrentPage();
 }
 
 function renderLockControlButton(d) {
@@ -893,7 +929,12 @@ function refreshDeviceCard(deviceId, syncActions = false) {
   const device = devices.find(item => item.device_id === deviceId);
   const card = Array.from(document.querySelectorAll('.device-card'))
     .find(item => item.dataset.deviceId === deviceId);
-  if (!device || !card) return;
+  if (!device) return;
+  const matchesGroup = activeFilterGroup === 'all' || (device.group || t('devices.defaultGroup')) === activeFilterGroup;
+  if (!matchesGroup || !matchesOnlineFilter(device, deviceOnlineFilter) || !card) {
+    renderCurrentPage();
+    return;
+  }
 
   const template = document.createElement('template');
   template.innerHTML = renderDeviceCardWithActions(device, !!currentUser).trim();

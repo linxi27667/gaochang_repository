@@ -416,6 +416,7 @@ function init() {
   ensureColumn(db, 'command_queue', 'last_attempt_at', 'TEXT');
   ensureColumn(db, 'command_queue', 'timeout_at', 'TEXT');
   ensureColumn(db, 'command_queue', 'sent_at', 'TEXT');
+  ensureColumn(db, 'command_queue', 'purpose', "TEXT DEFAULT ''");
 
   // 设备状态表新增多产品字段
   ensureColumn(db, 'device_status', 'rotary_switch', "TEXT DEFAULT 'main'");

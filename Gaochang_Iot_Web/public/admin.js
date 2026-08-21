@@ -18,8 +18,10 @@ let logsPageSize = 20;
 let deviceOpsPage = 1;
 let deviceOpsTotal = 0;
 let deviceOpsPageSize = 20;
+const shippingResetSelected = new Set();
+const shippingResetState = new Map();
 // 各模块是否已首次加载
-const loaded = { dashboard: false, registry: false, bindings: false, users: false, logs: false, device_ops: false };
+const loaded = { dashboard: false, registry: false, bindings: false, shipping_reset: false, users: false, logs: false, device_ops: false };
 
 /* ============ 通用工具 ============ */
 
@@ -255,10 +257,139 @@ function loadSection(section) {
         case 'dashboard': loadStats(); break;
         case 'registry': loadRegistry(); break;
         case 'bindings': loadBindings(); break;
+        case 'shipping_reset': loadShippingResetDevices(); break;
         case 'approval': loadBindingRequests(); break;
         case 'users': loadUsers(); break;
         case 'logs': loadLogs(); break;
         case 'device_ops': loadDeviceOps(); loadDeviceOpStats(); break;
+    }
+}
+
+/* ============ 发货前数据清理 ============ */
+
+async function loadShippingResetDevices() {
+    const tbody = document.getElementById('shipping-reset-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">加载中...</td></tr>';
+    try {
+        const params = new URLSearchParams();
+        const account = document.getElementById('shipping-account-filter').value.trim();
+        const search = document.getElementById('shipping-device-filter').value.trim();
+        const productType = document.getElementById('shipping-product-filter').value;
+        const online = document.getElementById('shipping-online-filter').value;
+        if (account) params.set('account', account);
+        if (search) params.set('search', search);
+        if (productType) params.set('product_type', productType);
+        if (online) params.set('online', online);
+        const data = await api('/api/admin/shipping-reset/devices?' + params.toString());
+        window.shippingResetRows = data.list || [];
+        const visibleIds = new Set(window.shippingResetRows.map(row => row.device_id));
+        [...shippingResetSelected].forEach(id => { if (!visibleIds.has(id)) shippingResetSelected.delete(id); });
+        renderShippingResetDevices(window.shippingResetRows);
+    } catch (err) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="7" style="color:var(--danger);">加载失败: ' + escapeHtml(err.message) + '</td></tr>';
+    }
+}
+
+function shippingResetRowState(deviceId, fallback = '') {
+    return shippingResetState.get(deviceId) || fallback;
+}
+
+function renderShippingResetDevices(list) {
+    const tbody = document.getElementById('shipping-reset-tbody');
+    if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">没有符合筛选条件的设备</td></tr>';
+        updateShippingSelectionSummary();
+        return;
+    }
+    tbody.innerHTML = list.map(row => {
+        const state = shippingResetRowState(row.device_id, row.reset_pending ? '等待设备响应' : '');
+        const terminal = /^(清理成功|失败|设备离线|超时|拒绝)/.test(state);
+        const canSelect = row.online && !row.reset_pending && !terminal;
+        const checked = shippingResetSelected.has(row.device_id);
+        const statusTag = row.online ? '<span class="tag tag-success">在线</span>' : '<span class="tag tag-default">离线</span>';
+        const stateClass = state === '清理成功' ? 'tag-success' : (state.startsWith('失败') || state === '超时' || state === '拒绝' ? 'tag-danger' : 'tag-warning');
+        const stateHtml = state ? `<span class="tag ${stateClass}" title="${escapeHtml(state)}">${escapeHtml(state)}</span>` : '<span class="text-muted">未执行</span>';
+        return `<tr>
+            <td><input type="checkbox" ${checked ? 'checked' : ''} ${canSelect ? '' : 'disabled'} onchange="toggleShippingResetDevice('${escapeAttr(row.device_id)}', this.checked)"></td>
+            <td><div class="shipping-device-primary">${escapeHtml(row.name || row.device_id)}</div><div class="shipping-device-secondary">${escapeHtml(row.device_id)}<br>UID ${escapeHtml(row.uid || '-')} · 出厂编号 ${escapeHtml(row.serial || '-')}</div></td>
+            <td><span class="tag tag-info">${escapeHtml(row.product_type_name)}</span></td>
+            <td>${escapeHtml(row.account_names)}</td>
+            <td class="shipping-status-cell">${statusTag}</td>
+            <td><div class="shipping-data-summary">运行 ${row.run_count || 0} 次 / ${row.run_time_s || 0} 秒<br>举升 ${row.total_lift_count || 0} 次 · 保养 ${row.maintenance_lift_count || 0} 次<br>报警 ${row.alarm_count || 0} · 保养记录 ${row.maintenance_record_count || 0} · 命令 ${row.command_count || 0} · 操作日志 ${row.device_log_count || 0}</div></td>
+            <td class="shipping-status-cell">${stateHtml}</td>
+        </tr>`;
+    }).join('');
+    updateShippingSelectionSummary();
+}
+
+function toggleShippingResetDevice(deviceId, checked) {
+    if (checked) shippingResetSelected.add(deviceId);
+    else shippingResetSelected.delete(deviceId);
+    updateShippingSelectionSummary();
+}
+
+function toggleAllShippingReset(checked) {
+    (window.shippingResetRows || []).forEach(row => {
+        if (checked && row.online && !row.reset_pending && !shippingResetRowState(row.device_id)) shippingResetSelected.add(row.device_id);
+        if (!checked) shippingResetSelected.delete(row.device_id);
+    });
+    renderShippingResetDevices(window.shippingResetRows || []);
+}
+
+function updateShippingSelectionSummary() {
+    const count = shippingResetSelected.size;
+    const summary = document.getElementById('shipping-selection-summary');
+    const submit = document.getElementById('shipping-reset-submit');
+    if (summary) summary.textContent = `已选择 ${count} 台`;
+    if (submit) submit.disabled = count === 0;
+    const selectAll = document.getElementById('shipping-select-all');
+    const selectable = (window.shippingResetRows || []).filter(row => row.online && !row.reset_pending && !shippingResetRowState(row.device_id));
+    if (selectAll) {
+        selectAll.checked = selectable.length > 0 && selectable.every(row => shippingResetSelected.has(row.device_id));
+        selectAll.indeterminate = count > 0 && !selectAll.checked;
+    }
+}
+
+function startShippingReset() {
+    const ids = [...shippingResetSelected];
+    if (!ids.length) return;
+    const names = (window.shippingResetRows || []).filter(row => shippingResetSelected.has(row.device_id)).map(row => row.name || row.device_id);
+    showConfirm(`将向 ${ids.length} 台在线设备下发清除命令：${names.join('、')}。设备成功回执后才会删除网站业务历史，资产和绑定不会改变。继续吗？`, async () => {
+        try {
+            const data = await api('/api/admin/shipping-reset/start', { method: 'POST', body: JSON.stringify({ device_ids: ids }) });
+            shippingResetSelected.clear();
+            (data.results || []).forEach(item => {
+                const state = item.status === 'sent' || item.status === 'pending' ? '等待设备响应' : (item.error || '失败');
+                shippingResetState.set(item.device_id, state);
+                if (item.msg_id && (item.status === 'sent' || item.status === 'pending')) pollShippingReset(item.device_id, item.msg_id);
+            });
+            renderShippingResetDevices(window.shippingResetRows || []);
+            toast('清除命令已提交，等待设备回执', 'info');
+        } catch (err) { toast(err.message, 'error'); }
+    }, '确认发货前清除');
+}
+
+async function pollShippingReset(deviceId, msgId, attempt = 0) {
+    if (attempt > 24) { shippingResetState.set(deviceId, '超时'); renderShippingResetDevices(window.shippingResetRows || []); return; }
+    try {
+        const status = await api('/api/commands/status/' + encodeURIComponent(msgId));
+        if (status.status === 'succeeded') {
+            shippingResetState.set(deviceId, '清理成功');
+            shippingResetSelected.delete(deviceId);
+            renderShippingResetDevices(window.shippingResetRows || []);
+            toast(`${deviceId} 发货前清除成功`, 'success');
+            return;
+        }
+        if (['failed', 'rejected', 'timeout'].includes(status.status)) {
+            shippingResetState.set(deviceId, `失败：${status.result || status.status}`);
+            renderShippingResetDevices(window.shippingResetRows || []);
+            toast(`${deviceId} 清除失败`, 'error');
+            return;
+        }
+        setTimeout(() => pollShippingReset(deviceId, msgId, attempt + 1), 1000);
+    } catch (err) {
+        setTimeout(() => pollShippingReset(deviceId, msgId, attempt + 1), 1000);
     }
 }
 

@@ -230,6 +230,15 @@
             background: #fff;
             outline: none;
         }
+        .warning-banner { display: flex; gap: 10px; align-items: baseline; margin-bottom: 16px; padding: 12px 14px; border-left: 3px solid var(--warning); background: #fff8eb; color: #7a4b00; font-size: 12px; line-height: 1.6; }
+        .warning-banner strong { white-space: nowrap; }
+        .shipping-reset-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+        .shipping-select-all { font-size: 13px; color: var(--text); cursor: pointer; }
+        .shipping-reset-table td { vertical-align: top; }
+        .shipping-device-primary { font-weight: 600; }
+        .shipping-device-secondary { margin-top: 3px; color: var(--text-light); font-size: 11px; word-break: break-all; }
+        .shipping-data-summary { color: var(--text-light); font-size: 11px; line-height: 1.7; white-space: nowrap; }
+        .shipping-status-cell { white-space: nowrap; }
 
         /* 按钮 */
         .btn {
@@ -542,6 +551,8 @@
             .stats-grid { grid-template-columns: 1fr; }
             table.data-table { font-size: 12px; }
             table.data-table th, table.data-table td { padding: 8px; }
+            .warning-banner { align-items: flex-start; flex-direction: column; gap: 2px; }
+            .shipping-reset-table { min-width: 760px; }
         }
 
         .text-muted { color: var(--text-light); }
@@ -698,6 +709,9 @@
             <div class="menu-item" data-section="bindings" onclick="switchSection('bindings')">
                 <span class="icon">🔗</span><span>绑定看板</span>
             </div>
+            <div class="menu-item" data-section="shipping_reset" onclick="switchSection('shipping_reset')">
+                <span class="icon">📦</span><span>发货前清除</span>
+            </div>
             <div class="menu-item" data-section="approval" onclick="switchSection('approval')">
                 <span class="icon">✅</span><span>绑定审批</span>
             </div>
@@ -826,6 +840,46 @@
                         </tbody>
                     </table>
                     <div class="pagination" id="bindings-pagination"></div>
+                </div>
+            </div>
+
+            <!-- 发货前数据清理 -->
+            <div class="page-section" id="section-shipping_reset">
+                <div class="section-header">
+                    <div class="section-title">发货前数据清理</div>
+                    <button class="btn btn-default btn-sm" onclick="loadShippingResetDevices()">刷新</button>
+                </div>
+                <div class="warning-banner">
+                    <strong>仅清除业务数据</strong>
+                    <span>设备必须在线并成功返回 Flash 台账后才会清理。保留设备资产、UID、型号、注册信息和账号绑定关系。</span>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="shipping-account-filter" placeholder="账号：用户名 / 姓名 / 手机号" onkeydown="if(event.key==='Enter')loadShippingResetDevices()">
+                    <input type="text" class="search-input" id="shipping-device-filter" placeholder="设备名 / 设备ID / UID / 出厂编号" onkeydown="if(event.key==='Enter')loadShippingResetDevices()">
+                    <select class="select" id="shipping-product-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部型号</option>
+                        <option value="double_post">两柱举升机</option>
+                        <option value="small_scissor">小剪举升机</option>
+                        <option value="thin_scissor">超薄小剪举升机</option>
+                        <option value="large_scissor">大剪举升机</option>
+                    </select>
+                    <select class="select" id="shipping-online-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部在线状态</option>
+                        <option value="1">在线</option>
+                        <option value="0">离线</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="loadShippingResetDevices()">搜索</button>
+                </div>
+                <div class="shipping-reset-actions">
+                    <label class="shipping-select-all"><input type="checkbox" id="shipping-select-all" onchange="toggleAllShippingReset(this.checked)"> 全选当前结果</label>
+                    <span id="shipping-selection-summary" class="text-muted">已选择 0 台</span>
+                    <button class="btn btn-danger" id="shipping-reset-submit" onclick="startShippingReset()" disabled>发货前清除所选设备</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table shipping-reset-table">
+                        <thead><tr><th style="width:42px;"></th><th>设备</th><th>型号</th><th>绑定账号</th><th>状态</th><th>当前业务数据</th><th>清理状态</th></tr></thead>
+                        <tbody id="shipping-reset-tbody"><tr class="empty-row"><td colspan="7">进入页面后加载</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 

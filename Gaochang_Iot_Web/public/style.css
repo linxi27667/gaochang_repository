@@ -306,6 +306,13 @@ tr:hover td { background: #f8fafc; }
 
 /* ===== Filter ===== */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-bar .filter-set { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.filter-bar .filter-label { color: var(--text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.filter-bar .tab-group, .online-filter-set .tab-group { margin-bottom: 0; }
+.online-filter-set { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.filter-bar .online-filter-set { margin-bottom: 0; }
+.status-tab-group { background: #edf2f7; }
+.empty-state.compact { padding: 34px 20px; border: 1px dashed var(--border); border-radius: 8px; background: rgba(255,255,255,.55); }
 .filter-item { display: flex; align-items: center; gap: 6px; }
 .filter-item label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 .filter-item input, .filter-item select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; font-family: inherit; color: var(--text-primary); }
@@ -474,6 +481,9 @@ tr:hover td { background: #f8fafc; }
     .card-value { font-size: 22px; }
     .page-content { padding: 14px; }
     .device-cards { grid-template-columns: 1fr; }
+    .filter-bar { align-items: stretch; }
+    .filter-bar .filter-set, .online-filter-set { width: 100%; align-items: flex-start; flex-direction: column; }
+    .filter-bar .tab-group, .online-filter-set .tab-group { width: 100%; overflow-x: auto; }
     .table-header { flex-direction: column; gap: 10px; align-items: flex-start; }
     .modal { align-items: flex-start; padding: 12px; }
     .modal-content { width: 100%; max-height: calc(100vh - 24px); }

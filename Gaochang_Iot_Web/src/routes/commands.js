@@ -43,6 +43,12 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
   const now = nowISO();
   // Destructive commands are idempotent by persistent firmware msg_id dedupe.
   const maxAttempts = CMD_MAX_ATTEMPTS;
+  const purpose = typeof extra.purpose === 'string' ? extra.purpose : '';
+  const commandArgs = { ...(extra || {}) };
+  delete commandArgs.purpose;
+  // admin_enter password is a server-side credential and must not be persisted
+  // in command history or exposed through the browser APIs.
+  delete commandArgs.password;
 
   // A second browser tab must not create a new maintenance message while the
   // first one is still awaiting the device response. Reuse the active message
@@ -87,15 +93,16 @@ function enqueueAndSendCommand(db, deviceId, cmd, msgId, extra = {}, operator = 
   db.prepare(`
     INSERT INTO command_queue
       (device_id, cmd, msg_id, status, created_at, chip_uid, operator_id, operator_name,
-       args_json, attempts, max_attempts, timeout_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL)
+       args_json, attempts, max_attempts, timeout_at, purpose)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL, ?)
   `).run(
     deviceId, cmd, msgId, 'pending', now,
     chipUid,
     operator ? operator.id : null,
     operator ? operator.username : '',
-    JSON.stringify(extra.args || extra || {}),
-    maxAttempts
+    JSON.stringify(commandArgs.args || commandArgs || {}),
+    maxAttempts,
+    purpose
   );
 
   // 发送命令
@@ -381,7 +388,7 @@ router.get('/status/:msgId', authMiddleware, (req, res) => {
   const db = getDb();
   const cmd = db.prepare(`
     SELECT id, device_id, cmd, msg_id, status, result, attempts, max_attempts,
-           created_at, sent_at, responded_at, timeout_at, operator_id, operator_name
+           created_at, sent_at, responded_at, timeout_at, operator_id, operator_name, purpose
     FROM command_queue
     WHERE msg_id = ?
   `).get(msgId);
@@ -398,6 +405,22 @@ router.get('/status/:msgId', authMiddleware, (req, res) => {
     if (!hasAccess && !isOwner) {
       return res.status(403).json({ error: '无权查询该命令' });
     }
+  }
+
+  // The browser polls the first admin_enter message for large-scissor
+  // shipping resets. Once authentication succeeds, expose the chained reset
+  // command status so the UI cannot report success before the Flash ledger is
+  // actually cleared.
+  if (cmd.purpose === 'shipping_reset_admin_enter' && cmd.status === 'succeeded') {
+    const reset = db.prepare(`
+      SELECT id, device_id, cmd, msg_id, status, result, attempts, max_attempts,
+             created_at, sent_at, responded_at, timeout_at, operator_id, operator_name, purpose
+      FROM command_queue
+      WHERE device_id = ? AND purpose = 'shipping_reset'
+      ORDER BY id DESC LIMIT 1
+    `).get(cmd.device_id);
+    if (reset) return res.json({ ...reset, parent_msg_id: cmd.msg_id });
+    return res.json({ ...cmd, status: 'pending', result: 'waiting_reset_command' });
   }
 
   res.json(cmd);

@@ -518,7 +518,7 @@ function handleV1CommandResponse(deviceId, chipUid, data) {
   // 更新命令状态:只有 pending/sent 状态的命令才能被响应(防止终态被覆盖)
   // 同时校验 chip_uid 归属,防止 msg_id 碰撞导致跨设备误匹配
   const cmdRow = db.prepare(
-    'SELECT id, status, cmd, device_id, attempts, chip_uid FROM command_queue WHERE msg_id = ?'
+    'SELECT id, status, cmd, device_id, attempts, chip_uid, purpose FROM command_queue WHERE msg_id = ?'
   ).get(msgId);
   if (!cmdRow) {
     console.warn(`[MQTT] Response rejected reason=unknown_msg_id uid=${chipUid} cmd=${cmd || '-'} msg_id=${msgId}`);
@@ -543,9 +543,14 @@ function handleV1CommandResponse(deviceId, chipUid, data) {
   }
 
   // 终态状态:succeeded / rejected / failed
-  const finalStatus = ['succeeded', 'rejected', 'failed'].includes(result)
+  let finalStatus = ['succeeded', 'rejected', 'failed'].includes(result)
     ? result
     : mapLegacyResultToStatus(cmd, result);
+  if (finalStatus === 'succeeded' && cmdRow.cmd === 'reset_usage' && cmdRow.purpose === 'shipping_reset'
+      && !normalizeTelemetry(data || {}).maintenance_reported) {
+    finalStatus = 'failed';
+    console.warn(`[MQTT] shipping reset rejected reason=missing_device_ledger device=${cmdRow.device_id} msg_id=${msgId}`);
+  }
   // WHERE 加状态约束,确保只有 pending/sent 的命令被更新(并发安全)
   const storedResult = finalStatus === 'succeeded' && (cmdRow.cmd || cmd) === 'reset_usage'
     ? 'usage_reset'
@@ -570,6 +575,7 @@ function handleV1CommandResponse(deviceId, chipUid, data) {
 
   // 只在收到 command_response 后才更新设备状态(不再在命令发送时立即修改)
   applyCommandResultToDevice(cmdRow.device_id, cmdRow.cmd || cmd, finalStatus, data, msgId);
+  advanceShippingResetChain(db, cmdRow, finalStatus);
 
   console.log(`[MQTT] Response matched device=${cmdRow.device_id} uid=${chipUid} msg_id=${msgId} cmd=${cmdRow.cmd || cmd} wire_result=${result} status=${finalStatus} at_ms=${Date.now()}`);
 
@@ -732,12 +738,16 @@ function applyCommandResultToDevice(deviceId, cmd, result, responseData, msgId =
         return;
       }
       const next = resolveMaintenanceStatus(current, reported);
+      const command = msgId ? db.prepare('SELECT operator_id, purpose FROM command_queue WHERE msg_id = ?').get(msgId) : null;
+      if (command && command.purpose === 'shipping_reset') {
+        applyShippingResetCleanup(db, deviceId, msgId, command.operator_id, current, next, now);
+        break;
+      }
       db.prepare(`UPDATE device_status SET total_lift_count=?, maintenance_lift_count=?, maintenance_threshold=?,
         maintenance_count=?, last_maintenance_total=?, maintenance_due=?, usage_epoch=?, maintenance_revision=? WHERE device_id=?`).run(
         next.total_lift_count, next.maintenance_lift_count, next.maintenance_threshold, next.maintenance_count,
         next.last_maintenance_total, next.maintenance_due, next.usage_epoch, next.maintenance_revision, deviceId
       );
-      const command = msgId ? db.prepare('SELECT operator_id FROM command_queue WHERE msg_id = ?').get(msgId) : null;
       if (command) {
         db.prepare('INSERT INTO operation_logs (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)')
           .run(command.operator_id || null, 'reset_usage', deviceId, JSON.stringify({ msg_id: msgId, before, after: next }), 'usage_reset', now);
@@ -746,6 +756,68 @@ function applyCommandResultToDevice(deviceId, cmd, result, responseData, msgId =
     }
     // set_product_type 已移除,不再支持远程切换型号
   }
+}
+
+function applyShippingResetCleanup(db, deviceId, msgId, operatorId, before, next, now) {
+  const device = db.prepare(`
+    SELECT d.uid, r.serial FROM devices d
+    LEFT JOIN device_registry r ON r.uid = d.uid
+    WHERE d.device_id = ?
+  `).get(deviceId) || {};
+
+  db.transaction(() => {
+    db.prepare(`UPDATE device_status SET
+      run_count=0, run_time_s=0, total_run_ms=0, up_count=0, down_count=0,
+      lock_count=0, refill_count=0, estop_count=0, photo_alarm_count=0,
+      total_lift_count=?, maintenance_lift_count=?, maintenance_count=?,
+      last_maintenance_total=?, maintenance_due=?, usage_epoch=?, maintenance_revision=?,
+      last_run_at=NULL
+      WHERE device_id=?`).run(
+      next.total_lift_count, next.maintenance_lift_count, next.maintenance_count,
+      next.last_maintenance_total, next.maintenance_due, next.usage_epoch,
+      next.maintenance_revision, deviceId
+    );
+    db.prepare('DELETE FROM alarms WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM maintenance_records WHERE device_id = ?').run(deviceId);
+    db.prepare('DELETE FROM command_queue WHERE device_id = ? AND msg_id <> ?').run(deviceId, msgId);
+    if (device.uid || device.serial) {
+      db.prepare(`DELETE FROM device_operation_logs
+        WHERE (? <> '' AND device_uid = ?) OR (? <> '' AND device_serial = ?)`)
+        .run(device.uid || '', device.uid || '', device.serial || '', device.serial || '');
+    }
+    db.prepare(`INSERT INTO operation_logs
+      (user_id, action, device_id, detail, result, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(operatorId || null, 'shipping_reset', deviceId, JSON.stringify({
+        msg_id: msgId,
+        before: before || {},
+        after: next,
+        preserved: ['device', 'uid', 'product_type', 'registry', 'bindings', 'users']
+      }), 'completed', now);
+  })();
+
+  broadcastToClients({
+    type: 'device_status',
+    device_id: deviceId,
+    data: {
+      run_count: 0,
+      run_time_s: 0,
+      total_run_ms: 0,
+      up_count: 0,
+      down_count: 0,
+      lock_count: 0,
+      refill_count: 0,
+      estop_count: 0,
+      photo_alarm_count: 0,
+      total_lift_count: next.total_lift_count,
+      maintenance_lift_count: next.maintenance_lift_count,
+      maintenance_count: next.maintenance_count,
+      last_maintenance_total: next.last_maintenance_total,
+      maintenance_due: next.maintenance_due,
+      usage_epoch: next.usage_epoch,
+      maintenance_revision: next.maintenance_revision,
+      last_run_at: null
+    }
+  });
 }
 
 // 隔离设备:UID 不一致或型号不匹配时
@@ -1647,9 +1719,13 @@ function handleCommandResponse(deviceId, data) {
   if (response.msg_id) {
     // 使用新的命令状态机:succeeded / rejected / failed
     // 旧固件返回的 event/result 需要映射到新状态
-    const finalStatus = mapLegacyResultToStatus(response.cmd, response.result);
-    const cmdRow = db.prepare('SELECT device_id, cmd FROM command_queue WHERE msg_id = ?').get(response.msg_id);
+    let finalStatus = mapLegacyResultToStatus(response.cmd, response.result);
+    const cmdRow = db.prepare('SELECT device_id, cmd, purpose, operator_id, operator_name FROM command_queue WHERE msg_id = ?').get(response.msg_id);
     const command = cmdRow?.cmd || response.cmd;
+    if (finalStatus === 'succeeded' && command === 'reset_usage' && cmdRow?.purpose === 'shipping_reset'
+        && !normalizeTelemetry(response || {}).maintenance_reported) {
+      finalStatus = 'failed';
+    }
     const storedResult = finalStatus === 'succeeded' && command === 'reset_usage'
       ? 'usage_reset'
       : (finalStatus === 'succeeded' && command === 'maintenance_done' ? 'maintenance_done' : (response.result || finalStatus));
@@ -1658,7 +1734,10 @@ function handleCommandResponse(deviceId, data) {
     ).run(finalStatus, storedResult, nowISO(), response.msg_id);
 
     // 只在收到成功响应后才更新设备状态
-    if (update.changes > 0) applyCommandResultToDevice(cmdRow?.device_id || deviceId, command, finalStatus, response, response.msg_id);
+    if (update.changes > 0) {
+      applyCommandResultToDevice(cmdRow?.device_id || deviceId, command, finalStatus, response, response.msg_id);
+      if (cmdRow) advanceShippingResetChain(db, cmdRow, finalStatus);
+    }
   }
 
   broadcastToClients({
@@ -1769,7 +1848,7 @@ function sendCommand(deviceId, cmd, msgId, extra = {}) {
   if (chipUid) {
     // v1 协议:向 {chip_uid}/down 发布,QoS 1,retained=false
     // args 提取:优先用 extra.args,否则用 extra 本身(去掉 operator 等非命令参数)
-    const { operator, args, ...cmdArgs } = extra;
+    const { operator, args, purpose, password, ...cmdArgs } = extra;
     const payload = {
       v: 1,
       type: 'command',
@@ -1780,6 +1859,11 @@ function sendCommand(deviceId, cmd, msgId, extra = {}) {
       operator: operator || '',
       created_at: nowISO()
     };
+    // The large-scissor firmware reads admin_enter.password from the command
+    // root. Keep this credential server-side; it is never sent by the browser.
+    if (wireCmd === 'admin_enter' && typeof extra.password === 'string') {
+      payload.password = extra.password;
+    }
     const success = publishV1Down(chipUid, payload);
     if (success) {
       scheduleRedundantCommandPublishes(chipUid, payload);
@@ -1791,13 +1875,14 @@ function sendCommand(deviceId, cmd, msgId, extra = {}) {
   // 旧主题回退
   if (LEGACY_ENABLED) {
     const topic = commandTopicFor(deviceId);
+    const { operator, args, purpose, password, ...legacyArgs } = extra;
     const payload = JSON.stringify({
       type: 'command',
       device: deviceId,
       cmd: wireCmd,
       command: wireCmd,
       msg_id: msgId,
-      ...extra
+      ...(args || legacyArgs)
     });
     mqttClient.publish(topic, payload, { qos: MQTT_QOS, retain: false }, (err) => {
       if (err) {
@@ -1811,6 +1896,58 @@ function sendCommand(deviceId, cmd, msgId, extra = {}) {
 
   console.warn(`[MQTT] Cannot send command to ${deviceId}: no chip_uid and legacy disabled`);
   return false;
+}
+
+function createInternalMsgId(prefix = 'cmd') {
+  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Continue the server-side shipping reset workflow only after the previous
+// command has a successful device response. This is intentionally kept out of
+// the public API so the MCU admin password never reaches a browser.
+function advanceShippingResetChain(db, cmdRow, result) {
+  if (!cmdRow) return;
+  if (cmdRow.purpose === 'shipping_reset_admin_enter' && cmdRow.cmd === 'admin_enter'
+      && result === 'succeeded') {
+    const active = db.prepare(`
+      SELECT msg_id FROM command_queue
+      WHERE device_id = ? AND purpose = 'shipping_reset' AND status IN ('pending', 'sent')
+      ORDER BY id DESC LIMIT 1
+    `).get(cmdRow.device_id);
+    if (active) return;
+    const msgId = createInternalMsgId('ship_reset');
+    const now = nowISO();
+    db.prepare(`
+      INSERT INTO command_queue
+        (device_id, cmd, msg_id, status, created_at, chip_uid, operator_id, operator_name,
+         args_json, attempts, max_attempts, timeout_at, purpose)
+      SELECT device_id, 'reset_usage', ?, 'pending', ?, chip_uid, operator_id, operator_name,
+             '{}', 0, max_attempts, NULL, 'shipping_reset'
+      FROM command_queue WHERE msg_id = ?
+    `).run(msgId, now, cmdRow.msg_id);
+    if (!sendCommand(cmdRow.device_id, 'reset_usage', msgId, {})) {
+      db.prepare("UPDATE command_queue SET status = 'failed', result = 'MQTT not connected' WHERE msg_id = ?").run(msgId);
+    }
+    return;
+  }
+  if (cmdRow.purpose === 'shipping_reset' && cmdRow.cmd === 'reset_usage'
+      && ['succeeded', 'rejected', 'failed'].includes(result)) {
+    // applyCommandResultToDevice has already removed old command history and
+    // recorded the completed reset before admin_exit is sent.
+    const msgId = createInternalMsgId('ship_exit');
+    const now = nowISO();
+    db.prepare(`
+      INSERT INTO command_queue
+        (device_id, cmd, msg_id, status, created_at, chip_uid, operator_id, operator_name,
+         args_json, attempts, max_attempts, timeout_at, purpose)
+      SELECT device_id, 'admin_exit', ?, 'pending', ?, chip_uid, operator_id, operator_name,
+             '{}', 0, max_attempts, NULL, 'shipping_reset_admin_exit'
+      FROM command_queue WHERE msg_id = ?
+    `).run(msgId, now, cmdRow.msg_id);
+    if (!sendCommand(cmdRow.device_id, 'admin_exit', msgId, {})) {
+      db.prepare("UPDATE command_queue SET status = 'failed', result = 'MQTT not connected' WHERE msg_id = ?").run(msgId);
+    }
+  }
 }
 
 // 更新命令队列状态为 sent,记录发送时间和尝试次数
@@ -1984,5 +2121,6 @@ module.exports = {
     normalizeTelemetry,
     handleStatusUpdate,
     resolveMaintenanceStatus
+    , applyCommandResultToDevice
   }
 };

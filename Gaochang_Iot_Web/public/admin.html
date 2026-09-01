@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - 高昌举升机 IoT 平台</title>
+    <title>高昌机电工业物联网管理平台 - 管理后台</title>
     <link rel="icon" href="img/logo.png" type="image/png">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -658,12 +658,12 @@
 </head>
 <body>
     <!-- 登录层(未登录时显示) -->
-    <div id="login-overlay" class="login-overlay" style="display:none;">
+    <div id="login-overlay" class="login-overlay" style="display:none; flex-direction:column;">
         <div class="login-box">
             <div class="login-logo">
                 <img src="img/logo.png" alt="GaoChang">
-                <h1>高昌举升机 IoT 管理后台</h1>
-                <p>请使用管理员账号登录</p>
+                <h1>高昌机电工业物联网管理平台</h1>
+                <p>广州高昌机电股份有限公司 · 管理后台</p>
             </div>
             <form id="admin-login-form" onsubmit="return handleAdminLogin(event)">
                 <div class="form-group">
@@ -681,13 +681,17 @@
                 <a href="/">← 返回前台</a>
             </div>
         </div>
+        <div style="text-align:center; margin-top:20px; font-size:12px; color:rgba(255,255,255,0.75);">
+            <p>© 广州高昌机电股份有限公司 版权所有</p>
+            <p style="margin-top:4px;"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.85); text-decoration:none;">粤ICP备2020035985号-1</a></p>
+        </div>
     </div>
 
     <!-- 顶部栏 -->
     <div class="topbar">
         <div class="logo">
             <img src="img/logo.png" alt="GaoChang">
-            <span>高昌举升机 IoT 管理后台</span>
+            <span>高昌机电工业物联网管理平台</span>
         </div>
         <div class="topbar-right">
             <a href="/" class="btn-back">← 返回前台</a>

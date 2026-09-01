@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GaoChang Lift IoT Platform</title>
-    <link rel="stylesheet" href="style.css?v=10">
+    <title>高昌机电工业物联网管理平台 - GaoChang Lift IoT Platform</title>
+    <link rel="stylesheet" href="style.css?v=11">
     <link rel="icon" href="img/logo.png" type="image/png">
 </head>
 <body>
@@ -13,8 +13,8 @@
         <div class="login-card">
             <div class="login-logo">
                 <img src="img/logo.png" alt="GaoChang" class="login-logo-img">
-                <h1 data-i18n="app.name">高昌举升机管理平台</h1>
-                <p data-i18n="app.subtitle">IoT Management System</p>
+                <h1 data-i18n="app.name">高昌机电工业物联网管理平台</h1>
+                <p data-i18n="app.subtitle">广州高昌机电股份有限公司</p>
             </div>
             <!-- Language Switcher on Login -->
             <div class="lang-switch-login">
@@ -55,6 +55,12 @@
                 <a href="#" onclick="showRegisterPage();return false;" data-i18n="login.registerLink">注册账号</a>
             </div>
         </div>
+        <footer class="site-beian-footer">
+            <p class="company-name">© 广州高昌机电股份有限公司 版权所有</p>
+            <p class="icp-link">
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备2020035985号-1</a>
+            </p>
+        </footer>
     </div>
 
     <!-- Register Page -->
@@ -63,7 +69,7 @@
             <div class="login-logo">
                 <img src="img/logo.png" alt="GaoChang" class="login-logo-img">
                 <h1 data-i18n="register.title">注册账号</h1>
-                <p data-i18n="app.subtitle">IoT Management System</p>
+                <p data-i18n="app.subtitle">广州高昌机电股份有限公司</p>
             </div>
             <form id="register-form" onsubmit="return handleRegister(event)">
                 <div class="form-group">
@@ -133,6 +139,12 @@
                 </div>
             </div>
         </div>
+        <footer class="site-beian-footer">
+            <p class="company-name">© 广州高昌机电股份有限公司 版权所有</p>
+            <p class="icp-link">
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备2020035985号-1</a>
+            </p>
+        </footer>
     </div>
 
     <!-- Main App -->
@@ -192,6 +204,9 @@
                 <div class="mqtt-status-bar">
                     <span class="indicator-dot" id="mqtt-dot"></span>
                     <span id="mqtt-status-text">未连接</span>
+                </div>
+                <div class="sidebar-beian">
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备2020035985号-1</a>
                 </div>
             </div>
         </aside>

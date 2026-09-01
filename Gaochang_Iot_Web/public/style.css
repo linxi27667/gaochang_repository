@@ -35,14 +35,24 @@
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
 
 /* ===== Login ===== */
-.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); }
-.login-card { background: var(--white); border-radius: 16px; padding: 40px; width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); padding: 30px 20px; box-sizing: border-box; }
+.login-card { background: var(--white); border-radius: 16px; padding: 40px; width: 400px; max-width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
 .login-logo { text-align: center; margin-bottom: 24px; }
 .login-logo-img { width: 110px; height: 110px; border-radius: 16px; margin-bottom: 14px; object-fit: contain; }
-.login-logo h1 { font-size: 26px; font-weight: 700; color: var(--text-primary); }
-.login-logo p { font-size: 12px; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.05em; }
+.login-logo h1 { font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.login-logo p { font-size: 13px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.03em; }
 .login-footer { text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-muted); }
 .error-msg { background: var(--danger-bg); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+
+/* ===== Legal / ICP Beian Footer ===== */
+.site-beian-footer { text-align: center; margin-top: 24px; font-size: 12px; color: rgba(255, 255, 255, 0.7); line-height: 1.8; }
+.site-beian-footer .company-name { font-weight: 500; color: rgba(255, 255, 255, 0.85); }
+.site-beian-footer .icp-link a { color: rgba(255, 255, 255, 0.75); text-decoration: none; transition: var(--transition); border-bottom: 1px dotted rgba(255,255,255,0.4); padding-bottom: 1px; }
+.site-beian-footer .icp-link a:hover { color: #ffffff; border-bottom-color: #ffffff; }
+
+.sidebar-beian { padding: 6px 8px; font-size: 11px; text-align: center; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 6px; }
+.sidebar-beian a { color: var(--text-muted); text-decoration: none; font-size: 10px; }
+.sidebar-beian a:hover { color: #ffffff; text-decoration: underline; }
 
 /* ===== Language Switch Login ===== */
 .lang-switch-login { display: flex; justify-content: center; margin-bottom: 20px; position: relative; }

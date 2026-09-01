@@ -15,10 +15,10 @@ const LANGUAGES = {
 
 const I18N = {
   zh: {
-    'app.name': '高昌举升机管理平台',
-    'app.name_short': '高昌举升机',
-    'app.subtitle': '物联网管理平台',
-    'app.iot': '物联网平台',
+    'app.name': '高昌机电工业物联网管理平台',
+    'app.name_short': '高昌物联网',
+    'app.subtitle': '广州高昌机电股份有限公司',
+    'app.iot': '工业物联网平台',
     'login.username': '用户名',
     'login.password': '密码',
     'login.username_ph': '请输入用户名',

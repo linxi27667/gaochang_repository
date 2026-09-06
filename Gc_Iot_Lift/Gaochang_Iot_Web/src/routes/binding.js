@@ -12,6 +12,31 @@ const router = express.Router();
 const BIND_CODE_SALT = process.env.BIND_CODE_SALT || 'gaochang_lift_default_salt_2026';
 const AUTO_APPROVE_LIMIT = parseInt(process.env.BINDING_AUTO_APPROVE_LIMIT || '3', 10);
 
+const DEFAULT_DEVICE_NAME_PREFIX = {
+  screw_lift: '丝杆',
+  double_post: '两柱',
+  large_scissor: '大剪',
+  small_scissor: '小剪',
+  thin_scissor: '超薄小剪'
+};
+
+function nextDefaultDeviceName(db, productType) {
+  const prefix = DEFAULT_DEVICE_NAME_PREFIX[productType] || '举升机';
+  const rows = db.prepare('SELECT name FROM devices WHERE product_type = ?').all(productType);
+  let next = 0;
+
+  for (const row of rows) {
+    const name = String(row.name || '');
+    if (!name.startsWith(prefix)) continue;
+    const suffix = name.slice(prefix.length);
+    if (/^\d+$/.test(suffix)) {
+      next = Math.max(next, Number(suffix) + 1);
+    }
+  }
+
+  return `${prefix}${String(next).padStart(2, '0')}`;
+}
+
 // 获取客户端 IP(兼容反向代理)
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -165,7 +190,7 @@ router.post('/bind', rateLimit({ windowMs: 60000, max: 3 }), (req, res) => {
         VALUES (?, ?, ?, ?, ?, NULL, 'bound', ?, ?, ?, ?, ?, ?, ?)
       `).run(
         serial,
-        registry.display_name || ('举升机 ' + serial),
+        nextDefaultDeviceName(db, registry.product_type || 'double_post'),
         registry.model || '',
         '默认分组',
         registry.uid,

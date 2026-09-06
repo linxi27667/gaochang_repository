@@ -52,6 +52,17 @@ function getDisplayName(productType) {
   return FIRMWARE_DISPLAY_NAMES[productType] || FIRMWARE_DISPLAY_NAMES.double_post;
 }
 
+function resolveRegistryAccessories(productType, body = {}) {
+  const cfg = PRODUCT_CONFIGS.find((p) => p.product_type === productType) || {};
+  return {
+    /* 丝杆产品强制编码器能力，避免登记漏勾导致主页不显示高度 */
+    has_encoder: productType === 'screw_lift' ? 1 : boolInt(body.has_encoder ?? cfg.has_encoder),
+    has_buzzer: boolInt(body.has_buzzer ?? cfg.has_buzzer),
+    has_pressure_sensor: boolInt(body.has_pressure_sensor ?? cfg.has_pressure_sensor),
+    has_display: boolInt(body.has_display ?? cfg.has_display)
+  };
+}
+
 // 记录操作日志的辅助函数
 function logOperation(userId, action, deviceId, detail, result) {
   const db = getDb();
@@ -234,14 +245,16 @@ router.post('/registry', (req, res) => {
     const dupUid = db.prepare('SELECT id FROM device_registry WHERE uid = ?').get(uid);
     if (dupUid) return res.status(409).json({ error: '芯片UID已存在' });
 
+    const type = product_type || 'double_post';
+    const accessories = resolveRegistryAccessories(type, req.body);
     const result = db.prepare(`
       INSERT INTO device_registry (serial, uid, product_type, display_name, model, batch, produced_at,
         has_encoder, has_buzzer, has_pressure_sensor, has_display, bind_code_hash, status, bound_device_id, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unbound', '', ?)
     `).run(
-      serial, uid, product_type || 'double_post', getDisplayName(product_type || 'double_post'), model || '', batch || '', produced_at || '',
-      boolInt(req.body.has_encoder), boolInt(req.body.has_buzzer),
-      boolInt(req.body.has_pressure_sensor), boolInt(req.body.has_display),
+      serial, uid, type, getDisplayName(type), model || '', batch || '', produced_at || '',
+      accessories.has_encoder, accessories.has_buzzer,
+      accessories.has_pressure_sensor, accessories.has_display,
       hashBindCode(bindCode),
       nowISO()
     );
@@ -335,10 +348,11 @@ router.post('/registry/batch', (req, res) => {
           return;
         }
         try {
+          const accessories = resolveRegistryAccessories(product_type, item);
           insertStmt.run(
             serial, uid, product_type, getDisplayName(product_type), model, batch, produced_at,
-            boolInt(item.has_encoder), boolInt(item.has_buzzer),
-            boolInt(item.has_pressure_sensor), boolInt(item.has_display),
+            accessories.has_encoder, accessories.has_buzzer,
+            accessories.has_pressure_sensor, accessories.has_display,
             bind_code ? hashBindCode(bind_code) : bind_code_hash,
             nowISO()
           );
@@ -391,6 +405,8 @@ router.put('/registry/:id', (req, res) => {
       return res.status(409).json({ error: '已绑定设备不可修改出厂编号，请先解绑后再修改' });
     }
 
+    const type = product_type || 'double_post';
+    const accessories = resolveRegistryAccessories(type, req.body);
     // 事务:同时更新 device_registry 和 devices,保证两表数据一致
     const editTx = db.transaction(() => {
       db.prepare(`
@@ -399,9 +415,9 @@ router.put('/registry/:id', (req, res) => {
             has_encoder = ?, has_buzzer = ?, has_pressure_sensor = ?, has_display = ?
         WHERE id = ?
       `).run(
-        serial, uid, product_type || 'double_post', getDisplayName(product_type || 'double_post'), model || '', batch || '', produced_at || '',
-        boolInt(req.body.has_encoder), boolInt(req.body.has_buzzer),
-        boolInt(req.body.has_pressure_sensor), boolInt(req.body.has_display),
+        serial, uid, type, getDisplayName(type), model || '', batch || '', produced_at || '',
+        accessories.has_encoder, accessories.has_buzzer,
+        accessories.has_pressure_sensor, accessories.has_display,
         id
       );
 
@@ -411,9 +427,9 @@ router.put('/registry/:id', (req, res) => {
           has_pressure_sensor = ?, has_display = ? WHERE uid = ? OR device_id = ?`)
           .run(
             uid,
-            product_type || 'double_post',
-            boolInt(req.body.has_encoder), boolInt(req.body.has_buzzer),
-            boolInt(req.body.has_pressure_sensor), boolInt(req.body.has_display),
+            type,
+            accessories.has_encoder, accessories.has_buzzer,
+            accessories.has_pressure_sensor, accessories.has_display,
             existing.uid,
             existing.bound_device_id || ''
           );
@@ -725,6 +741,23 @@ router.post('/shipping-reset/start', (req, res) => {
 
       const msgId = createMsgId();
       const isLargeScissor = device.product_type === 'large_scissor';
+      const isScrewLift = device.product_type === 'screw_lift';
+      initializeShippingResetWebsite(db, deviceId, req.user.id, msgId);
+
+      /* 丝杆无 reset_usage：仅清网站台账，不下发未知命令 */
+      if (isScrewLift) {
+        logOperation(req.user.id, '发货前清除', deviceId,
+          `设备 ${device.name}; 丝杆固件无 reset_usage，已仅清除网站台账`,
+          '网站侧完成');
+        results.push({
+          device_id: deviceId,
+          msg_id: msgId,
+          status: 'website_only',
+          error: ''
+        });
+        continue;
+      }
+
       const initialCmd = isLargeScissor ? 'admin_enter' : 'reset_usage';
       const purpose = device.online
         ? (isLargeScissor ? 'shipping_reset_admin_enter' : 'shipping_reset')
@@ -732,7 +765,6 @@ router.post('/shipping-reset/start', (req, res) => {
       const extra = isLargeScissor
         ? { purpose, password: process.env.LIFT_IOT_ADMIN_PASSWORD || '123456', deferIfOffline: !device.online }
         : { purpose, deferIfOffline: !device.online };
-      initializeShippingResetWebsite(db, deviceId, req.user.id, msgId);
       const queued = enqueueAndSendCommand(db, deviceId, initialCmd, msgId, extra, req.user);
       logOperation(req.user.id, '发货前清除', deviceId,
         `设备 ${device.name}; ${device.online ? (isLargeScissor ? '先进入管理员模式，再清除 Flash 台账' : '等待设备清除 Flash 后回执') : '网站已初始化，等待设备上线自动清除 Flash 台账'}`,

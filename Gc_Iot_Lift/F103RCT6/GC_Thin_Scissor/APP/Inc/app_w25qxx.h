@@ -1,0 +1,223 @@
+#ifndef __APP_W25QXX_H__
+#define __APP_W25QXX_H__
+
+#include <stdint.h>
+#include "bsp_w25qxx.h"
+#include "main.h"
+#include "app_product.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ============ FRAM 8KB 地址规划（FM24CL64B，双槽间距 256，勿占 0x1FF0） ============
+ * 0x0000 Storage A / 0x0100 Storage B
+ * 0x0200 Config A  / 0x0300 Config B
+ * 0x0400 Stats A / 0x0500 Stats B
+ * 0x0600 OpLog 256B
+ * 0x0700 RiseStats journal 8×256 → 至 0x0EFF
+ * 0x0F00 Maintenance journal 8×256 → 至 0x16FF
+ * 0x1FF0 self-test
+ */
+
+#define W25Q_SLOT_A_ADDR        0x0000U
+#define W25Q_SLOT_B_ADDR        0x0100U
+
+#define W25Q_CONFIG_SLOT_A_ADDR 0x0200U
+#define W25Q_CONFIG_SLOT_B_ADDR 0x0300U
+#define HEIGHT_SLOT_A_ADDR      W25Q_CONFIG_SLOT_A_ADDR
+#define HEIGHT_SLOT_B_ADDR      W25Q_CONFIG_SLOT_B_ADDR
+#define HEIGHT_FLASH_ADDR       HEIGHT_SLOT_A_ADDR
+
+#define W25Q_STATS_SLOT_A_ADDR  0x0400U
+#define W25Q_STATS_SLOT_B_ADDR  0x0500U
+
+#define W25Q_OPLOG_ADDR         0x0600U
+#define W25Q_OPLOG_SECTOR_SIZE  0x0100U
+#define W25Q_OPLOG_MAX_ENTRIES  (W25Q_OPLOG_SECTOR_SIZE / 16U)
+
+/* ============ 持久化数据结构 ============ */
+
+typedef struct
+{
+    uint32_t magic;
+    uint32_t debug_counter;
+    uint32_t crc;
+} w25q_storage_t;
+
+#define W25Q_STORAGE_MAGIC      0x53544F52U
+#define W25Q_STORAGE_SIZE       sizeof(w25q_storage_t)
+
+/* ============ 可持久化配置参数（扩展版，支持多产品） ============ */
+
+#define W25Q_CONFIG_HEADER      0xA5A5U
+#define W25Q_CONFIG_VERSION     2U
+
+typedef struct {
+    uint16_t header;                       /* 0xA5A5 */
+    uint16_t version;                      /* 配置版本号 */
+    uint8_t  product_type;                 /* 产品类型 0=DOUBLE_POST 1=SMALL_SCISSOR 2=THIN_SCISSOR 3=LARGE_SCISSOR */
+    uint8_t  reserved1;                    /* 对齐填充 */
+    uint16_t motor_to_valve_delay_ms;      /* 电机到气阀延时，默认 200 */
+    uint16_t motor_hold_ms;                /* 主机下降电机保持，默认 2500 */
+    uint16_t sub_motor_hold_ms;            /* 子机下降电机保持，默认 1500 */
+    uint8_t  module_enable_mask;           /* 模块使能位图: bit0 蜂鸣器 bit1 压力 bit2 RS485 bit3 温度 */
+    uint8_t  reserved2;                    /* 对齐填充 */
+    uint16_t photoelectric_debounce_ms;    /* 光电去抖，默认 50 */
+    uint16_t estop_debounce_ms;            /* 急停去抖，默认 20 */
+    /* 旧双柱字段（保留兼容，大剪不使用） */
+    uint16_t tolerance_up;                 /* 上升允差（脉冲数） */
+    uint16_t tolerance_down;               /* 下降允差（脉冲数） */
+    uint16_t stall_timeout_ms;             /* 堵转判断时间 */
+    uint16_t balance_wait_max_ms;          /* 平衡等待超时 */
+    uint16_t collision_debounce_ms;        /* 防碰去抖时间 */
+    uint16_t secondary_descent_pulses;     /* 二次下降高度（脉冲数） */
+    uint8_t  dual_column_mode;             /* 0=独立 1=双柱联动 */
+    uint8_t  screw_lead_mm;                /* 丝杆导程 */
+    uint16_t max_pulses;                   /* 上限位脉冲数（到顶停机） */
+    uint8_t  reserved[16];                 /* 预留扩展 */
+    uint16_t crc16;                        /* CRC16 */
+} w25q_config_t;
+
+/* ============ 运行统计结构 ============ */
+
+#define W25Q_STATS_MAGIC        0x53544154U   /* "STAT" */
+#define W25Q_STATS_VERSION      1U
+
+#define W25Q_RISE_STATS_JOURNAL_ADDR          0x0700U
+#define W25Q_RISE_STATS_JOURNAL_SECTOR_SIZE   0x0100U
+#define W25Q_RISE_STATS_JOURNAL_SECTOR_COUNT  8U
+#define W25Q_RISE_STATS_REMAINDER_LIMIT_MS    3000U
+
+#define W25Q_MAINTENANCE_JOURNAL_ADDR          0x0F00U
+#define W25Q_MAINTENANCE_JOURNAL_SECTOR_SIZE   0x0100U
+#define W25Q_MAINTENANCE_JOURNAL_SECTOR_COUNT  8U
+#define W25Q_MAINTENANCE_THRESHOLD             5000U
+
+typedef struct {
+    uint32_t magic;            /* W25Q_STATS_MAGIC */
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t up_count;         /* 上升次数 */
+    uint32_t down_count;       /* 下降次数 */
+    uint32_t lock_count;       /* 锁定次数 */
+    uint32_t refill_count;     /* 补油次数 */
+    uint32_t estop_count;      /* 急停次数 */
+    uint32_t photo_alarm_count;/* 光电报警次数 */
+    uint32_t total_run_ms;     /* 总运行时长 */
+    uint32_t up_count_main;    /* 大剪主机上升次数 */
+    uint32_t up_count_sub;     /* 大剪子机上升次数 */
+    uint32_t down_count_main;  /* 大剪主机下降次数 */
+    uint32_t down_count_sub;   /* 大剪子机下降次数 */
+    uint32_t boot_count;       /* 开机次数 */
+    uint32_t crc;              /* CRC32 */
+} w25q_stats_t;
+
+/* The caller owns the event lifecycle: increment pending_count when a
+ * 3-second rise unit is created, and decrement it only after the DTU has
+ * accepted that unit.  next_sequence is the next cloud event sequence. */
+typedef struct {
+    uint32_t total_up_count;
+    uint16_t remainder_ms;
+    uint16_t reserved;
+    uint32_t pending_count;
+    uint32_t next_sequence;
+} w25q_rise_stats_t;
+
+typedef struct {
+    uint32_t total_lift_count;
+    uint32_t maintenance_lift_count;
+    uint32_t maintenance_count;
+    uint32_t last_maintenance_total;
+    uint8_t maintenance_due;
+    uint8_t reserved[3];
+    uint32_t usage_epoch;
+} w25q_maintenance_t;
+
+/* ============ 操作日志条目（16 字节） ============ */
+
+typedef struct {
+    uint32_t timestamp;     /* 时间戳（暂用 HAL_GetTick，后续接 RTC） */
+    uint8_t  op_type;      /* op_type_t 枚举值 */
+    uint8_t  op_result;    /* 0=ok 1=interrupted 2=failed */
+    uint16_t duration_ms;  /* 动作持续时长 */
+    uint8_t  detail[8];    /* 详情（如角色、方向等） */
+} w25q_op_log_entry_t;
+
+#define W25Q_OPLOG_ENTRY_SIZE   sizeof(w25q_op_log_entry_t)
+
+/* ============ 高度存储结构（双柱保留） ============ */
+
+typedef struct {
+    uint32_t magic;         /* 0x48494748 = "HIGH" */
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t sequence;
+    int32_t  heights[2];    /* 两个立柱脉冲计数 */
+    uint32_t crc;           /* CRC32 */
+} w25q_height_t;
+
+#define W25Q_HEIGHT_MAGIC   0x48494748U
+#define W25Q_HEIGHT_VERSION 2U
+
+/* ============ 全局对象 ============ */
+
+extern w25q_t W25Q_Flash;
+extern w25q_storage_t g_w25q_storage;
+extern w25q_config_t g_config;
+extern w25q_stats_t g_stats;
+extern w25q_rise_stats_t g_rise_stats;
+extern w25q_maintenance_t g_maintenance;
+
+/* ============ 系统初始化 ============ */
+void App_W25Qxx_System_Init(void);
+
+/* ============ Storage 接口 ============ */
+uint32_t App_W25Qxx_Get_JEDEC_ID(void);
+uint8_t App_W25Qxx_Storage_Save(void);
+void App_W25Qxx_Storage_Load(void);
+
+/* ============ Config 接口 ============ */
+void App_W25Qxx_Config_Load(void);
+uint8_t App_W25Qxx_Config_Save(void);
+
+/* ============ Stats 接口 ============ */
+void App_W25Qxx_Stats_Load(void);
+uint8_t App_W25Qxx_Stats_Save(void);
+void App_W25Qxx_Stats_Inc_Up(lift_role_t role);
+void App_W25Qxx_Stats_Inc_Down(lift_role_t role);
+void App_W25Qxx_Stats_Inc_Lock(void);
+void App_W25Qxx_Stats_Inc_Refill(void);
+void App_W25Qxx_Stats_Inc_Estop(void);
+void App_W25Qxx_Stats_Inc_PhotoAlarm(void);
+void App_W25Qxx_Stats_Add_RunMs(uint32_t ms);
+
+/* ============ Rise Statistics Persistence ============ */
+uint8_t App_W25Qxx_RiseStats_Load(void);
+uint8_t App_W25Qxx_RiseStats_Save(void);
+uint8_t App_W25Qxx_Maintenance_Load(void);
+uint8_t App_W25Qxx_Maintenance_Save(void);
+void App_W25Qxx_Maintenance_AddLiftUnits(uint32_t units);
+uint8_t App_W25Qxx_Maintenance_Done(const char *msg_id, w25q_maintenance_t *saved);
+uint8_t App_W25Qxx_Maintenance_ResetUsage(const char *msg_id, w25q_maintenance_t *saved);
+
+/* ============ OpLog 接口 ============ */
+uint8_t App_W25Qxx_OpLog_Append(const w25q_op_log_entry_t *entry);
+uint8_t App_W25Qxx_OpLog_Read(uint16_t index, w25q_op_log_entry_t *out);
+uint16_t App_W25Qxx_OpLog_Count(void);
+void App_W25Qxx_OpLog_Clear(void);
+
+/* ============ Height 接口（双柱保留） ============ */
+void    App_W25Qxx_Height_Load(void);
+uint8_t App_W25Qxx_Height_Save(void);
+uint8_t App_W25Qxx_Height_Is_Loaded(void);
+void    App_W25Qxx_Height_Save_If_Needed(void);
+
+/* ============ 高度脉冲 → mm 换算宏 ============ */
+#define HEIGHT_MM(p)  ((int32_t)(p) * (int32_t)g_config.screw_lead_mm)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __APP_W25QXX_H__ */

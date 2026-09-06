@@ -8,6 +8,7 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'lift.
 let db;
 
 const FIRMWARE_DISPLAY_NAMES = {
+  screw_lift: 'GC-Screw_Lift',
   double_post: 'GC-Two_Pillars',
   small_scissor: 'GC_Small_Scissor',
   thin_scissor: 'GC_Thin_Scissor',
@@ -16,6 +17,20 @@ const FIRMWARE_DISPLAY_NAMES = {
 
 // 产品型号元数据(供 Web 端动态渲染使用)
 const PRODUCT_CONFIGS = [
+  {
+    product_type: 'screw_lift',
+    display_name: '丝杆举升机',
+    inputs_json: '["btn_up","btn_down","limit_up","collision_left_up","collision_right_up","collision_left_down","collision_right_down"]',
+    outputs_json: '["motor_left","motor_right"]',
+    default_motor_hold_ms: 0,
+    default_motor_to_valve_delay_ms: 0,
+    has_encoder: 1,
+    has_refill: 0,
+    has_photoelectric: 0,
+    has_rotary: 0,
+    has_limit_down: 0,
+    firmware_folder: FIRMWARE_DISPLAY_NAMES.screw_lift
+  },
   {
     product_type: 'double_post',
     display_name: '两柱举升机',
@@ -510,9 +525,9 @@ function ensureColumn(database, table, column, definition) {
 // 把旧角色(admin/superadmin/operator/viewer)统一为 admin/user 两层
 function migrateRolesToTwoLayer(database) {
   // superadmin / admin -> admin
-  database.exec(`UPDATE users SET role = 'admin' WHERE role IN ('superadmin', 'admin')`);
+  database.exec(`UPDATE users SET role = 'admin' WHERE role = 'superadmin'`);
   // operator / viewer -> user
-  database.exec(`UPDATE users SET role = 'user' WHERE role IN ('operator', 'viewer', 'user')`);
+  database.exec(`UPDATE users SET role = 'user' WHERE role IN ('operator', 'viewer')`);
   // 防御性:任何非 admin/user 的角色统一降为 user
   database.exec(`UPDATE users SET role = 'user' WHERE role NOT IN ('admin', 'user')`);
 }
@@ -611,7 +626,7 @@ function ensureDefaultAdmin(database) {
     console.warn('[db] 默认管理员账号已创建,密码 admin123,请立即登录修改密码');
   } else {
     // 旧库存在 admin,确保角色为 admin
-    database.prepare("UPDATE users SET role = 'admin' WHERE username = 'admin'").run();
+    database.prepare("UPDATE users SET role = 'admin' WHERE username = 'admin' AND role <> 'admin'").run();
   }
 }
 

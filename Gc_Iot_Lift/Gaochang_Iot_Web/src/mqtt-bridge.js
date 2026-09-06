@@ -22,7 +22,7 @@ const CMD_REDUNDANT_DELAYS_MS = (process.env.CMD_REDUNDANT_DELAYS_MS || '1300,29
 const CMD_REDUNDANT_JITTER_MS = Math.max(0, parseInt(process.env.CMD_REDUNDANT_JITTER_MS || '350', 10));
 const LEGACY_ENABLED = (process.env.MQTT_LEGACY_ENABLED || 'true').toLowerCase() === 'true';
 const LEGACY_MAX_DEVICES = parseInt(process.env.MQTT_LEGACY_MAX_DEVICES || '1', 10);
-const VALID_PRODUCT_TYPES = ['double_post', 'small_scissor', 'thin_scissor', 'large_scissor'];
+const VALID_PRODUCT_TYPES = ['screw_lift', 'double_post', 'small_scissor', 'thin_scissor', 'large_scissor'];
 
 // v1 协议 msg_id 去重缓存:5 分钟窗口,最多 1000 条
 const DEDUP_WINDOW_MS = parseInt(process.env.OFFLINE_DEDUP_WINDOW_MS || '300000', 10);
@@ -349,6 +349,7 @@ const lockTelemetryGuards = new Map();
 const LOCK_TELEMETRY_GUARD_MS = 30000;
 
 const PRODUCT_LOG_CAPABILITIES = {
+  screw_lift: { photo: false, lower: false, rotary: false },
   double_post: { photo: false, lower: false, rotary: false },
   small_scissor: { photo: true, lower: true, rotary: false },
   thin_scissor: { photo: true, lower: true, rotary: false },
@@ -364,7 +365,8 @@ function adaptFirmwarePayload(productType, data) {
   if (data.lower_limit != null) ioInput.lower_limit = data.lower_limit;
   if (Object.keys(ioInput).length) adapted.io_input = ioInput;
   if (Object.keys(ioOutput).length) adapted.io_output = ioOutput;
-  if (['usage', 'rise_counter', 'rise_count'].includes(data.type) && productType === 'double_post') {
+  if (['usage', 'rise_counter', 'rise_count'].includes(data.type) &&
+      ['screw_lift', 'double_post'].includes(productType)) {
     if (data.rise_total_ms != null) adapted.total_run_ms = data.rise_total_ms;
     if (data.rise_count != null) adapted.run_count = data.rise_count;
   }
@@ -465,9 +467,13 @@ function mergePartialStatus(deviceId, normalized, raw = {}) {
   }
 
   const safety = objectOrEmpty(raw.safety);
+  const height = objectOrEmpty(raw.height);
   const io = objectOrEmpty(raw.io);
   const ioInput = objectOrEmpty(raw.io_input || io.input);
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+  const hasOwnRaw = (key) => hasOwn(raw, key);
+  const hasSafety = (key) => hasOwn(safety, key);
+  const hasHeight = (key) => hasOwn(height, key);
   const lowerReported = hasOwn(raw, 'lower_limit') || hasOwn(safety, 'lower') ||
     hasOwn(safety, 'lower_limit') || hasOwn(ioInput, 'lower_limit') || hasOwn(ioInput, 'limit_down');
   const upperReported = hasOwn(raw, 'upper_limit') || hasOwn(safety, 'upper') ||
@@ -477,6 +483,37 @@ function mergePartialStatus(deviceId, normalized, raw = {}) {
   // rather than overwriting the last telemetry value with normalizeTelemetry's default 0.
   if (!lowerReported) normalized.lower_limit = current.lower_limit;
   if (!upperReported) normalized.upper_limit = current.upper_limit;
+
+  /* Partial status/motion/usage frames may omit encoder fields. Keep last height. */
+  const heightReported = hasOwnRaw('height') || hasOwnRaw('height_left_mm') || hasOwnRaw('height_right_mm') ||
+    hasHeight('left_mm') || hasHeight('right_mm') || hasOwnRaw('left_pulse') || hasOwnRaw('right_pulse');
+  if (!heightReported) {
+    normalized.height_left_mm = current.height_left_mm;
+    normalized.height_right_mm = current.height_right_mm;
+    normalized.height_diff_mm = current.height_diff_mm;
+    normalized.left_pulse = current.left_pulse;
+    normalized.right_pulse = current.right_pulse;
+  }
+
+  /* Height packets may omit state/safety detail fields. Keep the last full status
+     instead of letting normalizeTelemetry replace omitted values with defaults. */
+  if (raw.type === 'height') {
+    if (!hasOwnRaw('state')) normalized.state = current.state;
+    if (!hasOwnRaw('direction')) normalized.direction = current.direction;
+    if (!hasOwnRaw('locked')) normalized.locked = current.locked;
+    if (!hasOwnRaw('alarm') && !hasSafety('alarm')) normalized.alarm = current.alarm;
+    if (!hasOwnRaw('alarm_code') && !hasSafety('alarm_code')) normalized.alarm_code = current.alarm_code;
+    if (!hasOwnRaw('uptime_ms') && !hasOwnRaw('uptime_s')) normalized.uptime_s = current.uptime_s;
+    if (!hasOwnRaw('dtu_state') && !hasOwn(objectOrEmpty(raw.dtu), 'state')) normalized.dtu_state = current.dtu_state;
+    if (!hasOwnRaw('csq') && !hasOwn(objectOrEmpty(raw.dtu), 'csq')) normalized.csq = current.csq;
+    if (!hasOwnRaw('stall') && !hasSafety('stall')) normalized.stall = current.stall;
+    if (!hasOwnRaw('collision_up') && !hasSafety('collision_up')) normalized.collision_up = current.collision_up;
+    if (!hasOwnRaw('collision_down') && !hasSafety('collision_down')) normalized.collision_down = current.collision_down;
+    if (!hasOwnRaw('left_up_collision') && !hasSafety('left_up_collision')) normalized.left_up_collision = current.left_up_collision;
+    if (!hasOwnRaw('right_up_collision') && !hasSafety('right_up_collision')) normalized.right_up_collision = current.right_up_collision;
+    if (!hasOwnRaw('left_down_collision') && !hasSafety('left_down_collision')) normalized.left_down_collision = current.left_down_collision;
+    if (!hasOwnRaw('right_down_collision') && !hasSafety('right_down_collision')) normalized.right_down_collision = current.right_down_collision;
+  }
   return normalized;
 }
 
@@ -1626,14 +1663,14 @@ function handleStatusUpdate(deviceId, data) {
         data.maintenance_due = 0;
         data.last_run_at = null;
       }
+      /* 平台绑定名/人工改名优先；固件固定 name 不得覆盖「丝杆00」等显示名 */
       db.prepare(`UPDATE devices SET
-        name = COALESCE(NULLIF(?, ''), name),
         model = COALESCE(NULLIF(?, ''), model),
         uid = COALESCE(NULLIF(?, ''), uid),
         gateway_id = COALESCE(NULLIF(?, ''), gateway_id),
         product_type = COALESCE(NULLIF(?, ''), product_type)
         WHERE device_id = ?`)
-        .run(data.name || '', data.model || '', data.uid || '', data.gateway_id || '', data.product_type || '', deviceId);
+        .run(data.model || '', data.uid || '', data.gateway_id || '', data.product_type || '', deviceId);
 
       db.prepare(`
         INSERT INTO device_status (device_id, online, locked, state, alarm,
@@ -1894,6 +1931,7 @@ function sendCommand(deviceId, cmd, msgId, extra = {}) {
       cmd: wireCmd,
       args: args || cmdArgs || {},
       operator: operator || '',
+      account: operator || '',
       created_at: nowISO()
     };
     // The large-scissor firmware reads admin_enter.password from the command
@@ -1956,6 +1994,18 @@ function dispatchPendingShippingReset(deviceId) {
       ORDER BY q.id DESC LIMIT 1
     `).get(deviceId);
     if (!deferred) return;
+
+    /* 丝杆固件无 reset_usage；网站侧台账已在排队时清零，延迟任务直接完成 */
+    if (deferred.product_type === 'screw_lift') {
+      const claimed = db.prepare(`
+        UPDATE command_queue SET status = 'succeeded', result = 'website_only', purpose = 'shipping_reset'
+        WHERE msg_id = ? AND purpose = 'shipping_reset_deferred' AND status = 'pending'
+      `).run(deferred.msg_id);
+      if (claimed.changes === 1) {
+        console.log(`[CMD] screw_lift shipping reset website-only device=${deviceId} msg_id=${deferred.msg_id}`);
+      }
+      return;
+    }
 
     const isLargeScissor = deferred.product_type === 'large_scissor';
     const nextCmd = isLargeScissor ? 'admin_enter' : 'reset_usage';

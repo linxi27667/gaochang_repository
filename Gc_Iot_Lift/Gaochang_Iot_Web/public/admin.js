@@ -527,12 +527,14 @@ async function loadRegistry() {
 
 // 产品型号中文映射(与后端 PRODUCT_CONFIGS 保持一致)
 const PRODUCT_TYPE_NAMES = {
+    screw_lift: '丝杆举升机',
     double_post: '两柱举升机',
     small_scissor: '小剪举升机',
     thin_scissor: '超薄小剪举升机',
     large_scissor: '大剪举升机'
 };
 const FIRMWARE_DISPLAY_NAMES = {
+    screw_lift: 'GC-Screw_Lift',
     double_post: 'GC-Two_Pillars',
     small_scissor: 'GC_Small_Scissor',
     thin_scissor: 'GC_Thin_Scissor',
@@ -546,6 +548,10 @@ function normalizeRegistryUid(value) {
 function syncRegistryDisplayName() {
     const productType = document.getElementById('registry-product-type').value;
     document.getElementById('registry-display-name').value = FIRMWARE_DISPLAY_NAMES[productType] || '';
+    /* 丝杆默认勾选高度编码器，其它型号不强制改动人工勾选 */
+    if (productType === 'screw_lift') {
+        document.getElementById('registry-has-encoder').checked = true;
+    }
 }
 
 function renderRegistry(list) {

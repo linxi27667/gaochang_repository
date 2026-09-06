@@ -4,7 +4,7 @@
 
 ## 主要功能
 
-- 连接 MQTT Broker，订阅 `gaochang/lift/#`。
+- 连接 MQTT Broker，订阅基于芯片 UID 的 `gaochang/lift/v1/devices/+/up`。
 - 接收固件 telemetry/status/operation log，写入 SQLite。
 - 提供登录鉴权、设备管理、远程锁机/解锁、清报警、配置下发、产品类型切换等 API。
 - WebSocket 推送 MQTT/设备状态到前端。
@@ -27,7 +27,7 @@
 默认配置可通过环境变量覆盖：
 
 ```text
-MQTT_BROKER=mqtt://127.0.0.1:1883
+MQTT_BROKER=mqtt://mqtt.gclift.net:1883
 MQTT_TOPIC_PREFIX=gaochang/lift
 MQTT_DEVICE_ID=gaochang_lift_f407zet6
 PORT=3000
@@ -51,3 +51,7 @@ npm run dev
 - `/api/maintenance`：维修保养记录。
 - `/api/device-ops`：固件上报的设备运行日志。
 - `/api/mqtt-status`：MQTT 连接状态。
+
+## 丝杆举升机
+
+丝杆举升机使用独立型号 `screw_lift`，固件目录为 `F407ZET6/GC-Screw_Lift`。该型号已在产品元数据中启用双编码器高度反馈；首页和设备详情会显示左右高度与高度差。设备实例必须以实际 STM32 UID 登记后才接受 MQTT 上报，具体步骤见 `docs/丝杆举升机接入与验收.md`。

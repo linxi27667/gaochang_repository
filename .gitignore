@@ -26,10 +26,13 @@ Objects/
 # IDE
 *.uvguix.*
 *.uvoptx
-*.uvproj.*
 *.csolution
 *.cproject
 *.project
+
+# SQLite runtime files
+*.db-shm
+*.db-wal
 
 # Archives
 *.zip

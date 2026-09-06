@@ -22,12 +22,14 @@ function readStoredUser() {
 // 举升机型号列表
 const LIFT_MODELS = ['GC-4.0sle', 'GC-4.0sb', 'GC-4.0MSL', 'GC-4.0PRO-DW'];
 const PRODUCT_CAPABILITIES = {
+  screw_lift: { refill: false, photoelectric: false, rotary: false, lowerLimit: false },
   double_post: { refill: false, photoelectric: false, rotary: false, lowerLimit: false },
   small_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: true },
   thin_scissor: { refill: true, photoelectric: true, rotary: false, lowerLimit: true },
   large_scissor: { refill: true, photoelectric: true, rotary: true, lowerLimit: true }
 };
 const PRODUCT_TYPE_NAMES = {
+  screw_lift: '丝杆举升机',
   double_post: '两柱举升机',
   small_scissor: '小剪举升机',
   thin_scissor: '超薄小剪举升机',
@@ -823,6 +825,7 @@ function renderDeviceSummary(d) {
       return `<span class="compact-input ${!d.online ? 'is-unavailable' : (active ? 'is-active' : '')}">${IO_INPUT_LABELS[key] || key}<b>${d.online ? ioStateText(key, active) : '未知'}</b></span>`;
     }).join('')}</div></div>
     <div class="device-summary-section"><div class="device-summary-title">安全状态</div>${renderSafetyStates(d, true)}</div>
+    ${hasHeightFeedback(d) ? renderHeightPanel(d, true) : ''}
     <div class="maintenance-progress ${isMaintenanceDue(d) ? 'is-due' : ''}"><div><span>保养周期</span><strong>${getCycleCount(d)} / ${d.maintenance_threshold || 5000}</strong></div><div class="maintenance-progress-track"><i style="width:${Math.min(100, (getCycleCount(d) / (d.maintenance_threshold || 5000)) * 100)}%"></i></div></div>`;
 }
 
@@ -1143,7 +1146,7 @@ async function showAddDeviceModal() {
     <form onsubmit="return addDevice(event)">
       <div class="form-group"><label>${t('devices.deviceId')}</label><input type="text" id="add-device-id" placeholder="${t('devices.idPlaceholder')}" required></div>
       <div class="form-group"><label>${t('devices.deviceName')}</label><input type="text" id="add-device-name" placeholder="${t('devices.namePlaceholder')}" required></div>
-      <div class="form-group"><label>产品型号</label><select id="add-product-type"><option value="double_post">两柱举升机</option><option value="small_scissor">小剪举升机</option><option value="thin_scissor">超薄小剪举升机</option><option value="large_scissor">大剪举升机</option></select></div>
+      <div class="form-group"><label>产品型号</label><select id="add-product-type"><option value="screw_lift">丝杆举升机</option><option value="double_post">两柱举升机</option><option value="small_scissor">小剪举升机</option><option value="thin_scissor">超薄小剪举升机</option><option value="large_scissor">大剪举升机</option></select></div>
       <div class="form-group"><label>${t('devices.model')}</label><select id="add-device-model">${modelOptions}</select></div>
       <div class="form-group"><label>${t('devices.group')}</label><input type="text" id="add-device-group" value="${t('devices.defaultGroup')}"></div>
       <div class="form-group">
@@ -2012,6 +2015,7 @@ function renderLogs() {
         <label>设备型号</label>
         <select id="log-filter-product">
           <option value="">全部型号</option>
+          <option value="screw_lift">丝杆举升机</option>
           <option value="double_post">两柱举升机</option>
           <option value="small_scissor">小剪举升机</option>
           <option value="thin_scissor">超薄小剪举升机</option>

@@ -3,6 +3,6 @@ speed 4000
 device STM32F407ZETx
 connect
 erase
-loadfile "E:\MCU\gaochang\Gc_Iot_Lift\GC-Screw_Lift\GC-Two_Pillars\MDK-ARM\gaochang_lift_2\gaochang_lift_2.hex"
+loadfile "E:\MCU\gaochang\Gc_Iot_Lift\F407ZET6\GC-Two_Pillars\MDK-ARM\gaochang_lift_2\gaochang_lift_2.hex"
 r
 q

@@ -56,8 +56,8 @@ node_modules/
 *.sqlite3
 .env
 Gaochang_Iot_Web/Gaochang_Iot_Web
-**/GC_*/GC_Small_Scissor/
-**/GC-*/GC-Screw_Lift/
+**/GC_*/GC_Small_Scissor
+**/GC-*/GC-Screw_Lift
 
 # Customer site runtime data and credentials
 deployments/sites/**/inventory.yaml

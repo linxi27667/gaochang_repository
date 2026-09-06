@@ -1,9 +1,0 @@
-device STM32F407ZG
-speed 4000
-if SWD
-connect
-erase
-loadfile "C:\Users\zjl\Desktop\gaochang\GC_Thin_Scissor\MDK-ARM\GC_Thin_Scissor\GC_Thin_Scissor.hex"
-r
-g
-exit

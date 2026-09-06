@@ -1,9 +1,0 @@
-si SWD
-speed 4000
-device STM32F407ZETx
-connect
-halt
-mem32 0x20000044 4
-mem32 0x20000048 1
-mem8 0x20000078 1
-q

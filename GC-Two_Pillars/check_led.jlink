@@ -1,6 +1,0 @@
-device STM32F407ZG
-speed 4000
-if SWD
-connect
-mem32 0x40021814,1
-exit

@@ -1,0 +1,10 @@
+si SWD
+speed 4000
+device STM32F407ZETx
+connect
+sleep 2000
+halt
+mem32 0x08000000 16
+mem32 0xE000ED08 1
+mem32 0x08009770 8
+q

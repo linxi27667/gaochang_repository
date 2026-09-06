@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 高昌举升机 IoT 平台</title>
+    <link rel="icon" href="img/logo.png" type="image/png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #1e6fff;
+            --primary-dark: #155ad6;
+            --primary-light: #e8f1ff;
+            --bg: #f4f6fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7a8699;
+            --border: #e4e9f2;
+            --success: #18b566;
+            --warning: #f5a623;
+            --danger: #e94c4c;
+            --shadow: 0 2px 8px rgba(30, 111, 255, 0.08);
+        }
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* 顶部栏 */
+        .topbar {
+            height: 56px;
+            background: linear-gradient(90deg, #1e6fff 0%, #2c7bff 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .topbar .logo img { width: 28px; height: 28px; }
+        .topbar .topbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .topbar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .topbar .user-info .role-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+        .topbar .btn-logout {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .topbar .btn-logout:hover { background: rgba(255,255,255,0.25); }
+        .topbar .btn-back {
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            opacity: 0.85;
+        }
+        .topbar .btn-back:hover { opacity: 1; }
+
+        /* 主体布局 */
+        .layout {
+            display: flex;
+            min-height: calc(100vh - 56px);
+        }
+        .sidebar {
+            width: 200px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+        .sidebar .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            cursor: pointer;
+            color: var(--text);
+            border-left: 3px solid transparent;
+            transition: all 0.15s;
+            font-size: 14px;
+        }
+        .sidebar .menu-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .sidebar .menu-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 500;
+        }
+        .sidebar .menu-item .icon {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-x: auto;
+        }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+            background: var(--primary);
+        }
+        .stat-card.success::before { background: var(--success); }
+        .stat-card.warning::before { background: var(--warning); }
+        .stat-card.danger::before { background: var(--danger); }
+        .stat-card .stat-label {
+            color: var(--text-light);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .stat-card .stat-sub {
+            color: var(--text-light);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-light);
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .toolbar .search-input {
+            flex: 1;
+            min-width: 200px;
+            max-width: 360px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+        .toolbar .search-input:focus { border-color: var(--primary); }
+        .toolbar .select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            background: #fff;
+            outline: none;
+        }
+        .warning-banner { display: flex; gap: 10px; align-items: baseline; margin-bottom: 16px; padding: 12px 14px; border-left: 3px solid var(--warning); background: #fff8eb; color: #7a4b00; font-size: 12px; line-height: 1.6; }
+        .warning-banner strong { white-space: nowrap; }
+        .shipping-reset-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+        .shipping-select-all { font-size: 13px; color: var(--text); cursor: pointer; }
+        .shipping-reset-table td { vertical-align: top; }
+        .shipping-queue-detail { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--warning); background: rgba(245, 158, 11, .08); font-size: 11px; line-height: 1.45; white-space: nowrap; }
+        .shipping-queue-detail strong { font-size: 12px; }
+        .shipping-device-primary { font-weight: 600; }
+        .shipping-device-secondary { margin-top: 3px; color: var(--text-light); font-size: 11px; word-break: break-all; }
+        .shipping-data-summary { color: var(--text-light); font-size: 11px; line-height: 1.7; white-space: nowrap; }
+        .shipping-status-cell { white-space: nowrap; }
+
+        /* 按钮 */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-default {
+            background: #fff;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-default:hover { background: var(--bg); }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 表格 */
+        .table-wrap {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        table.data-table th {
+            background: #f8fafc;
+            color: var(--text-light);
+            font-weight: 500;
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        table.data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+        table.data-table tr:hover td { background: #f8fafc; }
+        table.data-table tr:last-child td { border-bottom: none; }
+        table.data-table .empty-row td {
+            text-align: center;
+            color: var(--text-light);
+            padding: 32px 0;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .tag-success { background: #e6f9f0; color: var(--success); }
+        .tag-warning { background: #fff5e6; color: var(--warning); }
+        .tag-danger { background: #fdeaea; color: var(--danger); }
+        .tag-info { background: var(--primary-light); color: var(--primary); }
+        .tag-default { background: #eef1f6; color: var(--text-light); }
+
+        .action-link {
+            color: var(--primary);
+            cursor: pointer;
+            margin-right: 12px;
+            font-size: 13px;
+        }
+        .action-link.danger { color: var(--danger); }
+        .action-link:hover { text-decoration: underline; }
+
+        /* 分页 */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-light);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .pagination .page-btns {
+            display: flex;
+            gap: 4px;
+        }
+        .pagination .page-btn {
+            min-width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+        }
+        .pagination .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .pagination .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .pagination .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* 弹窗 */
+        .modal-mask {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-mask.show { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .modal.wide { max-width: 720px; }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .modal-close {
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 20px;
+            line-height: 1;
+            background: none;
+            border: none;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* 表单 */
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text);
+            font-size: 13px;
+        }
+        .form-group label .required { color: var(--danger); }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: var(--primary); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        .form-row .form-group { flex: 1; }
+        .form-tip {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        .accessory-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            margin-top: 8px;
+        }
+        .accessory-checkboxes label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+        .accessory-checkboxes input {
+            width: 15px;
+            height: 15px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 70px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            padding: 10px 16px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 200px;
+            animation: slideIn 0.2s ease;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.warning { background: var(--warning); }
+        .toast.info { background: var(--primary); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 加载中 */
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-light);
+        }
+        .loading::before {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 批量导入结果 */
+        .import-result {
+            background: #f8fafc;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+        .import-result .result-row {
+            margin-bottom: 4px;
+        }
+        .import-result .error-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 8px;
+            padding: 8px;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--danger);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .layout { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                display: flex;
+                overflow-x: auto;
+                padding: 8px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .sidebar .menu-item {
+                padding: 8px 16px;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                white-space: nowrap;
+            }
+            .sidebar .menu-item.active {
+                border-left: none;
+                border-bottom-color: var(--primary);
+            }
+            .main-content { padding: 12px; }
+            .form-row { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr; }
+            table.data-table { font-size: 12px; }
+            table.data-table th, table.data-table td { padding: 8px; }
+            .warning-banner { align-items: flex-start; flex-direction: column; gap: 2px; }
+            .shipping-reset-table { min-width: 760px; }
+        }
+
+        .text-muted { color: var(--text-light); }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+        .text-primary { color: var(--primary); }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .nowrap { white-space: nowrap; }
+        .break-all { word-break: break-all; }
+
+        /* 登录层 */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1e6fff 0%, #2c7bff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 36px 32px 28px;
+            width: 360px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .login-logo img {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+        }
+        .login-logo h1 {
+            font-size: 18px;
+            color: var(--text);
+            margin-top: 12px;
+            font-weight: 600;
+        }
+        .login-logo p {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        .login-box .form-group { margin-bottom: 14px; }
+        .login-box .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+        .login-box .form-group input {
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .login-box .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30,111,255,0.12);
+        }
+        .login-box .btn-primary {
+            width: 100%;
+            height: 42px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .login-box .btn-primary:hover { background: var(--primary-dark); }
+        .login-box .btn-primary[disabled] { opacity: 0.6; cursor: not-allowed; }
+        .login-box .error-msg {
+            background: #fef2f2;
+            color: var(--danger);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .login-box .login-foot {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 13px;
+        }
+        .login-box .login-foot a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录层(未登录时显示) -->
+    <div id="login-overlay" class="login-overlay" style="display:none;">
+        <div class="login-box">
+            <div class="login-logo">
+                <img src="img/logo.png" alt="GaoChang">
+                <h1>高昌举升机 IoT 管理后台</h1>
+                <p>请使用管理员账号登录</p>
+            </div>
+            <form id="admin-login-form" onsubmit="return handleAdminLogin(event)">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="admin-login-username" placeholder="请输入用户名" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="admin-login-password" placeholder="请输入密码" required autocomplete="current-password">
+                </div>
+                <div id="admin-login-error" class="error-msg" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary btn-block" id="admin-login-btn">登录</button>
+            </form>
+            <div class="login-foot">
+                <a href="/">← 返回前台</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部栏 -->
+    <div class="topbar">
+        <div class="logo">
+            <img src="img/logo.png" alt="GaoChang">
+            <span>高昌举升机 IoT 管理后台</span>
+        </div>
+        <div class="topbar-right">
+            <a href="/" class="btn-back">← 返回前台</a>
+            <div class="user-info">
+                <span id="current-username">-</span>
+                <span class="role-tag" id="current-role">-</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">退出</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu-item active" data-section="dashboard" onclick="switchSection('dashboard')">
+                <span class="icon">📊</span><span>仪表盘</span>
+            </div>
+            <div class="menu-item" data-section="registry" onclick="switchSection('registry')">
+                <span class="icon">📋</span><span>设备注册管理</span>
+            </div>
+            <div class="menu-item" data-section="bindings" onclick="switchSection('bindings')">
+                <span class="icon">🔗</span><span>绑定看板</span>
+            </div>
+            <div class="menu-item" data-section="shipping_reset" onclick="switchSection('shipping_reset')">
+                <span class="icon">📦</span><span>发货前清除</span>
+            </div>
+            <div class="menu-item" data-section="approval" onclick="switchSection('approval')">
+                <span class="icon">✅</span><span>绑定审批</span>
+            </div>
+            <div class="menu-item" data-section="users" onclick="switchSection('users')">
+                <span class="icon">👥</span><span>用户管理</span>
+            </div>
+            <div class="menu-item" data-section="logs" onclick="switchSection('logs')">
+                <span class="icon">📝</span><span>平台操作日志</span>
+            </div>
+            <div class="menu-item" data-section="device_ops" onclick="switchSection('device_ops')">
+                <span class="icon">🔧</span><span>设备操作日志</span>
+            </div>
+        </div>
+
+        <!-- 主内容 -->
+        <div class="main-content">
+            <!-- 仪表盘 -->
+            <div class="page-section active" id="section-dashboard">
+                <div class="section-header">
+                    <div class="section-title">仪表盘</div>
+                    <button class="btn btn-default btn-sm" onclick="loadStats()">刷新</button>
+                </div>
+                <div class="stats-grid" id="stats-grid">
+                    <div class="loading">加载中...</div>
+                </div>
+                <div class="card">
+                    <div class="section-title" style="font-size:15px;margin-bottom:12px;">今日活动</div>
+                    <div id="today-activity" class="text-muted">-</div>
+                </div>
+                <div class="card">
+                    <div class="section-title" style="font-size:15px;margin-bottom:12px;">最近 7 天绑定趋势</div>
+                    <div id="trend-chart" class="text-muted">-</div>
+                </div>
+            </div>
+
+            <!-- 设备注册管理 -->
+            <div class="page-section" id="section-registry">
+                <div class="section-header">
+                    <div class="section-title">设备注册管理</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-default btn-sm" onclick="exportRegistry()">导出 CSV</button>
+                        <button class="btn btn-default btn-sm" onclick="showBatchImportModal()">批量导入</button>
+                        <button class="btn btn-primary btn-sm" onclick="showRegistryModal()">+ 新增设备</button>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="registry-search" placeholder="搜索 出厂编号 / UID / 型号 / 批次" onkeydown="if(event.key==='Enter')registryPage=1;loadRegistry()">
+                    <select class="select" id="registry-status-filter" onchange="registryPage=1;loadRegistry()">
+                        <option value="">全部状态</option>
+                        <option value="unbound">未绑定</option>
+                        <option value="bound">已绑定</option>
+                    </select>
+                    <select class="select" id="registry-product-filter" onchange="registryPage=1;loadRegistry()">
+                        <option value="">全部型号</option>
+                        <option value="double_post">两柱举升机</option>
+                        <option value="small_scissor">小剪举升机</option>
+                        <option value="thin_scissor">超薄小剪举升机</option>
+                        <option value="large_scissor">大剪举升机</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="registryPage=1;loadRegistry()">搜索</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>出厂编号</th>
+                                <th>芯片UID</th>
+                                <th>产品型号</th>
+                                <th>批次</th>
+                                <th>生产日期</th>
+                                <th>状态</th>
+                                <th>绑定设备</th>
+                                <th>录入时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registry-tbody">
+                            <tr class="empty-row"><td colspan="10">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="registry-pagination"></div>
+                </div>
+            </div>
+
+            <!-- 绑定看板 -->
+            <div class="page-section" id="section-bindings">
+                <div class="section-header">
+                    <div class="section-title">绑定看板</div>
+                    <button class="btn btn-default btn-sm" onclick="bindingsPage=1;loadBindings()">刷新</button>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="bindings-search" placeholder="搜索 设备名 / UID / 编号 / 用户" onkeydown="if(event.key==='Enter')bindingsPage=1;loadBindings()">
+                    <select class="select" id="bindings-status-filter" onchange="bindingsPage=1;loadBindings()">
+                        <option value="">全部状态</option>
+                        <option value="bound">已绑定</option>
+                        <option value="unbound">未绑定</option>
+                    </select>
+                    <select class="select" id="bindings-product-filter" onchange="bindingsPage=1;loadBindings()">
+                        <option value="">全部型号</option>
+                        <option value="double_post">两柱举升机</option>
+                        <option value="small_scissor">小剪举升机</option>
+                        <option value="thin_scissor">超薄小剪举升机</option>
+                        <option value="large_scissor">大剪举升机</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="bindingsPage=1;loadBindings()">搜索</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>设备ID</th>
+                                <th>设备名称</th>
+                                <th>产品型号</th>
+                                <th>芯片UID</th>
+                                <th>出厂编号</th>
+                                <th>在线</th>
+                                <th>绑定状态</th>
+                                <th>绑定用户</th>
+                                <th>绑定时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bindings-tbody">
+                            <tr class="empty-row"><td colspan="10">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="bindings-pagination"></div>
+                </div>
+            </div>
+
+            <!-- 发货前数据清理 -->
+            <div class="page-section" id="section-shipping_reset">
+                <div class="section-header">
+                    <div class="section-title">发货前数据清理</div>
+                    <button class="btn btn-default btn-sm" onclick="loadShippingResetDevices()">刷新</button>
+                </div>
+                <div class="warning-banner">
+                    <strong>仅清除业务数据</strong>
+                    <span>设备必须在线并成功返回 Flash 台账后才会清理。保留设备资产、UID、型号、注册信息和账号绑定关系。</span>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="shipping-account-filter" placeholder="账号：用户名 / 姓名 / 手机号" onkeydown="if(event.key==='Enter')loadShippingResetDevices()">
+                    <input type="text" class="search-input" id="shipping-device-filter" placeholder="设备名 / 设备ID / UID / 出厂编号" onkeydown="if(event.key==='Enter')loadShippingResetDevices()">
+                    <select class="select" id="shipping-product-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部型号</option>
+                        <option value="double_post">两柱举升机</option>
+                        <option value="small_scissor">小剪举升机</option>
+                        <option value="thin_scissor">超薄小剪举升机</option>
+                        <option value="large_scissor">大剪举升机</option>
+                    </select>
+                    <select class="select" id="shipping-online-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部在线状态</option>
+                        <option value="1">在线</option>
+                        <option value="0">离线</option>
+                    </select>
+                    <select class="select" id="shipping-queue-filter" onchange="loadShippingResetDevices()">
+                        <option value="">全部清除状态</option>
+                        <option value="1">仅显示清除队列</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="loadShippingResetDevices()">搜索</button>
+                </div>
+                <div class="shipping-reset-actions">
+                    <label class="shipping-select-all"><input type="checkbox" id="shipping-select-all" onchange="toggleAllShippingReset(this.checked)"> 全选当前结果</label>
+                    <span id="shipping-selection-summary" class="text-muted">已选择 0 台</span>
+                    <button class="btn btn-danger" id="shipping-reset-submit" onclick="startShippingReset()" disabled>发货前清除所选设备</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table shipping-reset-table">
+                        <thead><tr><th style="width:42px;"></th><th>设备</th><th>型号</th><th>绑定账号</th><th>状态</th><th>当前业务数据</th><th>清理状态</th></tr></thead>
+                        <tbody id="shipping-reset-tbody"><tr class="empty-row"><td colspan="7">进入页面后加载</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 绑定审批中心 -->
+            <div class="page-section" id="section-approval">
+                <div class="section-header">
+                    <div class="section-title">绑定审批中心</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-default btn-sm" onclick="loadBindingRequests()">刷新待审批</button>
+                        <button class="btn btn-default btn-sm" onclick="loadBindingHistory()">查看审批历史</button>
+                    </div>
+                </div>
+                <div id="approval-pending-section">
+                    <div class="section-title" style="font-size:14px;margin-bottom:8px;">待审批申请</div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>申请ID</th>
+                                    <th>设备编号</th>
+                                    <th>设备名称</th>
+                                    <th>申请用户</th>
+                                    <th>申请时间</th>
+                                    <th>申请说明</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approval-pending-tbody">
+                                <tr class="empty-row"><td colspan="7">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="approval-history-section" style="display:none;margin-top:24px;">
+                    <div class="section-title" style="font-size:14px;margin-bottom:8px;">审批历史</div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>申请ID</th>
+                                    <th>设备编号</th>
+                                    <th>申请用户</th>
+                                    <th>状态</th>
+                                    <th>申请时间</th>
+                                    <th>审批时间</th>
+                                    <th>审批人</th>
+                                    <th>审批说明</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approval-history-tbody">
+                                <tr class="empty-row"><td colspan="8">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="page-section" id="section-users">
+                <div class="section-header">
+                    <div class="section-title">用户管理</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-default btn-sm" onclick="loadUsers()">刷新</button>
+                        <button class="btn btn-primary btn-sm" onclick="showUserModal()">+ 新增用户</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>角色</th>
+                                <th>姓名</th>
+                                <th>手机号</th>
+                                <th>状态</th>
+                                <th>需改密</th>
+                                <th>创建时间</th>
+                                <th>最近登录</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <tr class="empty-row"><td colspan="10">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 操作日志 -->
+            <div class="page-section" id="section-logs">
+                <div class="section-header">
+                    <div class="section-title">操作日志</div>
+                    <button class="btn btn-default btn-sm" onclick="logsPage=1;loadLogs()">刷新</button>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="logs-action" placeholder="操作类型" onkeydown="if(event.key==='Enter')logsPage=1;loadLogs()">
+                    <input type="text" class="search-input" id="logs-device" placeholder="设备ID" style="max-width:180px;" onkeydown="if(event.key==='Enter')logsPage=1;loadLogs()">
+                    <input type="number" class="search-input" id="logs-user" placeholder="用户ID" style="max-width:140px;" onkeydown="if(event.key==='Enter')logsPage=1;loadLogs()">
+                    <select class="select" id="logs-source-filter">
+                        <option value="">全部来源</option>
+                        <option value="operation">操作日志</option>
+                        <option value="binding">绑定日志</option>
+                    </select>
+                    <input type="date" class="select" id="logs-start">
+                    <input type="date" class="select" id="logs-end">
+                    <button class="btn btn-primary btn-sm" onclick="logsPage=1;loadLogs()">搜索</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>来源</th>
+                                <th>操作</th>
+                                <th>用户</th>
+                                <th>设备</th>
+                                <th>详情</th>
+                                <th>结果/IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr class="empty-row"><td colspan="7">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="logs-pagination"></div>
+                </div>
+            </div>
+
+            <!-- 设备操作日志 -->
+            <div class="page-section" id="section-device_ops">
+                <div class="section-header">
+                    <div class="section-title">设备操作日志</div>
+                    <button class="btn btn-default btn-sm" onclick="loadDeviceOpStats()">刷新统计</button>
+                </div>
+                <div class="stats-grid" id="device-op-stats-grid">
+                    <div class="loading">加载中...</div>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-input" id="device-op-serial" placeholder="出厂编号" onkeydown="if(event.key==='Enter')deviceOpsPage=1;loadDeviceOps()">
+                    <input type="text" class="search-input" id="device-op-uid" placeholder="设备UID" style="max-width:200px;" onkeydown="if(event.key==='Enter')deviceOpsPage=1;loadDeviceOps()">
+                    <select class="select" id="device-op-type-filter" onchange="deviceOpsPage=1;loadDeviceOps()">
+                        <option value="">全部操作</option>
+                        <option value="up">上升</option>
+                        <option value="down">下降</option>
+                        <option value="lock">锁定</option>
+                        <option value="unlock">解锁</option>
+                        <option value="refill">补油</option>
+                        <option value="estop">急停</option>
+                        <option value="photo_alarm">光电报警</option>
+                        <option value="rotary_switch">旋转开关切换</option>
+                        <option value="power_on">开机</option>
+                        <option value="power_off">关机</option>
+                    </select>
+                    <input type="date" class="select" id="device-op-start">
+                    <input type="date" class="select" id="device-op-end">
+                    <button class="btn btn-primary btn-sm" onclick="deviceOpsPage=1;loadDeviceOps()">搜索</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>时间(设备本地)</th>
+                                <th>接收时间</th>
+                                <th>出厂编号</th>
+                                <th>设备UID</th>
+                                <th>操作类型</th>
+                                <th>结果</th>
+                                <th>持续(ms)</th>
+                                <th>设备状态</th>
+                                <th>详情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="device-ops-tbody">
+                            <tr class="empty-row"><td colspan="9">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="device-ops-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设备注册 弹窗 -->
+    <div class="modal-mask" id="registry-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="registry-modal-title">新增设备注册</div>
+                <button class="modal-close" onclick="closeModal('registry-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="registry-id">
+                <div class="form-group">
+                    <label>出厂编号 <span class="required">*</span></label>
+                    <input type="text" id="registry-serial" placeholder="如 GC-2026-00001">
+                </div>
+                <div class="form-group">
+                    <label>芯片UID <span class="required">*</span></label>
+                    <input type="text" id="registry-uid" placeholder="STM32 96-bit UID HEX (24位)" onblur="this.value=normalizeRegistryUid(this.value)">
+                    <div class="form-tip">STM32 芯片唯一ID，24位十六进制字符</div>
+                </div>
+                <div class="form-group">
+                    <label>绑定码 <span class="required" id="registry-bind-code-required">*</span></label>
+                    <input type="text" id="registry-bind-code" placeholder="设备铭牌绑定码">
+                    <div class="form-tip">只在保存时写入哈希；编辑时留空表示不修改原绑定码。</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>产品型号 <span class="required">*</span></label>
+                    <select id="registry-product-type" onchange="syncRegistryDisplayName()">
+                            <option value="double_post">两柱举升机</option>
+                            <option value="small_scissor">小剪举升机</option>
+                            <option value="thin_scissor">超薄小剪举升机</option>
+                            <option value="large_scissor">大剪举升机</option>
+                        </select>
+                        <div class="form-tip">影响固件控制逻辑,4 种型号共用一份固件</div>
+                    </div>
+                    <div class="form-group">
+                        <label>型号</label>
+                        <input type="text" id="registry-model" placeholder="如 TL-5000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>显示名称</label>
+                    <input type="text" id="registry-display-name" readonly>
+                    <div class="form-tip">由产品型号自动对应固件文件夹名称。</div>
+                </div>
+                <div class="form-group">
+                    <label>生产批次</label>
+                    <input type="text" id="registry-batch" placeholder="如 2026-B01">
+                </div>
+                <div class="form-group">
+                    <label>生产日期</label>
+                    <input type="date" id="registry-produced">
+                </div>
+                <div class="form-group">
+                    <label>出厂配件能力</label>
+                    <div class="form-tip">按真实装配勾选。未安装高度编码器的设备，用户端只显示上升/下降/安全状态，不显示高度。</div>
+                    <div class="accessory-checkboxes">
+                        <label><input type="checkbox" id="registry-has-encoder"> 高度编码器</label>
+                        <label><input type="checkbox" id="registry-has-buzzer"> 蜂鸣器</label>
+                        <label><input type="checkbox" id="registry-has-pressure"> 压力传感器</label>
+                        <label><input type="checkbox" id="registry-has-display"> 显示屏</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('registry-modal')">取消</button>
+                <button class="btn btn-primary" onclick="submitRegistry()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设备编辑 弹窗 -->
+    <div class="modal-mask" id="device-edit-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="device-edit-modal-title">编辑设备</div>
+                <button class="modal-close" onclick="closeModal('device-edit-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="device-edit-id">
+                <div class="form-group">
+                    <label>设备ID</label>
+                    <input type="text" id="device-edit-device-id" readonly style="background:#f5f5f5;color:#666;">
+                </div>
+                <div class="form-group">
+                    <label>设备名称 <span class="required">*</span></label>
+                    <input type="text" id="device-edit-name" placeholder="如 超薄小剪1号机">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>型号</label>
+                        <input type="text" id="device-edit-model" placeholder="如 GC-TSCISSOR">
+                    </div>
+                    <div class="form-group">
+                        <label>分组</label>
+                        <input type="text" id="device-edit-group" placeholder="如 1号工位">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>位置</label>
+                    <input type="text" id="device-edit-location" placeholder="如 A区-3号工位">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('device-edit-modal')">取消</button>
+                <button class="btn btn-primary" onclick="submitDeviceEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量导入 弹窗 -->
+    <div class="modal-mask" id="batch-modal">
+        <div class="modal wide">
+            <div class="modal-header">
+                <div class="modal-title">批量导入设备注册</div>
+                <button class="modal-close" onclick="closeModal('batch-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>JSON 数据 <span class="required">*</span></label>
+                    <textarea id="batch-json" placeholder='[{"serial":"GC-2026-00001","uid":"3D002D0018474E5036393820","bind_code":"ABC123","product_type":"large_scissor","model":"GC-LSCISSOR","has_encoder":false,"batch":"2026-B01","produced_at":"2026-06-01"},...]'></textarea>
+                    <div class="form-tip">每条记录必须包含 serial、uid 和 bind_code 字段；也可传 64 位 bind_code_hash。</div>
+                </div>
+                <div id="batch-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('batch-modal')">关闭</button>
+                <button class="btn btn-primary" onclick="submitBatchImport()">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户 弹窗 -->
+    <div class="modal-mask" id="user-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="user-modal-title">新增用户</div>
+                <button class="modal-close" onclick="closeModal('user-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="user-id">
+                <div class="form-group">
+                    <label>用户名 <span class="required">*</span></label>
+                    <input type="text" id="user-username" placeholder="字母、数字、下划线 3-20位" disabled>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>角色 <span class="required">*</span></label>
+                        <select id="user-role">
+                            <option value="user">用户 (user)</option>
+                            <option value="admin">管理员 (admin)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" id="user-realname" placeholder="真实姓名">
+                    </div>
+                </div>
+                <div class="form-group" id="user-password-group">
+                    <label>初始密码 <span class="required">*</span></label>
+                    <input type="password" id="user-password" placeholder="至少6位">
+                    <div class="form-tip">用户首次登录需修改密码</div>
+                </div>
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="text" id="user-phone" placeholder="选填">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('user-modal')">取消</button>
+                <button class="btn btn-primary" onclick="submitUser()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重置密码 弹窗 -->
+    <div class="modal-mask" id="reset-pwd-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">重置密码</div>
+                <button class="modal-close" onclick="closeModal('reset-pwd-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reset-pwd-id">
+                <p style="margin-bottom:12px;">为用户 <b id="reset-pwd-username"></b> 重置密码：</p>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="reset-pwd-new" placeholder="留空则重置为默认密码 123456">
+                    <div class="form-tip">用户下次登录需要修改密码</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('reset-pwd-modal')">取消</button>
+                <button class="btn btn-primary" onclick="submitResetPassword()">确认重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认弹窗 -->
+    <div class="modal-mask" id="confirm-modal">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">
+                <div class="modal-title" id="confirm-title">确认</div>
+                <button class="modal-close" onclick="closeModal('confirm-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message" style="line-height:1.6;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="closeModal('confirm-modal')">取消</button>
+                <button class="btn btn-danger" id="confirm-ok-btn">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

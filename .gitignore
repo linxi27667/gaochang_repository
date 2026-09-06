@@ -1,38 +1,83 @@
-# Keil MDK build artifacts
+# Build output
+build/
+Debug/
+Release/
+Objects/
+Listings/
 *.o
-*.d
-*.crf
+*.obj
+*.elf
+*.hex
+*.axf
 *.htm
-*.dep
 *.lnp
 *.lst
+*.crf
+*.d
+*.dep
+*.bin
 *.map
+*.exe
 *.iex
 *.bak
 *.sct
 *.tmp
-*.hex
-*.bin
-*.axf
 *.sbr
 *.sup
 *.scvd
 JLinkLog.txt
 DebugConfig/
-Listings/
-Objects/
 */MDK-ARM/*-*/
 
-# IDE
+# IDE (uvprojx tracked; uvoptx/uvguix are user-local debug state)
 *.uvguix.*
 *.uvoptx
 *.csolution
 *.cproject
 *.project
 
-# SQLite runtime files
+# Logs and temporary debug captures
+logs/
+*.log
+rtt_capture*.txt
+rtt_logger*.txt
+jlink_*.txt
+sram_dump.bin
+
+# Test output
+Tests/*/out/
+
+# Web dependencies and local runtime data
+node_modules/
+*.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
+.env
+Gaochang_Iot_Web/Gaochang_Iot_Web
+**/GC_*/GC_Small_Scissor/
+**/GC-*/GC-Screw_Lift/
+
+# Customer site runtime data and credentials
+deployments/sites/**/inventory.yaml
+deployments/sites/**/secrets.*
+deployments/sites/**/production-logs/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
+# Local/editor state
+.vs/
+.vscode/
+.idea/
+.claude/
+.agents/
+.sisyphus/
+.superpowers/
 
 # Archives
 *.zip
@@ -40,6 +85,7 @@ Objects/
 *.7z
 *.tar.gz
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini

@@ -1,0 +1,7 @@
+si SWD
+speed 4000
+device STM32F407ZETx
+connect
+sleep 500
+rtt
+q

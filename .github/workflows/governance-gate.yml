@@ -1,0 +1,37 @@
+name: governance-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: 检查提交空白错误
+        shell: bash
+        run: git diff-tree --check --no-commit-id -r "$GITHUB_SHA"
+      - name: 检查入口卡
+        shell: bash
+        run: |
+          test -f README.md
+          grep -q '^## 项目入口$' README.md
+          for field in 业务负责人 技术负责人 代码权威源 正式业务资料 部署/运行说明 凭据; do
+            grep -q -- "- $field：" README.md
+          done
+      - name: 检查受限文件路径
+        shell: bash
+        run: |
+          blocked="$(git ls-files | grep -E '(^|/)\.env$|\.(pem|key|p12|pfx)$|(^|/)[^/]+\.(token|secret)$' || true)"
+          if [ -n "$blocked" ]; then
+            printf '%s\n' "发现受限文件路径：" "$blocked"
+            exit 1
+          fi
